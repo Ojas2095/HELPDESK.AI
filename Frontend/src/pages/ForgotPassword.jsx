@@ -50,14 +50,9 @@ function ForgotPassword() {
         setError("");
 
         try {
-            // signInWithOtp with shouldCreateUser:false sends a 6-digit OTP
-            // (not a magic link) to the user's existing account email.
-            const { error } = await supabase.auth.signInWithOtp({
-                email,
-                options: {
-                    shouldCreateUser: false,
-                }
-            });
+            // With Email OTP enabled in Supabase, resetPasswordForEmail sends
+            // a 6-digit numeric OTP instead of a magic link.
+            const { error } = await supabase.auth.resetPasswordForEmail(email);
 
             if (error) throw error;
 
@@ -65,7 +60,7 @@ function ForgotPassword() {
             setStep(2);
         } catch (err) {
             console.error("Password reset error:", err);
-            setError(err.message || "No account found for this email. Please check and try again.");
+            setError(err.message || "An error occurred. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -89,7 +84,7 @@ function ForgotPassword() {
             const { error } = await supabase.auth.verifyOtp({
                 email,
                 token: otp,
-                type: 'email'
+                type: 'recovery'
             });
 
             if (error) throw error;
