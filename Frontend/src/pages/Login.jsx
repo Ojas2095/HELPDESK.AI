@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import useAuthStore from "../store/authStore";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";

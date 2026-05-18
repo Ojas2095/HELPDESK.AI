@@ -35,7 +35,7 @@ export const getTimeZoneAbbr = () => {
         })
         .formatToParts(new Date())
         .find(part => part.type === 'timeZoneName')?.value || 'IST';
-    } catch (e) {
+    } catch (_e) {
         return 'IST';
     }
 };

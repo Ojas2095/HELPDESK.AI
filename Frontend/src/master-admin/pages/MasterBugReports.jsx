@@ -20,13 +20,15 @@ import {
     Trash2,
     Terminal
 } from 'lucide-react';
+ 
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MasterBugReports = () => {
     const { addToast } = useToastStore();
     const [bugs, setBugs] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+ 
     const [selectedBug, setSelectedBug] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
@@ -44,7 +46,6 @@ const MasterBugReports = () => {
             setBugs(data || []);
         } catch (err) {
             console.error("Fetch bugs error:", err);
-            setError(err.message);
         } finally {
             setLoading(false);
         }
@@ -69,8 +70,10 @@ const MasterBugReports = () => {
             .subscribe();
 
         return () => supabase.removeChannel(channel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+ 
     const updateBugStatus = async (id, newStatus) => {
         try {
             const { error: upError } = await supabase

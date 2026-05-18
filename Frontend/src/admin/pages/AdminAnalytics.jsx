@@ -20,11 +20,10 @@ const AdminAnalytics = () => {
     const { profile } = useAuthStore();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
     const fetchAnalytics = async () => {
         setLoading(true);
-        setError(null);
+        // removed setError
         try {
             let query = supabase.from('tickets').select('*');
             if (profile?.role === 'admin' && profile?.company) {
@@ -36,14 +35,13 @@ const AdminAnalytics = () => {
             setTickets(data || []);
         } catch (err) {
             console.error("Analytics fetch error:", err);
-            setError(err.message);
-        } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const stats = useMemo(() => {

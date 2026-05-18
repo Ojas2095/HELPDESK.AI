@@ -7,6 +7,8 @@ import {
     User, Mail, Phone, Briefcase, Building2, Globe, Users, Check, X,
     MoreVertical, ExternalLink, Calendar, Loader2, Info
 } from "lucide-react";
+ 
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 
 function PendingAdminRequests() {

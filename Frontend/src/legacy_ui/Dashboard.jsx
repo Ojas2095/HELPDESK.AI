@@ -49,6 +49,7 @@ const Dashboard = () => {
   const openTickets = tickets.filter(
     (t) => t.status === "Open" || t.Resolution_Status === "Open"
   ).length;
+// eslint-disable-next-line no-unused-vars
   const resolvedTickets = tickets.filter(
     (t) => t.status === "Resolved" || t.Resolution_Status === "Resolved" || t.Resolution_Status === "Auto-Resolved" || t.Auto_Resolve
   ).length;

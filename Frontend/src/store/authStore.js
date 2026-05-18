@@ -90,6 +90,7 @@ const useAuthStore = create(
                         set({ user: null, profile: null });
                     }
                     return user;
+// eslint-disable-next-line no-unused-vars
                 } catch (error) {
                     set({ user: null, profile: null });
                     return null;

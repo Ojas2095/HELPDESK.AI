@@ -6,7 +6,7 @@ import {
   useLocation
 } from "react-router-dom";
 import React, { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";

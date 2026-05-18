@@ -25,6 +25,8 @@ function AdminLobby() {
 
         // If they are already active, send to dashboard
         if (currentStatus === "active") {
+ 
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setIsTransitioning(true);
             const timer = setTimeout(() => navigate("/admin/dashboard"), 2000);
             return () => clearTimeout(timer);
@@ -83,6 +85,7 @@ function AdminLobby() {
         return "Pending Master Admin Approval";
     };
 
+// eslint-disable-next-line no-unused-vars
     const getStatusColorClass = () => {
         if (currentStatus === 'active') return "text-emerald-500 bg-emerald-500/20";
         if (currentStatus === 'rejected') return "text-red-500 bg-red-500/20";

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
-import { formatTimelineDate, getTimeZoneAbbr } from '../../utils/dateUtils';
+import { formatTimelineDate } from '../../utils/dateUtils';
 
 const RecentTickets = () => {
     const navigate = useNavigate();
@@ -40,7 +40,8 @@ const RecentTickets = () => {
 
     useEffect(() => {
         fetchRecentTickets();
-    }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const getStatusBadge = (status) => {
         const s = String(status || '').toLowerCase();

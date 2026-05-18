@@ -17,12 +17,10 @@ import {
     Globe,
     ChevronDown
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Button } from "../../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/card";
 import { Textarea } from "../../components/ui/textarea";
-import useTicketStore from "../../store/ticketStore";
-import axios from 'axios';
 import Tesseract from 'tesseract.js';
 import { translateText, SUPPORTED_LANGUAGES } from '../../services/translationService';
 
@@ -35,10 +33,8 @@ const CreateTicket = () => {
     const [extractedOCR, setExtractedOCR] = useState('');
     const [isOcrLoading, setIsOcrLoading] = useState(false);
     const [isListening, setIsListening] = useState(false);
-    const [aiResult, setAiResult] = useState(null);
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
-    const addTicket = useTicketStore((state) => state.addTicket);
     const MAX_CHARS = 1000;
     const supportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
     const [selectedLanguage, setSelectedLanguage] = useState('en');
@@ -50,7 +46,7 @@ const CreateTicket = () => {
     const [showVoiceModal, setShowVoiceModal] = useState(false);
     const [voiceTranscript, setVoiceTranscript] = useState('');
     const [interimVoice, setInterimVoice] = useState('');
-    const [isModelLoading, setIsModelLoading] = useState(false);
+
 
     // Voice Refs & Visualizer
     const recognitionRef = useRef(null);

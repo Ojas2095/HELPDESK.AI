@@ -5,6 +5,7 @@ import {
     Activity, Database, Zap
 } from "lucide-react";
 import useToastStore from "../../store/toastStore";
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 
 /**

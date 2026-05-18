@@ -53,7 +53,7 @@ function KnowledgeCheck() {
         if (Array.isArray(raw) && raw.length > 0) return raw;
         if (typeof raw === 'string' && raw.trim()) {
             // Split on newlines or numbered list patterns
-            return raw.split(/\n+/).map(s => s.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+            return raw.split(/\n+/).map(s => s.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
         }
         return null; // no steps available
     })();

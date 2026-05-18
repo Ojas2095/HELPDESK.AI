@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     FileText, Database, Zap,
     CheckCircle2, AlertTriangle, ArrowRight,
     Lightbulb, SearchX, TicketCheck, Search
 } from 'lucide-react';
-import axios from 'axios';
 import useTicketStore from "../../store/ticketStore";
-import useAuthStore from "../../store/authStore";
 import { API_CONFIG } from "../../config";
 
 // ─── Animated Step Pipeline ───────────────────────────────────────────────────
@@ -69,7 +67,7 @@ const DuplicateDetection = () => {
         return () => clearInterval(interval);
     }, [isLoading, aiTicket, isDuplicate]);
 
-    const handleCreateTicket = async () => {
+    const handleCreateTicket = useCallback(async () => {
         if (!aiTicket) return;
         setIsLoading(true);
         try {
@@ -81,14 +79,14 @@ const DuplicateDetection = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [aiTicket, navigate, resolutionSteps]);
 
     // Navigate when countdown reaches 0
     useEffect(() => {
         if (countdown === 0 && !isDuplicate && aiTicket) {
             handleCreateTicket();
         }
-    }, [countdown, isDuplicate, aiTicket]);
+    }, [countdown, isDuplicate, aiTicket, handleCreateTicket]);
 
     if (isLoading) return <SkeletonLoader />;
     if (!aiTicket) return null;
@@ -106,7 +104,7 @@ const DuplicateDetection = () => {
             null;
         if (Array.isArray(raw) && raw.length > 0) return raw;
         if (typeof raw === 'string' && raw.trim()) {
-            return raw.split(/\n+/).map(s => s.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+            return raw.split(/\n+/).map(s => s.replace(/^\d+[.)]/,'').trim()).filter(Boolean);
         }
         return null; // hide section entirely if no steps
     })();
