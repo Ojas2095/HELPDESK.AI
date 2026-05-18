@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Select = ({ value, onChange, options, placeholder = "Select an option", className = "", buttonClassName = "", disabled = false, ...props }) => {

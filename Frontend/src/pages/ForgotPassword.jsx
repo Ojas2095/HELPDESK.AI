@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { BrainCircuit, Mail, ArrowLeft, Loader2, CheckCircle2, ShieldCheck, Lock, KeyRound, AlertCircle } from "lucide-react";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 
 function ForgotPassword() {
@@ -31,7 +32,7 @@ function ForgotPassword() {
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [step]);  
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);

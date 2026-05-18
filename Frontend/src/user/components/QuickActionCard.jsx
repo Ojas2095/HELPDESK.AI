@@ -1,4 +1,5 @@
 import React from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';

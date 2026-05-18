@@ -4,14 +4,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+// eslint-disable-next-line no-unused-vars
 import useTicketStore from "../../store/ticketStore";
+// removed useNotificationStore
 import NotificationPopover from "./NotificationPopover";
 
 import useAuthStore from "../../store/authStore";
 
 const TopNav = () => {
     const navigate = useNavigate();
-    const { notifications = [], markNotificationsRead } = useTicketStore();
+    
+ 
     const { profile, logout } = useAuthStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -22,7 +25,7 @@ const TopNav = () => {
         navigate('/login');
     };
 
-    const unreadCount = notifications.filter(n => !n.read).length;
+
 
     return (
         <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     User, Mail, Shield, Bell, Lock, Globe, Camera, ShieldCheck, Key,
     Smartphone, History, Activity, CheckCircle2, AlertCircle, Copy,
@@ -12,8 +12,6 @@ import BugReportWidget from "../../components/shared/BugReportWidget";
 const AdminProfile = () => {
     const { user, profile: adminProfile } = useAuthStore();
     const { showToast } = useToastStore();
-    const [isSaving, setIsSaving] = useState(false);
-    const [uploading, setUploading] = useState(false);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [profileForm, setProfileForm] = useState({
         name: adminProfile?.full_name || '',
@@ -67,7 +65,6 @@ const AdminProfile = () => {
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setUploading(true);
         try {
             const userId = user?.id || adminProfile?.id;
             const fileExt = file.name.split('.').pop();
@@ -82,11 +79,10 @@ const AdminProfile = () => {
             showToast("Profile picture updated.", "success");
         } catch (err) {
             showToast(`Upload failed: ${err.message}`, "error");
-        } finally { setUploading(false); }
+        }
     };
 
     const handleSaveProfile = async () => {
-        setIsSaving(true);
         try {
             const { error } = await supabase.from('profiles').update({
                 full_name: profileForm.name, email: profileForm.email,
@@ -97,7 +93,6 @@ const AdminProfile = () => {
             await useAuthStore.getState().getProfile(useAuthStore.getState().user);
             showToast("Profile updated successfully.", "success");
         } catch (err) { showToast("Save failed: " + err.message, "error"); }
-        finally { setIsSaving(false); }
     };
 
     const handleDownloadArchive = () => {

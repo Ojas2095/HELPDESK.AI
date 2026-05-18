@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Ticket, Inbox, Search, Filter,
@@ -31,7 +31,7 @@ function MyTickets() {
     const [priorityFilter, setPriorityFilter] = useState('All');
 
     // Fetch tickets from Supabase
-    const fetchTickets = async () => {
+    const fetchTickets = useCallback(async () => {
         if (!user?.id) {
             setLoading(false);
             return;
@@ -53,9 +53,10 @@ function MyTickets() {
             setTickets(data || []);
         }
         setLoading(false);
-    };
+    }, [user]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchTickets();
 
         if (!user?.id) return;
@@ -78,7 +79,7 @@ function MyTickets() {
                     } else if (payload.eventType === 'UPDATE') {
                         setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
                     } else if (payload.eventType === 'DELETE') {
-                        setTickets(prev => prev.filter(t => t.id === payload.old.id));
+                        setTickets(prev => prev.filter(t => t.id !== payload.old.id));
                     }
                 }
             )
@@ -87,7 +88,7 @@ function MyTickets() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user]); // Re-subscribe when user changes
+    }, [user, fetchTickets]); // Re-subscribe when user changes
 
     // Filtering logic
     const filteredTickets = useMemo(() => {

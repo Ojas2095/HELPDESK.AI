@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
-import useTicketStore from "../../store/ticketStore";
+
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";

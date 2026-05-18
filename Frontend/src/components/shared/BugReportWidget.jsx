@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bug, X, Info, Send, AlertTriangle, ScreenShare, ShieldAlert, Camera, Trash2, Crop, MousePointer2, ChevronDown, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -22,6 +23,7 @@ function useDiagnostics() {
         const browserInfo = navigator.userAgent;
         const screenInfo = `${window.innerWidth}x${window.innerHeight}`;
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDiagnostics(prev => ({
             ...prev,
             url: window.location.href,
@@ -132,7 +134,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [lastSubmitTime, setLastSubmitTime] = useState(0);
     const [screenshotData, setScreenshotData] = useState(null);
-    const [isCapturing, setIsCapturing] = useState(false);
+    const [, setIsCapturing] = useState(false);
     const [isSelectingRegion, setIsSelectingRegion] = useState(false);
     const [selectionStart, setSelectionStart] = useState(null);
     const [selectionRect, setSelectionRect] = useState(null);

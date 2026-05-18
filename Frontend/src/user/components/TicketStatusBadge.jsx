@@ -1,5 +1,6 @@
 import React from 'react';
 import { Badge } from "../../components/ui/badge";
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
 const TicketStatusBadge = ({ status }) => {

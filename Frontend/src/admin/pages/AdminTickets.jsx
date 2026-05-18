@@ -24,7 +24,7 @@ import {
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
-import { formatFullTimestamp, formatTimelineDate } from "../../utils/dateUtils";
+import { formatTimelineDate } from "../../utils/dateUtils";
 
 const AdminTickets = () => {
     const navigate = useNavigate();
@@ -144,6 +144,7 @@ const AdminTickets = () => {
         return () => {
             supabase.removeChannel(channel);
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
 
     // Seed search from URL

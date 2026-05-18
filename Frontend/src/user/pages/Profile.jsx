@@ -23,6 +23,7 @@ import {
     Loader2,
     AlertCircle
 } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";

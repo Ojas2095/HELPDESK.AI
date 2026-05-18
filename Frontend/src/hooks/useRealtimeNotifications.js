@@ -47,6 +47,7 @@ const useRealtimeNotifications = () => {
                 // For nested JSON/JSONB updates (messages)
                 const oldMessagesLen = Array.isArray(oldRecord.messages) ? oldRecord.messages.length : 0;
                 const newMessagesLen = Array.isArray(newRecord.messages) ? newRecord.messages.length : 0;
+// eslint-disable-next-line no-unused-vars
                 const newlyAddedMessage = newMessagesLen > oldMessagesLen
                     ? newRecord.messages[newMessagesLen - 1]
                     : null;

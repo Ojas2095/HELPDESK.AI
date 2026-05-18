@@ -7,7 +7,7 @@ import {
     Plus, Search, ListChecks, ArrowUpRight, Loader2,
     LifeBuoy
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import useTicketStore from '../../store/ticketStore';
@@ -24,7 +24,6 @@ const AutoResolveChat = () => {
     const [inputText, setInputText] = useState('');
     const [isListening, setIsListening] = useState(false);
     const { showToast } = useToastStore();
-    const [plan, setPlan] = useState([]);
     const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -78,7 +77,7 @@ const AutoResolveChat = () => {
                 }
 
                 if (newSteps.length >= 2) {
-                    setPlan(newSteps);
+                    // Steps parsed successfully; welcome message sent below
                 } else {
                     const sentences = response
                         .replace(/\*\*/g, '')
@@ -88,7 +87,7 @@ const AutoResolveChat = () => {
                         .slice(0, 4);
 
                     if (sentences.length >= 2) {
-                        setPlan(sentences.map((task, idx) => ({ id: idx + 1, task, completed: false })));
+                        // Plan parsed but not rendered; welcome message sent below
                     } else {
                         throw new Error("Could not parse steps from AI response.");
                     }
@@ -103,12 +102,6 @@ const AutoResolveChat = () => {
 
             } catch (error) {
                 console.error("AI Plan Generation Failed:", error);
-                setPlan([
-                    { id: 1, task: "Check core connection settings", completed: false },
-                    { id: 2, task: "Verify user authentication/permissions", completed: false },
-                    { id: 3, task: "Restart relevant services/applications", completed: false },
-                    { id: 4, task: "Test end-to-end connectivity", completed: false }
-                ]);
 
                 const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 setMessages([{
@@ -124,7 +117,7 @@ const AutoResolveChat = () => {
         if (messages.length === 0) {
             generateInitialPlan();
         }
-    }, [aiTicket]);
+    }, [aiTicket, navigate, messages.length]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -289,18 +282,18 @@ const AutoResolveChat = () => {
                                                     <ReactMarkdown
                                                         remarkPlugins={[remarkGfm]}
                                                         components={{
-                                                            ul: ({ node, ...props }) => <ul className="list-disc ml-4 space-y-2 mb-3" {...props} />,
-                                                            ol: ({ node, ...props }) => <ol className="list-decimal ml-4 space-y-2 mb-3" {...props} />,
-                                                            li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-                                                            h1: ({ node, ...props }) => <h1 className="text-lg font-black mb-3 mt-3 text-slate-900 tracking-tight" {...props} />,
-                                                            h2: ({ node, ...props }) => <h2 className="text-base font-black mb-3 mt-2 uppercase tracking-widest text-slate-800 text-[10px]" {...props} />,
-                                                            p: ({ node, ...props }) => <p className="mb-3 last:mb-0" {...props} />,
-                                                            code: ({ node, inline, ...props }) => (
+                                                            ul: ({ ...props }) => <ul className="list-disc ml-4 space-y-2 mb-3" {...props} />,
+                                                            ol: ({ ...props }) => <ol className="list-decimal ml-4 space-y-2 mb-3" {...props} />,
+                                                            li: ({ ...props }) => <li className="mb-1" {...props} />,
+                                                            h1: ({ ...props }) => <h1 className="text-lg font-black mb-3 mt-3 text-slate-900 tracking-tight" {...props} />,
+                                                            h2: ({ ...props }) => <h2 className="text-base font-black mb-3 mt-2 uppercase tracking-widest text-slate-800 text-[10px]" {...props} />,
+                                                            p: ({ ...props }) => <p className="mb-3 last:mb-0" {...props} />,
+                                                            code: ({ inline, ...props }) => (
                                                                 inline
                                                                     ? <code className="bg-emerald-50 px-1.5 py-0.5 rounded font-mono text-[12px] font-bold text-emerald-600" {...props} />
                                                                     : <code className="block bg-slate-900 text-slate-100 p-5 rounded-2xl font-mono text-[12px] mb-4 border border-slate-800 shadow-xl overflow-x-auto" {...props} />
                                                             ),
-                                                            strong: ({ node, ...props }) => <strong className="font-black text-slate-900" {...props} />
+                                                            strong: ({ ...props }) => <strong className="font-black text-slate-900" {...props} />
                                                         }}
                                                     >
                                                         {msg.text}

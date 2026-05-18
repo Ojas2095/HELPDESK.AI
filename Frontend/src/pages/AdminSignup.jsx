@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Eye, EyeOff, BrainCircuit, ArrowRight,
@@ -60,7 +61,9 @@ function AdminSignup() {
         if (/[A-Z]/.test(pw)) strength += 25;
         if (/[0-9]/.test(pw)) strength += 25;
         if (/[^A-Za-z0-9]/.test(pw)) strength += 25;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPasswordStrength(strength);
+ 
     }, [formData.password]);
 
     const handleChange = (e) => {

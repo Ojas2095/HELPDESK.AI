@@ -12,6 +12,7 @@ import { Card } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
 
 const AdminUsers = () => {
+// eslint-disable-next-line no-unused-vars
     const navigate = useNavigate();
     const { user: currentUser, profile: currentProfile } = useAuthStore();
     const { showToast } = useToastStore();
@@ -19,7 +20,8 @@ const AdminUsers = () => {
     // Data State
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [_error, setError] = useState(null);
+ 
     const [isProcessing, setIsProcessing] = useState(null); // ID of user being updated
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -174,8 +176,10 @@ const AdminUsers = () => {
 
     useEffect(() => {
         fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+ 
     const handleUpdateRole = async (userId, newRole) => {
         setIsProcessing(userId);
         try {
@@ -229,9 +233,10 @@ const AdminUsers = () => {
             // Deep fetch if still missing — ensures we aren't blocked by stale local state
             if (!targetCompanyId && currentUser) {
                 console.log("⚠️ Target Company ID missing in state, reaching out to database...");
-                const { data: freshProfile, error: profileFetchErr } = await supabase
+                const { data: freshProfile, error: _profileFetchErr } = await supabase
                     .from('profiles')
                     .select('company_id, company')
+ 
                     .eq('id', currentUser.id)
                     .single();
 

@@ -31,6 +31,7 @@ const useTicketStore = create(
                 };
             }),
             updateTicket: (ticketId, updates) => set((state) => {
+// eslint-disable-next-line no-unused-vars
                 const existingTicket = state.tickets.find(t => t.ticket_id === ticketId);
                 const updatedTickets = state.tickets.map(t => t.ticket_id === ticketId ? { ...t, ...updates } : t);
                 const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;

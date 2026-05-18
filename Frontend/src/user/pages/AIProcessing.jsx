@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
 import { Bot } from 'lucide-react';
 import useToastStore from '../../store/toastStore';
 import { Card } from "../../components/ui/card";
@@ -191,6 +190,7 @@ const AIProcessing = () => {
         };
 
         analyzeTicket();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [text, image_text, image_base64, navigate, setAITicket]);
 
     return (
