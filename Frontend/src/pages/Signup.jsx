@@ -145,20 +145,6 @@ function Signup() {
       );
 
       if (newUser) {
-        // Step 2: Insert into user_requests
-        const { error: requestError } = await supabase
-          .from('user_requests')
-          .insert([{
-            user_id: newUser.id,
-            company_id: selectedCompany.id,
-            status: 'pending'
-          }]);
-
-        if (requestError) {
-          console.error("Failed to insert user request:", requestError);
-          // Non-fatal, but we should log it
-        }
-
         // Check if email confirmation was skipped
         const updatedProfile = useAuthStore.getState().profile;
         if (updatedProfile?.status === 'pending_approval') {
