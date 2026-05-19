@@ -161,11 +161,11 @@ const AdminProfile = () => {
                                     <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '26px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
                                         {adminProfile?.full_name || 'Admin Agent'}
                                         <span style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', borderRadius: '100px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', padding: '6px 16px', textTransform: 'uppercase' }}>
-                                            {adminProfile?.role === 'master_admin' ? 'Root Administrator' : 'Operating Admin'}
+                                            {adminProfile?.role === 'master_admin' ? 'Master Admin' : 'Admin'}
                                         </span>
                                     </h1>
                                     <p style={{ color: '#9ca3af', fontSize: '11px', fontFamily: 'monospace', marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} className="md:justify-start">
-                                        <ShieldCheck size={14} color="#16a34a" /> Operational Protocol ID: {adminProfile?.id}
+                                        <ShieldCheck size={14} color="#16a34a" /> User ID: {adminProfile?.id}
                                     </p>
                                 </>
                             ) : (
@@ -196,9 +196,9 @@ const AdminProfile = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {[
-                            { label: 'Email Terminal', val: adminProfile?.email },
+                            { label: 'Email Address', val: adminProfile?.email },
                             { label: 'Company', val: adminProfile?.company || 'Universal Hub' },
-                            { label: 'Last Secure Login', val: user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Just Now' }
+                            { label: 'Last Login', val: user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Just Now' }
                         ].map((m, i) => (
                             <div key={i} style={{ padding: '16px', background: '#f8faf9', border: '1px solid #f0fdf4', borderRadius: '14px' }}>
                                 <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{m.label}</label>
@@ -215,7 +215,7 @@ const AdminProfile = () => {
                     <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
                         <div style={{ background: '#0f1f12', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#fff', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                                <Lock size={16} color="#22c55e" /> SECURITY SEQUENCE
+                                <Lock size={16} color="#22c55e" /> SECURITY SETTINGS
                             </h3>
                             <Shield size={16} color="#22c55e" style={{ opacity: 0.5 }} />
                         </div>
@@ -223,20 +223,20 @@ const AdminProfile = () => {
                             {/* Password */}
                             <div style={{ background: '#f8faf9', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '20px' }} className="space-y-4">
                                 <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#111827', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Key size={14} color="#16a34a" /> Password Protocol
+                                    <Key size={14} color="#16a34a" /> Password
                                 </h4>
-                                <p style={{ fontSize: '12px', color: '#6b7280' }}>Update your administrative credentials for enhanced system integrity.</p>
+                                <p style={{ fontSize: '12px', color: '#6b7280' }}>Update your administrative password to keep your account secure.</p>
                                 <button onClick={() => setShowPasswordModal(true)} style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
-                                    <Edit2 size={14} /> Initiate Override
+                                    <Edit2 size={14} /> Change Password
                                 </button>
                             </div>
                             {/* 2FA */}
                             <div style={{ background: '#f8faf9', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
                                 <div className="space-y-1 flex-1">
                                     <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#111827', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Smartphone size={14} color="#16a34a" /> Two-Factor Logic
+                                        <Smartphone size={14} color="#16a34a" /> Two-Factor Authentication (2FA)
                                     </h4>
-                                    <p style={{ fontSize: '11px', color: '#6b7280' }}>Enforce biometric or SMS verification for root actions.</p>
+                                    <p style={{ fontSize: '11px', color: '#6b7280' }}>Enforce extra verification for secure admin actions.</p>
                                 </div>
                                 <button onClick={() => setIsAdmin2FAEnabled(!isAdmin2FAEnabled)} style={{ width: '52px', height: '28px', borderRadius: '100px', position: 'relative', transition: 'all 0.4s', background: isAdmin2FAEnabled ? '#22c55e' : '#d1d5db', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
                                     <div style={{ position: 'absolute', top: '2px', width: '24px', height: '24px', background: '#fff', borderRadius: '50%', transition: 'all 0.4s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)', left: isAdmin2FAEnabled ? '26px' : '2px' }}></div>
@@ -245,9 +245,9 @@ const AdminProfile = () => {
                             {/* Bug Report */}
                             <div style={{ border: '1px solid #fee2e2', background: '#fff5f5', borderRadius: '14px', padding: '20px' }} className="space-y-4">
                                 <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#991b1b', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <AlertCircle size={14} color="#dc2626" /> Advanced Bug Report
+                                    <AlertCircle size={14} color="#dc2626" /> Bug Report
                                 </h4>
-                                <p style={{ fontSize: '11px', color: '#6b7280' }}>Submit detailed system bug reports with attachments.</p>
+                                <p style={{ fontSize: '11px', color: '#6b7280' }}>Submit a detailed system bug report with attachments.</p>
                                 <BugReportWidget advanced={true} customTrigger={
                                     <button style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                                         <AlertCircle size={14} /> Report Bug
@@ -256,7 +256,7 @@ const AdminProfile = () => {
                             </div>
 
                             <button onClick={handleLogout} style={{ width: '100%', padding: '14px', background: '#fff5f5', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                <LogOut size={16} /> Finalize Session (Logout)
+                                <LogOut size={16} /> Logout
                             </button>
                         </div>
                     </div>
@@ -267,17 +267,17 @@ const AdminProfile = () => {
                     <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '20px 28px', borderBottom: '1px solid #f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                                <History size={18} color="#16a34a" /> ADMIN ACTIVITY AUDIT
+                                <History size={18} color="#16a34a" /> ACTIVITY LOG
                             </h3>
                             <button onClick={handleDownloadArchive} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                <Download size={13} /> Download Archive
+                                <Download size={13} /> Download Log
                             </button>
                         </div>
                         <div className="flex-1 overflow-x-auto">
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr style={{ background: '#f8faf9' }}>
-                                        {['Protocol Action', 'Target', 'Sync Time', 'Result'].map((h, i) => (
+                                        {['Action', 'Target', 'Time', 'Status'].map((h, i) => (
                                             <th key={i} style={{ padding: '14px 24px', textAlign: i === 3 ? 'center' : 'left', fontSize: '10px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
                                         ))}
                                     </tr>
@@ -301,7 +301,7 @@ const AdminProfile = () => {
                             </table>
                         </div>
                         <div style={{ padding: '24px', textAlign: 'center', background: '#f8faf9' }}>
-                            <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.14em', fontWeight: 600 }}>End of Recorded Activity</p>
+                            <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.14em', fontWeight: 600 }}>End of Activity Log</p>
                         </div>
                     </div>
                 </div>
