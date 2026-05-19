@@ -29,17 +29,13 @@ export default defineConfig([
         sourceType: 'module',
       },
     },
-    rules: {
-<<<<<<< HEAD
-      'no-unused-vars': 'off',
-      'react-hooks/exhaustive-deps': 'off',
-      'react-hooks/set-state-in-effect': 'off',
-      'react-refresh/only-export-components': 'off',
-=======
+        rules: {
       'react/jsx-uses-react': 'error',
       'react/jsx-uses-vars': 'error',
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', args: 'none', caughtErrorsIgnorePattern: '^_' }],
->>>>>>> upstream/main
-    },
+      'react-hooks/exhaustive-deps': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-refresh/only-export-components': 'off',
+        },
   },
 ])

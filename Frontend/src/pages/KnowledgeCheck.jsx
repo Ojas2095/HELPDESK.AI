@@ -44,21 +44,11 @@ function KnowledgeCheck() {
     let resolutionSteps = null;
     const rawSteps = aiTicket.resolution_steps || aiTicket.suggested_solution || aiTicket.solution_steps || aiTicket.steps || null;
 
-<<<<<<< HEAD
-        if (Array.isArray(raw) && raw.length > 0) return raw;
-        if (typeof raw === 'string' && raw.trim()) {
-            // Split on newlines or numbered list patterns
-            return raw.split(/\n+/).map(s => s.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
-        }
-        return null; // no steps available
-    })();
-=======
     if (Array.isArray(rawSteps) && rawSteps.length > 0) {
         resolutionSteps = rawSteps;
     } else if (typeof rawSteps === 'string' && rawSteps.trim()) {
         resolutionSteps = rawSteps.split(/\n+/).map(s => s.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
     }
->>>>>>> upstream/main
 
     const similarityPct = aiTicket.similarity_score
         ? Math.round(aiTicket.similarity_score * 100)

@@ -21,10 +21,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "../../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/card";
 import { Textarea } from "../../components/ui/textarea";
-<<<<<<< HEAD
-import useTicketStore from "../../store/ticketStore";
-=======
->>>>>>> upstream/main
 import Tesseract from 'tesseract.js';
 import { translateText, SUPPORTED_LANGUAGES } from '../../services/translationService';
 
@@ -50,10 +46,6 @@ const CreateTicket = () => {
     const [showVoiceModal, setShowVoiceModal] = useState(false);
     const [voiceTranscript, setVoiceTranscript] = useState('');
     const [interimVoice, setInterimVoice] = useState('');
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/main
 
     // Voice Refs & Visualizer
     const recognitionRef = useRef(null);

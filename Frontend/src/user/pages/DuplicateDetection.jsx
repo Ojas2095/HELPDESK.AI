@@ -104,27 +104,7 @@ const DuplicateDetection = () => {
     if (isLoading) return <SkeletonLoader />;
     if (!aiTicket) return null;
 
-<<<<<<< HEAD
-    const duplicate = aiTicket.duplicate_ticket || {};
-    const similarity = duplicate.similarity ? Math.round(duplicate.similarity * 100) : 0;
-
-    // ── Dynamic solution steps — from AI data, no hardcoding ──────────────────
-    const resolutionSteps = (() => {
-        const raw =
-            aiTicket.resolution_steps ||
-            aiTicket.suggested_solution ||
-            aiTicket.solution_steps ||
-            duplicate.solution_steps ||
-            null;
-        if (Array.isArray(raw) && raw.length > 0) return raw;
-        if (typeof raw === 'string' && raw.trim()) {
-            return raw.split(/\n+/).map(s => s.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
-        }
-        return null; // hide section entirely if no steps
-    })();
-
-=======
->>>>>>> upstream/main
+    
     return (
         <div className="min-h-screen bg-[#f6f8f7] pb-20 pt-28 px-6">
             <style>{`@keyframes knowledgeScan{0%{left:0%;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:100%;opacity:0}}`}</style>

@@ -32,11 +32,7 @@ function ForgotPassword() {
             });
         }, 1000);
         return () => clearInterval(timer);
-<<<<<<< HEAD
     }, [step]);
-=======
-    }, [step]);  
->>>>>>> upstream/main
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
