@@ -212,9 +212,9 @@ const AdminTickets = () => {
             {/* 1. Header & Utility Bar */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">Incident Management</h1>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">Ticket Management</h1>
                     <p className="text-sm font-bold text-slate-400 mt-1 flex items-center gap-2">
-                        <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} incidents matching current filter protocol.
+                        <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} tickets matching current filters.
                     </p>
                 </div>
             </div>
