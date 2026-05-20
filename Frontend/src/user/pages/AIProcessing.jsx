@@ -368,7 +368,7 @@ const AIProcessing = () => {
 
         analyzeTicket();
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
     }, [text, image_text, image_base64, navigate, setAITicket, settings, user, profile]);
 
 

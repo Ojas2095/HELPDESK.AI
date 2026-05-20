@@ -17,9 +17,6 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
-    plugins: {
-      react,
-    },
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,

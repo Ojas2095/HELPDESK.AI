@@ -60,7 +60,7 @@ function AdminSignup() {
         if (/[A-Z]/.test(pw)) strength += 25;
         if (/[0-9]/.test(pw)) strength += 25;
         if (/[^A-Za-z0-9]/.test(pw)) strength += 25;
-        // eslint-disable-next-line react-hooks/set-state-in-effect
+         
         setPasswordStrength(strength);
  
     }, [formData.password]);
