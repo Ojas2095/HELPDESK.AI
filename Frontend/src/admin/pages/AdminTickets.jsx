@@ -437,6 +437,8 @@ const AdminTickets = () => {
                                         <SLABadge
                                             priority={ticket.priority}
                                             createdAt={ticket.created_at}
+                                            slaBreachAt={ticket.sla_breach_at}
+                                            slaStatus={ticket.sla_status}
                                             status={ticket.status}
                                         />
                                     </td>

@@ -159,6 +159,12 @@ const localFallbackSummary = (issueText) => {
     return { summary, image_description: '' };
 };
 
+const getSlaBreachAt = (priority = 'Medium') => {
+    const hoursMap = { Critical: 2, High: 8, Medium: 24, Low: 72 };
+    const slaHours = hoursMap[priority] || 24;
+    return new Date(Date.now() + slaHours * 60 * 60 * 1000).toISOString();
+};
+
 
 // ============================================================
 // EXPORT 1: askAI — Used by the chat troubleshooting assistant
@@ -231,11 +237,15 @@ User Issue: "${issueText}"${imageNote}${imageInstruction}`;
             subcategory: parsed.subcategory,
             priority: parsed.priority,
             assigned_team: parsed.assigned_team,
-            confidence: parsed.confidence || 0.9
+            confidence: parsed.confidence || 0.9,
+            sla_breach_at: getSlaBreachAt(parsed.priority)
         };
     } catch (err) {
         // All providers failed — use smart local fallback so ticket flow never breaks
         console.warn('[analyzeTicketWithAI] All providers exhausted, using local fallback:', err.message);
-        return localFallbackSummary(issueText);
+        return {
+            ...localFallbackSummary(issueText),
+            sla_breach_at: getSlaBreachAt()
+        };
     }
 };

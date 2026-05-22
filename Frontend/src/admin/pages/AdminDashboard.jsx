@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity } from 'lucide-react';
+import { Activity, AlertTriangle, Clock, ShieldCheck } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
@@ -67,11 +67,45 @@ const aiIconMap = [
     { icon: <DuplicateIcon />, bg: '#FFF7ED', color: '#f97316' },
 ];
 
+function isTerminalTicket(ticket) {
+    const status = String(ticket?.status || '').toLowerCase();
+    return status.includes('resolv') || status.includes('closed');
+}
+
+function getSlaDeadline(ticket) {
+    const source = ticket?.sla_breach_at || ticket?.slaBreachAt;
+    const value = source ? new Date(source).getTime() : NaN;
+    return Number.isFinite(value) ? value : null;
+}
+
+function getSlaState(ticket, nowMs) {
+    if (isTerminalTicket(ticket)) return 'met';
+    if (String(ticket?.sla_status || '').toUpperCase() === 'BREACHED') return 'breached';
+    const deadline = getSlaDeadline(ticket);
+    if (!deadline) return 'active';
+    const remaining = deadline - nowMs;
+    if (remaining <= 0) return 'breached';
+    if (remaining <= 60 * 60 * 1000) return 'warning';
+    return 'active';
+}
+
+function formatSlaCountdown(deadlineMs, nowMs) {
+    if (!deadlineMs) return 'No deadline';
+    const remaining = deadlineMs - nowMs;
+    if (remaining <= 0) return 'Breached';
+    const totalMinutes = Math.ceil(remaining / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+}
+
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const { profile } = useAuthStore();
     const [tickets, setTickets] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [nowMs, setNowMs] = React.useState(() => Date.now());
 
     React.useEffect(() => {
         if (profile) {
@@ -106,6 +140,11 @@ const AdminDashboard = () => {
         }
     }, [profile]);
 
+    React.useEffect(() => {
+        const timer = setInterval(() => setNowMs(Date.now()), 60 * 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     const metrics = useMemo(() => {
         const total = tickets.length;
         const active = tickets.filter(t => !t.status?.toLowerCase()?.includes('resolv') && !t.status?.toLowerCase()?.includes('closed')).length;
@@ -125,6 +164,26 @@ const AdminDashboard = () => {
             { name: 'Duplicate Detection', status: 'Active', latency: 'Optimal' },
         ];
     }, [tickets]);
+
+    const slaBoard = useMemo(() => {
+        const actionable = tickets.filter(t => !isTerminalTicket(t));
+        const breached = actionable.filter(t => getSlaState(t, nowMs) === 'breached');
+        const warning = actionable.filter(t => getSlaState(t, nowMs) === 'warning');
+        const active = actionable.filter(t => getSlaState(t, nowMs) === 'active');
+        const critical = actionable.filter(t => String(t.priority || '').toLowerCase() === 'critical');
+        const nextTicket = actionable
+            .map(ticket => ({ ticket, deadline: getSlaDeadline(ticket) }))
+            .filter(item => item.deadline)
+            .sort((a, b) => a.deadline - b.deadline)[0];
+
+        return {
+            breached,
+            warning,
+            active,
+            critical,
+            nextTicket,
+        };
+    }, [tickets, nowMs]);
 
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '40px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10">
@@ -159,6 +218,42 @@ const AdminDashboard = () => {
                 <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
                     <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
                 </button>
+            </div>
+
+            <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #fee2e2', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 800, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                            <Clock size={18} color="#dc2626" /> SLA Compliance
+                        </h2>
+                        <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                            {slaBoard.nextTicket ? `Next deadline ${formatSlaCountdown(slaBoard.nextTicket.deadline, nowMs)}` : 'No active deadlines'}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => navigate('/admin/tickets')}
+                        className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:border-red-200 hover:text-red-600 transition-colors"
+                    >
+                        Open Queue
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {[
+                        { label: 'Breached', value: slaBoard.breached.length, icon: <AlertTriangle size={18} />, bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+                        { label: 'Warning', value: slaBoard.warning.length, icon: <Clock size={18} />, bg: '#fffbeb', color: '#d97706', border: '#fde68a' },
+                        { label: 'Critical Open', value: slaBoard.critical.length, icon: <Activity size={18} />, bg: '#fff7ed', color: '#ea580c', border: '#fed7aa' },
+                        { label: 'Healthy', value: slaBoard.active.length, icon: <ShieldCheck size={18} />, bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+                    ].map(item => (
+                        <div key={item.label} style={{ background: item.bg, border: `1px solid ${item.border}`, borderRadius: '16px', padding: '18px' }}>
+                            <div className="flex items-center justify-between">
+                                <span style={{ color: item.color }}>{item.icon}</span>
+                                <span style={{ color: item.color, fontSize: '28px', fontWeight: 900, lineHeight: 1 }}>{item.value}</span>
+                            </div>
+                            <p style={{ margin: '12px 0 0', fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: item.color }}>{item.label}</p>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">

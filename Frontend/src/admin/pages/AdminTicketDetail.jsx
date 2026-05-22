@@ -237,7 +237,14 @@ const AdminTicketDetail = () => {
                             <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>
                                 {ticket.assignee?.full_name || 'UNASSIGNED'}
                             </span>
-                            <SLABadge priority={displayPriority} createdAt={ticket.created_at} status={displayStatus} compact />
+                            <SLABadge
+                                priority={displayPriority}
+                                createdAt={ticket.created_at}
+                                slaBreachAt={ticket.sla_breach_at}
+                                slaStatus={ticket.sla_status}
+                                status={displayStatus}
+                                compact
+                            />
                         </div>
                     </div>
                 </div>

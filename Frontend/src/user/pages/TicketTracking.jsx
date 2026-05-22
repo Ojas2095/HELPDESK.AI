@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Activity, CheckCircle2, ShieldCheck, User,
@@ -20,13 +20,19 @@ const TicketTracking = () => {
     const [error, setError] = useState(null);
     const [createdTicket, setCreatedTicket] = useState(null);
     const hasCreated = useRef(false);
+    const resolutionSteps = useMemo(() => location.state?.resolutionSteps || [], [location.state?.resolutionSteps]);
+
+    const getSlaBreachAt = (priority = 'Medium') => {
+        const hoursMap = { Critical: 2, High: 8, Medium: 24, Low: 72 };
+        const slaHours = hoursMap[priority] || 24;
+        return new Date(Date.now() + slaHours * 60 * 60 * 1000).toISOString();
+    };
+
     useEffect(() => {
         if (!aiTicket) {
             navigate('/create-ticket');
             return;
         }
-
-        const resolutionSteps = location.state?.resolutionSteps || [];
 
         const finalizeTracking = async () => {
             if (hasCreated.current) return;
@@ -56,7 +62,7 @@ const TicketTracking = () => {
                     image_url: aiTicket.image_url || null,
                     company: profile?.company || null,
                     company_id: profile?.company_id || null,
-                    sla_breach_at: aiTicket.sla_breach_at,
+                    sla_breach_at: aiTicket.sla_breach_at || getSlaBreachAt(aiTicket.priority),
                     metadata: {
                         confidence: aiTicket.confidence,
                         entities: aiTicket.entities,
@@ -94,7 +100,7 @@ const TicketTracking = () => {
         };
 
         finalizeTracking();
-    }, [aiTicket, addTicket, navigate, user, profile?.company, location.state]);
+    }, [aiTicket, addTicket, navigate, user, profile?.company, profile?.company_id, resolutionSteps]);
 
     if (!aiTicket) return null;
 

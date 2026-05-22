@@ -88,7 +88,6 @@ const CreateTicket = () => {
                 handleHighlightTemplate(template);
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Close language dropdown on outside click
