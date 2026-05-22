@@ -54,6 +54,44 @@ pinned: false
 <br/><br/>
 </div>
 
+---
+
+## 🌟 GSSoC '26 Contributor & Community Campaign
+
+We are extremely proud to be part of the **GirlScript Summer of Code (GSSoC) 2026**! To support the project and get real-time open-source project updates, please make sure you participate in our community campaign:
+
+<div align="center">
+
+<h3> 🚀 Support the Orchestrator in 3 Seconds! </h3>
+
+<a href="https://github.com/ritesh-1918/HELPDESK.AI">
+  <img src="https://img.shields.io/badge/⭐_STAR_REPOSITORY-111827?style=for-the-badge&logo=github&logoColor=white&labelColor=e5a50a" height="40" alt="Star Repository" />
+</a>
+&nbsp;&nbsp;
+<a href="https://github.com/ritesh-1918/HELPDESK.AI/fork">
+  <img src="https://img.shields.io/badge/🍴_FORK_REPOSITORY-111827?style=for-the-badge&logo=git&logoColor=white&labelColor=238636" height="40" alt="Fork Repository" />
+</a>
+&nbsp;&nbsp;
+<a href="https://github.com/ritesh-1918">
+  <img src="https://img.shields.io/badge/👤_FOLLOW_OWNER-111827?style=for-the-badge&logo=github&logoColor=white&labelColor=586069" height="40" alt="Follow Owner" />
+</a>
+
+<br/><br/>
+
+<h3> 💼 Let's Connect and Collaborate! </h3>
+
+<a href="https://www.linkedin.com/in/ritesh1908/">
+  <img src="https://img.shields.io/badge/🔗_CONNECT_ON_LINKEDIN-111827?style=for-the-badge&logo=linkedin&logoColor=white&labelColor=0077b5" height="40" alt="Connect on LinkedIn" />
+</a>
+&nbsp;&nbsp;
+<a href="mailto:bonthalamadhavi1@gmail.com">
+  <img src="https://img.shields.io/badge/✉️_EMAIL_ME-111827?style=for-the-badge&logo=gmail&logoColor=white&labelColor=ea4335" height="40" alt="Email Me" />
+</a>
+
+</div>
+
+---
+
 > [!NOTE] 
 > ### Eliminating the Manual Triage Bottleneck
 > Helpdesk.ai uses deep-learning neural networks and 4-layer enterprise architecture to categorize, prioritize, and resolve IT issues in milliseconds.
