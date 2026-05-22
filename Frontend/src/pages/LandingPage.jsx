@@ -683,6 +683,7 @@ export default function LandingPage() {
                                                     {step.title}
                                                 </h3>
                                                 <p
+                                                    aria-hidden={activeStep !== idx}
                                                     className={`text-white/60 text-sm mt-3 leading-relaxed max-w-sm overflow-hidden transition-all duration-300 ${activeStep === idx ? 'opacity-100 max-h-24' : 'opacity-0 max-h-0'}`}
                                                 >
                                                     {step.desc}
