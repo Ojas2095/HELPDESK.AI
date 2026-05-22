@@ -12,6 +12,7 @@ import datetime
 import traceback
 import warnings
 import logging
+import hashlib
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -58,68 +59,19 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
-from backend.services.sla_service import (
-    calculate_sla_breach_at,
-    calculate_sla_response_at,
-    classify_sla_status,
-    load as load_sla_service,
-    run_sla_escalation_loop,
-)
+from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
+from backend.services.semantic_duplicate_service import SemanticDuplicateService
 
 
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
-def get_system_settings(company_id: str) -> dict:
-    defaults = {
-        "ai_confidence_threshold": 0.80,
-        "duplicate_sensitivity": 0.85,
-        "enable_auto_resolve": False
-    }
-    if not supabase or not company_id:
-        return defaults
-    try:
-        res = supabase.table("system_settings").select(
-            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
-        ).eq("company_id", company_id).single().execute()
-        if res.data:
-            return {**defaults, **res.data}
-    except Exception as e:
-        print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
-    return defaults
-
-
-def get_duplicate_threshold(company_id: str | None, fallback: float = 0.85) -> float:
-    if not company_id:
-        return fallback
-    settings = get_system_settings(company_id)
-    try:
-        return float(settings.get("duplicate_sensitivity", fallback))
-    except (TypeError, ValueError):
-        return fallback
-
-
-def detect_semantic_duplicate(text: str, *, company_id: str | None, threshold: float) -> dict:
-    try:
-        return duplicate_service.find_semantic_duplicate(
-            text,
-            threshold=threshold,
-            company_id=company_id,
-            supabase_client=supabase,
-        )
-    except Exception as error:
-        print(f"[WARNING] Duplicate detection fallback activated: {error}")
-        duplicate_result = duplicate_service.check_duplicate(text, threshold=threshold)
-        duplicate_result["parent_ticket_id"] = duplicate_result.get("duplicate_ticket_id")
-        duplicate_result["is_potential_duplicate"] = duplicate_result.get("is_duplicate", False)
-        return duplicate_result
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
-    company_id: str | None = None
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
@@ -139,13 +91,7 @@ class TicketSaveRequest(BaseModel):
     image_url: str | None = None
     company: str | None = None
     company_id: str | None = None
-    description_vector: list[float] | None = None
-    is_potential_duplicate: bool = False
-    parent_ticket_id: str | None = None
-    sla_response_due_at: str | None = None
     sla_breach_at: str
-    sla_status: str | None = None
-    escalation_level: int = 0
     metadata: dict
     entities: list = []
     solution_steps: list = []
@@ -157,8 +103,6 @@ class TicketSaveRequest(BaseModel):
 class DuplicateInfo(BaseModel):
     is_duplicate: bool
     duplicate_ticket_id: str | None = None
-    parent_ticket_id: str | None = None
-    is_potential_duplicate: bool = False
     similarity: float = 0.0
 
 
@@ -180,8 +124,6 @@ class TicketResponse(BaseModel):
     entities: list[EntityInfo]
     duplicate_ticket: DuplicateInfo
     confidence: float
-    is_potential_duplicate: bool = False
-    parent_ticket_id: str | None = None
     needs_review: bool = False
     reasoning: str = ""
     decision_factors: list[str] = []
@@ -190,7 +132,6 @@ class TicketResponse(BaseModel):
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
-    sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
 
 
@@ -240,6 +181,8 @@ classifier_service = ClassifierService()
 ner_service = NERService()
 duplicate_service = DuplicateService()
 rag_service = RagService()
+sla_engine = SLAEngine(supabase_client=None)  # Will be reassigned after supabase init
+semantic_dupe_service = SemanticDuplicateService(supabase_client=None)  # wired in lifespan
 
 try:
     from backend.services.gemini_service import GeminiService
@@ -283,44 +226,28 @@ async def lifespan(app: FastAPI):
     else:
         print("[Startup] Gemini Service: NOT LOADED (Import failed)")
 
+    # Wire services with supabase client
+    sla_engine.supabase = supabase
+    semantic_dupe_service.supabase = supabase
+
+    # Pre-load embedding model so first ticket save is fast
+    try:
+        semantic_dupe_service.load()
+        print(f"[Startup] Semantic Duplicate Detection: {'Loaded' if semantic_dupe_service._loaded else 'Failed (model missing)'}")
+    except Exception as e:
+        print(f"[Startup] Semantic Duplicate Detection load error: {e}")
+    print(f"[Startup] SLA Engine: {'Initialized' if supabase else 'Offline (no DB)'}")
+
+    # Start background SLA checker as an async task (every 5 minutes)
+    if supabase:
+        from backend.sla_checker import sla_checker_loop_async
+        asyncio.create_task(sla_checker_loop_async(supabase, interval_seconds=300))
+        print("[Startup] SLA background checker started (interval=300s)")
+
     print("[Startup] Classifier V2 Shadow: Ready.")
     print("[Startup] Ready.")
-    # Strict health checks: fail loudly when core model assets are unavailable.
-    # Set ALLOW_DEGRADED_STARTUP=1 to permit degraded startup for local/dev convenience.
-    try:
-        strict_mode = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") != "1"
-    except Exception:
-        strict_mode = True
-
-    classifier_loaded_flag = getattr(classifier_service, "_loaded", False)
-    ner_loaded_flag = getattr(ner_service, "_loaded", False)
-
-    if strict_mode and not classifier_loaded_flag:
-        raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
-
-    sla_task = None
-    try:
-        if supabase and os.environ.get("SLA_ESCALATION_ENABLED", "true").lower() == "true":
-            notification_router = None
-            try:
-                from backend.services.notification_routing import load as load_notification_router
-                notification_router = load_notification_router()
-            except Exception as e:
-                print(f"[WARNING] Notification router not loaded for SLA service: {e}")
-            sla_service = load_sla_service(supabase, notification_router)
-            interval = int(os.environ.get("SLA_ESCALATION_INTERVAL_SECONDS", "300"))
-            sla_task = asyncio.create_task(run_sla_escalation_loop(sla_service, interval_seconds=interval))
-            print(f"[Startup] SLA escalation loop enabled ({interval}s interval).")
-
-        yield
-    finally:
-        if sla_task:
-            sla_task.cancel()
-            try:
-                await sla_task
-            except asyncio.CancelledError:
-                pass
-        print("[Shutdown] Cleaning up ...")
+    yield
+    print("[Shutdown] Cleaning up ...")
 
 
 # ---------------------------------------------------------------------------
@@ -449,29 +376,18 @@ async def health_check():
 @app.get("/ready", response_model=ReadinessResponse)
 async def readiness_check():
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
-    allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
-    
     checks = {
         "api": True,
         "classifier_loaded": classifier_service._loaded,
         "ner_loaded": ner_service._loaded,
-        "duplicate_index_loaded": duplicate_service.is_available(),
-        "rag_loaded": rag_service.is_available(),
+        "duplicate_index_loaded": duplicate_service._loaded,
+        "rag_loaded": rag_service._loaded,
     }
     if require_supabase:
         checks["supabase_configured"] = supabase is not None
 
-    # In degraded mode, duplicate and RAG services are optional
-    if allow_degraded:
-        required_checks = {k: v for k, v in checks.items() if k not in ["duplicate_index_loaded", "rag_loaded"]}
-        all_required_pass = all(required_checks.values())
-        
-        if all_required_pass:
-            return ReadinessResponse(status="ready", checks=checks)
-    else:
-        # Strict mode: all checks must pass
-        if all(checks.values()):
-            return ReadinessResponse(status="ready", checks=checks)
+    if all(checks.values()):
+        return ReadinessResponse(status="ready", checks=checks)
 
     return JSONResponse(
         status_code=503,
@@ -612,31 +528,6 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
-@app.get("/tickets/search")
-async def search_tickets(q: str | None = None, company_id: str | None = None, limit: int = 50, offset: int = 0):
-    """Search tickets using tenant-safe full-text search."""
-    if not supabase:
-        raise HTTPException(status_code=500, detail="Database connection not initialized")
-
-    if not q:
-        raise HTTPException(status_code=400, detail="Search query is required")
-    if not company_id:
-        raise HTTPException(status_code=400, detail="company_id is required for tenant-safe search")
-
-    try:
-        result = supabase.rpc(
-            "search_tickets",
-            {
-                "query_text": q,
-                "company_id": company_id,
-                "limit_rows": limit,
-                "offset_rows": offset,
-            },
-        ).execute()
-        return result.data or []
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
-
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
@@ -667,7 +558,8 @@ async def save_ticket(request_body: TicketSaveRequest):
             except HTTPException:
                 raise
             except Exception as profile_error:
-                logger.error(f"Tenant resolution error for user {request_body.user_id}: {profile_error}")
+                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
                 raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
 
         # Validate tenant consistency and authorization.
@@ -675,7 +567,8 @@ async def save_ticket(request_body: TicketSaveRequest):
         if final_data.get("company_id"):
             # User provided company_id: verify it matches their profile.
             if profile_company_id and final_data["company_id"] != profile_company_id:
-                logger.warning(f"Tenant mismatch: user {request_body.user_id} attempted {final_data['company_id']}, assigned to {profile_company_id}")
+                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
                 raise HTTPException(status_code=403, detail="User not authorized for this tenant")
         elif profile_company_id:
             # Backfill company_id from profile.
@@ -688,38 +581,28 @@ async def save_ticket(request_body: TicketSaveRequest):
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
-        priority = final_data.get("priority")
-        if not final_data.get("sla_response_due_at"):
-            final_data["sla_response_due_at"] = calculate_sla_response_at(priority).isoformat().replace("+00:00", "Z")
-        if not final_data.get("sla_breach_at"):
-            final_data["sla_breach_at"] = calculate_sla_breach_at(priority).isoformat().replace("+00:00", "Z")
-        final_data["sla_status"] = final_data.get("sla_status") or classify_sla_status(final_data.get("sla_breach_at"))
-        final_data["escalation_level"] = int(final_data.get("escalation_level") or 0)
+        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
-        logger.info(f"Tenant linkage: user_id={request_body.user_id}, company_id={final_data.get('company_id')}")
 
-        duplicate_text = (request_body.description or "").strip() or (request_body.subject or "").strip()
-        duplicate_threshold = get_duplicate_threshold(final_data.get("company_id"), 0.85)
-        duplicate_result = {
-            "is_duplicate": False,
-            "duplicate_ticket_id": None,
-            "parent_ticket_id": None,
-            "is_potential_duplicate": False,
-            "similarity": 0.0,
-        }
-
-        if duplicate_text:
-            duplicate_result = detect_semantic_duplicate(
-                duplicate_text,
-                company_id=final_data.get("company_id"),
-                threshold=duplicate_threshold,
-            )
-            final_data["description_vector"] = duplicate_service.generate_embedding(duplicate_text)
-        else:
-            final_data["description_vector"] = None
-
-        final_data["is_potential_duplicate"] = duplicate_result.get("is_potential_duplicate", False)
-        final_data["parent_ticket_id"] = duplicate_result.get("parent_ticket_id")
+        # Semantic duplicate check BEFORE inserting the ticket
+        # This allows us to warn the user before confirming
+        duplicate_check_result = None
+        try:
+            dupe_text = (request_body.description or request_body.subject or "").strip()
+            if dupe_text:
+                duplicate_check_result = await semantic_dupe_service.check_duplicate(
+                    text=dupe_text,
+                    company_id=final_data.get("company_id"),
+                )
+                if duplicate_check_result["is_duplicate"]:
+                    logger.info(
+                        f"[DUPLICATE] Ticket flagged as potential duplicate of "
+                        f"{duplicate_check_result['duplicate_ticket_id']} "
+                        f"(similarity: {duplicate_check_result['similarity']})"
+                    )
+        except Exception as e:
+            logger.warning(f"[DUPLICATE] Semantic check error (non-fatal): {e}")
 
         res = supabase.table("tickets").insert(final_data).execute()
         
@@ -728,19 +611,29 @@ async def save_ticket(request_body: TicketSaveRequest):
             
         ticket_id = res.data[0]["id"]
 
-        duplicate_indexed = True
-        duplicate_index_warning = None
+        # If duplicate detected, link parent ticket
+        if duplicate_check_result and duplicate_check_result["is_duplicate"]:
+            try:
+                supabase.table("tickets").update({
+                    "is_potential_duplicate": True,
+                    "parent_ticket_id": duplicate_check_result["duplicate_ticket_id"],
+                }).eq("id", ticket_id).execute()
+            except Exception as e:
+                logger.warning(f"[DUPLICATE] Failed to link parent ticket: {e}")
+
+        # Index the new ticket's embedding for future duplicate checks
+        embedding_indexed = False
+        description_text = (request_body.description or "").strip()
+        subject_text = (request_body.subject or "").strip()
+        duplicate_text = description_text or subject_text
         if duplicate_text:
             try:
+                # Both: old in-memory index (for backward compat) and new pgvector index
                 duplicate_service.add_ticket(str(ticket_id), duplicate_text)
+                asyncio.create_task(semantic_dupe_service.index_ticket(ticket_id, duplicate_text))
+                embedding_indexed = True
             except Exception as index_error:
-                duplicate_indexed = False
-                duplicate_index_warning = "Duplicate index update failed."
-                print(f"[WARNING] {duplicate_index_warning} ticket_id={ticket_id} error={index_error}")
-        else:
-            duplicate_indexed = False
-            duplicate_index_warning = "Duplicate index update skipped: no description or subject text was provided."
-            print(f"[WARNING] {duplicate_index_warning}")
+                logger.warning(f"[INDEX] Failed to index ticket {ticket_id}: {index_error}")
         
         # Add initial system diagnostic message
         msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
@@ -758,12 +651,14 @@ async def save_ticket(request_body: TicketSaveRequest):
         response = {
             "status": "success",
             "ticket_id": ticket_id,
-            "duplicate_indexed": duplicate_indexed,
-            "is_potential_duplicate": final_data["is_potential_duplicate"],
-            "parent_ticket_id": final_data["parent_ticket_id"],
+            "duplicate_indexed": embedding_indexed,
         }
-        if duplicate_index_warning:
-            response["duplicate_index_warning"] = duplicate_index_warning
+        if duplicate_check_result and duplicate_check_result["is_duplicate"]:
+            response["duplicate_warning"] = True
+            response["parent_ticket_id"] = duplicate_check_result["duplicate_ticket_id"]
+            response["parent_subject"] = duplicate_check_result.get("parent_subject")
+            response["similarity"] = duplicate_check_result["similarity"]
+            response["candidates"] = duplicate_check_result.get("candidates", [])
         return response
 
     except Exception as e:
@@ -820,11 +715,6 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
     """
     text = request_body.text
-
-    settings = get_system_settings(request_body.company_id)
-    confidence_threshold = settings["ai_confidence_threshold"]
-    duplicate_sensitivity = settings["duplicate_sensitivity"]
-    enable_auto_resolve = settings["enable_auto_resolve"]
     
     # Grab client metadata
     client_ip = request.client.host if request.client else "unknown"
@@ -857,11 +747,7 @@ async def analyze_only(request_body: TicketRequest):
     and duplicate check before committing to a ticket creation.
     """
     text = request_body.text
-    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(request_body.company)
-    confidence_threshold = settings["ai_confidence_threshold"]
-    duplicate_sensitivity = settings["duplicate_sensitivity"]
-    enable_auto_resolve = settings["enable_auto_resolve"]
+    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...")
     
     # --- Context & Environment ---
     import datetime
@@ -936,21 +822,10 @@ async def analyze_only(request_body: TicketRequest):
     timeline["metadata_harvested"] = get_now_ist()
 
     # --- Duplicate detection ---
-    duplicate_threshold = get_duplicate_threshold(request_body.company_id, duplicate_sensitivity)
     try:
-        dup_result = detect_semantic_duplicate(
-            text,
-            company_id=request_body.company_id,
-            threshold=duplicate_threshold,
-        )
+        dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
     except Exception:
-        dup_result = {
-            "is_duplicate": False,
-            "duplicate_ticket_id": None,
-            "parent_ticket_id": None,
-            "is_potential_duplicate": False,
-            "similarity": 0.0,
-        }
+        dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
     # --- RAG Knowledge Base Check ---
     rag_match = None
@@ -966,7 +841,7 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Reasoning ---
     decision_factors = []
-    if classification["confidence"] > confidence_threshold:
+    if classification["confidence"] > request_body.confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
     if entities:
         decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
@@ -976,14 +851,6 @@ async def analyze_only(request_body: TicketRequest):
         decision_factors.append(f"Found solution article: '{rag_match['title']}'")
 
     reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
-    if (
-        enable_auto_resolve
-        and classification["confidence"] >= confidence_threshold
-        and classification["auto_resolve"]
-    ):
-        classification["auto_resolve"] = True
-    else:
-        classification["auto_resolve"] = False
     if classification["auto_resolve"]:
         reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
     
@@ -993,8 +860,10 @@ async def analyze_only(request_body: TicketRequest):
     if gemini_service and gemini_service._initialized:
         summary = gemini_service.get_summary(text)
     
-    # Convert priority to the SLA resolution target timestamp for preview.
-    sla_breach_dt = calculate_sla_breach_at(classification["priority"])
+    # Convert priority to SLA breached timestamp (for preview)
+    hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
+    sla_hours = hours_map.get(classification["priority"], 72)
+    sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
 
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
@@ -1007,7 +876,7 @@ async def analyze_only(request_body: TicketRequest):
         entities=[EntityInfo(**e) for e in entities],
         duplicate_ticket=DuplicateInfo(**dup_result),
         confidence=classification["confidence"],
-        needs_review=classification["confidence"] < confidence_threshold,
+        needs_review=classification["confidence"] < 0.20,
         reasoning=reasoning,
         decision_factors=decision_factors,
         image_description=gemini_analysis["image_description"],
@@ -1015,9 +884,7 @@ async def analyze_only(request_body: TicketRequest):
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
-        is_potential_duplicate=dup_result.get("is_potential_duplicate", False),
-        parent_ticket_id=dup_result.get("parent_ticket_id"),
-        sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z")
+        sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
 
 @app.post("/ai/analyze_stream")
@@ -1036,11 +903,7 @@ async def analyze_stream(request_body: TicketRequest):
             "model_version": "3.0.0-PRO",
             "api_endpoint": "/ai/analyze_stream"
         }
-        timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company_id)
-        confidence_threshold = settings["ai_confidence_threshold"]
-        duplicate_sensitivity = settings["duplicate_sensitivity"]
-        enable_auto_resolve = settings["enable_auto_resolve"]
+        timeline = {"received": get_now_ist()}
 
         # 1. Reading
         yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
@@ -1102,20 +965,9 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            duplicate_threshold = get_duplicate_threshold(request_body.company_id, duplicate_sensitivity)
-            dup_result = detect_semantic_duplicate(
-                text,
-                company_id=request_body.company_id,
-                threshold=duplicate_threshold,
-            )
+            dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
         except Exception:
-            dup_result = {
-                "is_duplicate": False,
-                "duplicate_ticket_id": None,
-                "parent_ticket_id": None,
-                "is_potential_duplicate": False,
-                "similarity": 0.0,
-            }
+            dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
         # 5. RAG / Solutions
         yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
@@ -1131,7 +983,7 @@ async def analyze_stream(request_body: TicketRequest):
             pass
 
         decision_factors = []
-        if classification["confidence"] > confidence_threshold:
+        if classification["confidence"] > request_body.confidence_threshold:
             decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
         if entities:
             decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
@@ -1140,8 +992,6 @@ async def analyze_stream(request_body: TicketRequest):
         if rag_match:
             decision_factors.append(f"Found solution article: '{rag_match['title']}'")
 
-        if not enable_auto_resolve:
-            classification["auto_resolve"] = False
         reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
         if classification["auto_resolve"]:
             reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
@@ -1151,7 +1001,9 @@ async def analyze_stream(request_body: TicketRequest):
         if gemini_service and gemini_service._initialized:
             summary = gemini_service.get_summary(text)
         
-        sla_breach_dt = calculate_sla_breach_at(classification["priority"])
+        hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
+        sla_hours = hours_map.get(classification["priority"], 72)
+        sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
 
         ticket_response_dict = {
             "ticket_id": str(uuid.uuid4()),
@@ -1164,7 +1016,7 @@ async def analyze_stream(request_body: TicketRequest):
             "entities": [e for e in entities],
             "duplicate_ticket": dup_result,
             "confidence": classification["confidence"],
-            "needs_review": classification["confidence"] < confidence_threshold,
+            "needs_review": classification["confidence"] < 0.20,
             "reasoning": reasoning,
             "decision_factors": decision_factors,
             "image_description": gemini_analysis["image_description"],
@@ -1172,9 +1024,7 @@ async def analyze_stream(request_body: TicketRequest):
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "is_potential_duplicate": dup_result.get("is_potential_duplicate", False),
-            "parent_ticket_id": dup_result.get("parent_ticket_id"),
-            "sla_breach_at": sla_breach_dt.isoformat().replace("+00:00", "Z")
+            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
         }
 
         # 6. Final Result
@@ -1182,7 +1032,7 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket/legacy")
+@app.post("/ai/analyze_ticket")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
@@ -1206,3 +1056,258 @@ async def analyze_ticket_v2(request: TicketRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# SLA Engine Endpoints
+# ---------------------------------------------------------------------------
+
+class SLAStatsResponse(BaseModel):
+    total: int = 0
+    active: int = 0
+    breached: int = 0
+    warning: int = 0
+    met: int = 0
+    breach_rate: float = 0.0
+    by_priority: dict = {}
+
+
+@app.get("/sla/stats", response_model=SLAStatsResponse)
+async def sla_stats():
+    """Get aggregated SLA dashboard statistics across all tickets."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    stats = await sla_engine.get_dashboard_stats()
+    if "error" in stats:
+        raise HTTPException(status_code=500, detail=stats["error"])
+    return stats
+
+
+class SLATicketInfo(BaseModel):
+    id: str
+    ticket_id: str | None = None
+    subject: str | None = None
+    summary: str | None = None
+    priority: str = "medium"
+    status: str | None = None
+    assigned_team: str | None = None
+    sla_status: str = "active"
+    escalation_level: int = 0
+    remaining_seconds: int = 0
+    created_at: str | None = None
+    sla_breach_at: str | None = None
+    sla_warning_at: str | None = None
+    last_escalated_at: str | None = None
+
+
+@app.get("/sla/tickets")
+async def sla_tickets(
+    status: str | None = None,
+    priority: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    """
+    List tickets with SLA status. Filter by sla_status and/or priority.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    query = (
+        supabase.table("tickets")
+        .select("id, ticket_id, subject, summary, priority, status, assigned_team, sla_status, escalation_level, remaining_seconds, created_at, sla_breach_at, sla_warning_at, last_escalated_at")
+        .order("created_at", desc=True)
+    )
+
+    if status and status != "all":
+        query = query.eq("sla_status", status)
+    if priority and priority != "all":
+        query = query.eq("priority", priority.capitalize())
+
+    query = query.range(offset, offset + limit - 1)
+    res = query.execute()
+    return {"tickets": res.data or [], "total": len(res.data or [])}
+
+
+class EscalationLogEntry(BaseModel):
+    id: str
+    ticket_id: str | None = None
+    ticket_subject: str = ""
+    priority: str = "medium"
+    sla_status: str = ""
+    escalation_level: int = 0
+    remaining_seconds: int = 0
+    assigned_team: str = ""
+    notification_channels: list = []
+    triggered_at: str | None = None
+    resolved_at: str | None = None
+    notes: str = ""
+
+
+@app.get("/sla/escalations")
+async def sla_escalations(limit: int = 50, offset: int = 0):
+    """Fetch escalation log history."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        res = (
+            supabase.table("escalation_logs")
+            .select("*")
+            .order("triggered_at", desc=True)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+        return {"escalations": res.data or [], "total": len(res.data or [])}
+    except Exception as e:
+        # Table might not exist yet
+        print(f"[SLA] Escalation logs query failed: {e}")
+        return {"escalations": [], "total": 0}
+
+
+class SLAPolicyInfo(BaseModel):
+    id: str
+    priority: str
+    max_hours: int
+    warning_pct: float
+    auto_escalate: bool
+    l2_after_minutes: int
+    l3_after_minutes: int
+
+
+@app.get("/sla/policies")
+async def sla_policies():
+    """Get configured SLA policies."""
+    if not supabase:
+        # Return defaults from code
+        policies = []
+        for pri, cfg in sla_engine.SLA_POLICIES.items() if hasattr(sla_engine, 'SLA_POLICIES') else SLA_POLICIES.items():
+            policies.append({
+                "priority": pri,
+                "max_hours": cfg["max_hours"],
+                "warning_pct": cfg["warning_pct"],
+                "auto_escalate": cfg["auto_escalate_on_breach"],
+                "l2_after_minutes": cfg["l2_escalation_mins"],
+                "l3_after_minutes": cfg["l3_escalation_mins"],
+            })
+        return {"policies": policies}
+
+    try:
+        res = supabase.table("sla_policies").select("*").execute()
+        return {"policies": res.data or []}
+    except Exception as e:
+        print(f"[SLA] Policies query failed: {e}")
+        return {"policies": []}
+
+
+@app.post("/sla/check")
+async def trigger_sla_check():
+    """Manually trigger an SLA evaluation cycle (admin)."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    
+    asyncio.create_task(sla_engine.check_all_active_tickets())
+    return {"status": "triggered", "message": "SLA check cycle started in background"}
+
+
+# ---------------------------------------------------------------------------
+# Semantic Duplicate Detection Endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/ai/check_duplicate")
+async def check_duplicate_endpoint(
+    body: TicketRequest,
+    company_id: str | None = None,
+):
+    """
+    Check a ticket text for potential duplicates using semantic vector search.
+    Returns top candidates with similarity scores.
+    """
+    text = (body.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided")
+
+    threshold = body.duplicate_sensitivity if hasattr(body, 'duplicate_sensitivity') else None
+    result = await semantic_dupe_service.check_duplicate(
+        text=text,
+        company_id=company_id or body.company,
+        threshold=threshold,
+    )
+    return result
+
+
+@app.post("/ai/reindex_embeddings")
+async def reindex_embeddings():
+    """Re-generate vector embeddings for all tickets."""
+    result = await semantic_dupe_service.reindex_all()
+    return result
+
+
+@app.get("/system/settings")
+async def get_system_settings():
+    """Fetch all system settings."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    try:
+        res = supabase.table("system_settings").select("*").execute()
+        settings = {}
+        for row in res.data or []:
+            settings[row["key"]] = row["value"]
+        return settings
+    except Exception as e:
+        logger.warning(f"[SETTINGS] Query failed: {e}")
+        return {}
+
+
+@app.patch("/system/settings")
+async def update_system_settings(body: dict):
+    """Update a specific system setting."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    key = body.get("key")
+    value = body.get("value")
+    if not key or value is None:
+        raise HTTPException(status_code=400, detail="key and value required")
+    try:
+        supabase.table("system_settings").upsert({
+            "key": key,
+            "value": value,
+            "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
+        }).execute()
+        return {"status": "updated", "key": key}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/sla/tickets/{ticket_id}")
+async def sla_ticket_detail(ticket_id: str):
+    """Get detailed SLA info for a specific ticket."""
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    # Fetch ticket
+    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket = res.data
+    result = sla_engine.evaluate_ticket(ticket)
+
+    # Fetch escalation history for this ticket
+    try:
+        esc_res = (
+            supabase.table("escalation_logs")
+            .select("*")
+            .eq("ticket_id", ticket_id)
+            .order("triggered_at", desc=True)
+            .execute()
+        )
+        escalations = esc_res.data or []
+    except Exception:
+        escalations = []
+
+    return {
+        "ticket": ticket,
+        "sla_evaluation": result,
+        "escalations": escalations,
+    }
