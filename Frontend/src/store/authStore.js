@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
 import useTicketStore from './ticketStore';
 
+let currentUserPromise = null;
+
 const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -10,6 +12,7 @@ const useAuthStore = create(
             user: null,
             profile: null,
             loading: false,
+            isCheckingSession: true,
 
             // --- SUPABASE AUTH METHODS ---
 
@@ -79,25 +82,35 @@ const useAuthStore = create(
             },
 
             getCurrentUser: async () => {
-                try {
-                    const { data: { user }, error } = await supabase.auth.getUser();
-                    if (error) throw error;
-
-                    if (user) {
-                        set({ user });
-                        // Don't 'await' here because we want 'loading: false' ASAP
-                        get().getProfile(user);
-                    } else {
-                        set({ user: null, profile: null });
-                    }
-                    return user;
-                    // eslint-disable-next-line no-unused-vars
-                } catch (error) {
-                    set({ user: null, profile: null });
-                    return null;
-                } finally {
-                    set({ loading: false });
+                if (currentUserPromise) {
+                    return currentUserPromise;
                 }
+
+                currentUserPromise = (async () => {
+                    try {
+                        set({ isCheckingSession: true });
+                        const { data: { user }, error } = await supabase.auth.getUser();
+                        if (error) throw error;
+
+                        if (user) {
+                            set({ user });
+                            // Don't 'await' here because we want 'loading: false' ASAP
+                            get().getProfile(user);
+                        } else {
+                            set({ user: null, profile: null });
+                        }
+                        return user;
+                        // eslint-disable-next-line no-unused-vars
+                    } catch (error) {
+                        set({ user: null, profile: null });
+                        return null;
+                    } finally {
+                        set({ loading: false, isCheckingSession: false });
+                        currentUserPromise = null;
+                    }
+                })();
+
+                return currentUserPromise;
             },
 
             login: async (email, password) => {
@@ -285,7 +298,7 @@ const useAuthStore = create(
                     } else {
                         set({ user: null, profile: null });
                     }
-                    set({ loading: false });
+                    set({ loading: false, isCheckingSession: false });
                 });
             }
         }),
