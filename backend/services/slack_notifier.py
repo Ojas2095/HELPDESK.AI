@@ -175,4 +175,3 @@ def notify_sla_breach(ticket: dict[str, Any]) -> bool:
 
     return sent
 
-# PR diff placeholder
