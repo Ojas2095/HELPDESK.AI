@@ -262,7 +262,8 @@ def fake_db():
 
 @pytest.fixture
 def fake_supabase(fake_db):
-    return FakeSupabase(fake_db)
+    from backend.auth.crypto import wrap_client
+    return wrap_client(FakeSupabase(fake_db))
 
 
 @pytest.fixture(autouse=True)

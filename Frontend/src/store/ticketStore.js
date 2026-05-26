@@ -65,13 +65,6 @@ const useTicketStore = create(
                     activeTicket: shouldUpdateActive ? { ...state.activeTicket, ...updates } : state.activeTicket
                 };
             }),
-
-            removeTicket: (ticketId) => set((state) => ({
-    tickets: state.tickets.filter(t => t.ticket_id !== ticketId),
-    activeTicket: state.activeTicket?.ticket_id === ticketId
-        ? null
-        : state.activeTicket
-})),
             appendMessage: (ticketId, message) => set((state) => {
                 const updatedTickets = state.tickets.map(t =>
                     t.ticket_id === ticketId

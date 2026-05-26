@@ -114,7 +114,8 @@ class SlaEscalationService:
         now_fn: Callable[[], datetime] = _utc_now,
         notification_router: Any = None,
     ):
-        self.supabase = supabase_client
+        from backend.auth.crypto import wrap_client
+        self.supabase = wrap_client(supabase_client)
         self.now_fn = now_fn
         self.notification_router = notification_router
 
