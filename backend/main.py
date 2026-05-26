@@ -19,8 +19,9 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, Header, HTTPException, Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
@@ -265,11 +266,11 @@ async def lifespan(app: FastAPI):
     print("[Startup] Loading AI models ...")
     try:
         classifier_service.load()
-    except FileNotFoundError as e:
+    except Exception as e:
         print(f"[WARNING] Classifier not loaded: {e}")
     try:
         ner_service.load()
-    except FileNotFoundError as e:
+    except Exception as e:
         print(f"[WARNING] NER not loaded: {e}")
     try:
         duplicate_service.load()
@@ -437,6 +438,17 @@ async def root():
     </body>
     </html>
     """
+
+
+async def verify_metrics_token(x_metrics_token: str | None = Header(default=None)):
+    expected_token = os.environ.get("METRICS_TOKEN")
+    if expected_token and x_metrics_token != expected_token:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+@app.get("/metrics", dependencies=[Depends(verify_metrics_token)])
+def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/health", response_model=HealthResponse)
