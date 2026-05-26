@@ -735,15 +735,62 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
+MASTER_TICKET_ROLES = {"master_admin", "super_admin", "superadmin", "owner"}
+
+
+def _get_auth_user_id(user: dict) -> str:
+    user_id = user.get("id") or user.get("sub") or user.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid authenticated user")
+    return str(user_id)
+
+
+def _get_authenticated_profile(user: dict) -> dict:
+    user_id = _get_auth_user_id(user)
+    res = (
+        supabase.table("profiles")
+        .select("id, company_id, company, role")
+        .eq("id", user_id)
+        .single()
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=403, detail="User profile not found")
+    return res.data
+
+
+def _is_master_ticket_reader(profile: dict) -> bool:
+    role = str(profile.get("role") or "").lower()
+    return role in MASTER_TICKET_ROLES
+
+
+def _ticket_company_scope(profile: dict, requested_company_id: str | None = None) -> str | None:
+    if _is_master_ticket_reader(profile):
+        return requested_company_id
+
+    company_id = profile.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=403, detail="User tenant is not configured")
+    if requested_company_id and requested_company_id != company_id:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+    return str(company_id)
+
+
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
     
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
+    if company_scope:
+        query = query.eq("company_id", company_scope)
         
     res = query.execute()
     return res.data
@@ -968,6 +1015,7 @@ async def save_ticket(request_body: TicketSaveRequest):
 async def get_ticket_by_id(
     request: Request,
     ticket_id: str,
+    current_user: dict = Depends(get_current_user),
 ):
     """Fetch single persistent ticket."""
     if not supabase:
@@ -978,11 +1026,16 @@ async def get_ticket_by_id(
         return await search_tickets(
             q=request.query_params.get("q", ""),
             company_id=request.query_params.get("company_id"),
+            current_user=current_user,
         )
 
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile)
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    if company_scope and res.data.get("company_id") != company_scope:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
     return res.data
 
 
@@ -1000,7 +1053,11 @@ async def get_ticket_audit_logs(ticket_id: str, company_id: str):
 
 
 @app.get("/tickets/search")
-async def search_tickets(q: str, company_id: str | None = None):
+async def search_tickets(
+    q: str,
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
     """Search tickets by query text, optionally scoped by company_id."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -1008,10 +1065,13 @@ async def search_tickets(q: str, company_id: str | None = None):
     if not query_text:
         raise HTTPException(status_code=400, detail="Query text is required")
 
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
     try:
         rpc_res = supabase.rpc(
             "search_tickets",
-            {"query_text": query_text, "company_id": company_id},
+            {"query_text": query_text, "company_id": company_scope},
         ).execute()
         return rpc_res.data or []
     except Exception:
@@ -1024,8 +1084,8 @@ async def search_tickets(q: str, company_id: str | None = None):
             if lowered in str(row.get("subject", "")).lower()
             or lowered in str(row.get("description", "")).lower()
         ]
-        if company_id:
-            filtered = [row for row in filtered if row.get("company_id") == company_id]
+        if company_scope:
+            filtered = [row for row in filtered if row.get("company_id") == company_scope]
         return filtered
 
 
