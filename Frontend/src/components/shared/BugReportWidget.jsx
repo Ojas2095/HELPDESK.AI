@@ -386,10 +386,10 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleOpen}
-                        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-[#13ec80] to-[#0fd472] text-[#111814] px-4 py-3 rounded-full shadow-lg hover:shadow-xl hover:shadow-[#13ec80]/20 transition-all border border-[#13ec80]/50 group"
+                        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-[#13ec80] to-[#0fd472] text-[#111814] p-3 md:px-4 md:py-3 rounded-full shadow-lg hover:shadow-xl hover:shadow-[#13ec80]/20 transition-all border border-[#13ec80]/50 group"
                     >
                         <Bug className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                        <span className="font-bold text-sm hidden sm:block">Report Bug</span>
+                        <span className="font-bold text-sm hidden md:block">Report Bug</span>
                     </motion.button>
                 )}
             </AnimatePresence>

@@ -38,7 +38,7 @@ const useAuthStore = create(
                     email: user.email,
                     full_name: isMasterAdmin ? 'Master Admin' : (metadata.full_name || 'User'),
                     role: isMasterAdmin ? 'master_admin' : (metadata.role || 'user'),
-                    status: isMasterAdmin ? 'active' : 'pending_email_verification',
+                    status: isMasterAdmin ? 'active' : (user.email_confirmed_at ? 'pending_approval' : 'pending_email_verification'),
                     company: metadata.company || ''
                 };
 
@@ -46,6 +46,11 @@ const useAuthStore = create(
                 // This prevents flashes of 'pending_email_verification' when returning from magic links
                 const dbProfile = await get()._syncProfile(user.id);
                 if (dbProfile) {
+                    if (user.email_confirmed_at && dbProfile.status === 'pending_email_verification') {
+                        console.log("Email confirmed! Upgrading status in database to pending_approval.");
+                        const updated = await get().updateProfile({ status: 'pending_approval' });
+                        if (updated) return updated;
+                    }
                     return dbProfile;
                 }
 
@@ -128,6 +133,25 @@ const useAuthStore = create(
                     return { user, profile };
                 } catch (error) {
                     console.error("Login operation failed:", error.message);
+                    throw error;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
+            loginWithGoogle: async () => {
+                set({ loading: true });
+                console.log("Attempting Google login via OAuth...");
+                try {
+                    const { error } = await supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo: window.location.origin + '/login'
+                        }
+                    });
+                    if (error) throw error;
+                } catch (error) {
+                    console.error("Google OAuth failed:", error.message);
                     throw error;
                 } finally {
                     set({ loading: false });
