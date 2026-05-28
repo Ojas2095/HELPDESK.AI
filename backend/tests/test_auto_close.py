@@ -26,7 +26,7 @@ class TestAutoCloseService(unittest.TestCase):
         # Mock environment variables
         self.env_patcher = patch.dict(os.environ, {
             'SUPABASE_URL': 'https://test.supabase.co',
-            'SUPABASE_SERVICE_ROLE_KEY': 'test-key',
+            'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key',
             'AUTO_CLOSE_ENABLED': 'true',
             'AUTO_CLOSE_DAYS': '7',
             'AUTO_CLOSE_CRON_SCHEDULE': '0 2 * * *'
@@ -311,12 +311,82 @@ class TestAutoCloseServiceInitialization(unittest.TestCase):
         self.assertEqual(service.cron_schedule, '0 0 * * 0')
 
 
+class TestAutoCloseServiceAdvanced(unittest.TestCase):
+    """Advanced test cases for AutoCloseService."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.env_patcher = patch.dict(os.environ, {
+            'SUPABASE_URL': 'https://test.supabase.co',
+            'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key',
+            'AUTO_CLOSE_ENABLED': 'true',
+            'AUTO_CLOSE_DAYS': '7',
+            'AUTO_CLOSE_CRON_SCHEDULE': '0 2 * * *'
+        })
+        self.env_patcher.start()
+        
+        self.mock_supabase_patcher = patch('services.auto_close_service.create_client')
+        self.mock_create_client = self.mock_supabase_patcher.start()
+        self.mock_supabase = Mock()
+        self.mock_create_client.return_value = self.mock_supabase
+        
+        self.service = AutoCloseService()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        self.env_patcher.stop()
+        self.mock_supabase_patcher.stop()
+
+    def test_concurrent_ticket_processing(self):
+        """Test that multiple tickets for same company are processed correctly."""
+        # Arrange: Multiple tickets from same company, some old, some new
+        old_date = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
+        new_date = (datetime.now(timezone.utc) - timedelta(days=3)).isoformat()
+        
+        mock_ticket_response = Mock()
+        mock_ticket_response.data = [
+            {"id": "ticket-old-1", "company_id": "company-1", "status": "resolved", "updated_at": old_date},
+            {"id": "ticket-old-2", "company_id": "company-1", "status": "resolved", "updated_at": old_date},
+            {"id": "ticket-new-1", "company_id": "company-1", "status": "resolved", "updated_at": new_date},
+        ]
+        self.mock_supabase.table.return_value.select.return_value.eq.return_value.execute.return_value = mock_ticket_response
+        
+        # Company settings: enabled, 7 days
+        mock_settings_response = Mock()
+        mock_settings_response.data = {"auto_close_days": 7, "auto_close_enabled": True}
+        self.mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_settings_response
+        
+        # Mock successful closes
+        self.mock_supabase.table.return_value.update.return_value.eq.return_value.eq.return_value.execute.return_value = Mock()
+        
+        # Act
+        stats = self.service.run()
+        
+        # Assert: 2 old tickets closed, 1 new ticket skipped
+        self.assertEqual(stats["closed_count"], 2)
+        self.assertEqual(stats["skipped_count"], 1)
+
+    def test_partial_settings_from_database(self):
+        """Test fallback when database has partial settings (only auto_close_days)."""
+        # Arrange: Database has only auto_close_days, missing auto_close_enabled
+        mock_response = Mock()
+        mock_response.data = {"auto_close_days": 3}  # Missing auto_close_enabled
+        self.mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_response
+        
+        # Act
+        settings = self.service.get_system_settings("partial-settings-company")
+        
+        # Assert: Uses DB value for days, defaults for enabled
+        self.assertEqual(settings["auto_close_days"], 3)
+        self.assertTrue(settings["auto_close_enabled"])  # Default value
+
+
 class TestAutoCloseServiceSingleton(unittest.TestCase):
     """Test singleton pattern implementation."""
 
     @patch.dict(os.environ, {
         'SUPABASE_URL': 'https://test.supabase.co',
-        'SUPABASE_SERVICE_ROLE_KEY': 'test-key'
+        'SUPABASE_SERVICE_ROLE_KEY': 'test-service-role-key'
     })
     @patch('services.auto_close_service.create_client')
     def test_load_creates_singleton(self, mock_create_client):
