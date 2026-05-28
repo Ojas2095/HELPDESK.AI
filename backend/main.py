@@ -532,7 +532,8 @@ def _heuristic_language_detection(text: str) -> dict:
         return {"code": "en", "name": "English"}
     return {"code": "unknown", "name": "Unknown"}
 
-def detect_and_translate_ticket_text(text: str) -> dict:
+import asyncio
+async def detect_and_translate_ticket_text(text: str) -> dict:
     original_text = (text or "").strip()
     if not original_text:
         return {
@@ -552,13 +553,13 @@ def detect_and_translate_ticket_text(text: str) -> dict:
     else:
         detected = _heuristic_language_detection(original_text)
         if gemini_service and getattr(gemini_service, "_initialized", False):
-            detected = gemini_service.detect_language(original_text)
+            detected = await asyncio.to_thread(gemini_service.detect_language, original_text)
         source_code = str(detected.get("code", "en")).lower()
         source_name = detected.get("name") or LANGUAGE_NAMES.get(source_code, source_code.upper())
 
     # If langdetect returned "en" / "unknown", try Gemini for confirmation
     if source_code in ("en", "unknown") and gemini_service and getattr(gemini_service, "_initialized", False):
-        gemini_detected = gemini_service.detect_language(original_text)
+        gemini_detected = await asyncio.to_thread(gemini_service.detect_language, original_text)
         gemini_code = str(gemini_detected.get("code", "en")).lower()
         if gemini_code not in ("en", "eng", "unknown"):
             source_code = gemini_code
@@ -578,11 +579,11 @@ def detect_and_translate_ticket_text(text: str) -> dict:
     # Primary: language_pipeline (Helsinki-NLP); fallback: Gemini
     translated_text = original_text
     if _LANGUAGE_PIPELINE_AVAILABLE:
-        translated_text = _lp_translate_to_english(original_text, source_code)
+        translated_text = await asyncio.to_thread(_lp_translate_to_english, original_text, source_code)
 
     # Fall back to Gemini if Helsinki-NLP returned the same text (model unavailable)
     if translated_text == original_text and gemini_service and getattr(gemini_service, "_initialized", False):
-        translated_text = gemini_service.translate_to_english(original_text, source_name)
+        translated_text = await asyncio.to_thread(gemini_service.translate_to_english, original_text, source_name)
 
     if not translated_text or translated_text.strip() == original_text:
         return {
@@ -658,6 +659,11 @@ async def lifespan(app: FastAPI):
         from backend.sla_checker import sla_checker_loop_async
         asyncio.create_task(sla_checker_loop_async(supabase, interval_seconds=300))
         print("[Startup] SLA background checker started (interval=300s)")
+        
+        # Start background weekly digest email scheduler (checks hourly)
+        from backend.services.digest_service import digest_scheduler_loop_async
+        asyncio.create_task(digest_scheduler_loop_async(supabase, interval_seconds=3600))
+        print("[Startup] Weekly digest email scheduler started (interval=3600s)")
 
     print("[Startup] Classifier V2 Shadow: Ready.")
     print(f"[Startup] ONNX MiniLM Fallback: {'READY' if getattr(onnx_classifier, '_loaded', False) else 'DEGRADED (artifacts missing)'}")
@@ -1021,11 +1027,11 @@ async def save_ticket(request_body: TicketSaveRequest):
 
     # Detect language and translate subject/description into English before downstream routing/indexing.
     translation_probe_text = (original_description.strip() or original_subject.strip())
-    translation_ctx = detect_and_translate_ticket_text(translation_probe_text)
+    translation_ctx = await detect_and_translate_ticket_text(translation_probe_text)
     metadata = final_data.get("metadata") or {}
     if translation_ctx["was_translated"]:
-        translated_subject = gemini_service.translate_to_english(original_subject, translation_ctx["source_language_name"]) if original_subject else original_subject
-        translated_description = gemini_service.translate_to_english(original_description, translation_ctx["source_language_name"]) if original_description else original_description
+        translated_subject = await asyncio.to_thread(gemini_service.translate_to_english, original_subject, translation_ctx["source_language_name"]) if original_subject else original_subject
+        translated_description = await asyncio.to_thread(gemini_service.translate_to_english, original_description, translation_ctx["source_language_name"]) if original_description else original_description
         final_data["subject"] = translated_subject or original_subject
         final_data["description"] = translated_description or original_description
         metadata["original_text"] = {
@@ -1419,7 +1425,7 @@ async def analyze_only(request_body: TicketRequest):
     and duplicate check before committing to a ticket creation.
     """
     text = request_body.text
-    translation_ctx = detect_and_translate_ticket_text(text)
+    translation_ctx = await detect_and_translate_ticket_text(text)
     text = translation_ctx["text_for_analysis"]
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
     settings = get_system_settings(request_body.company)
@@ -1920,6 +1926,49 @@ async def trigger_sla_check():
 
 
 # ---------------------------------------------------------------------------
+# Weekly Digest Endpoints
+# ---------------------------------------------------------------------------
+
+class DigestSendRequest(BaseModel):
+    company_id: str
+    email: str
+
+@app.get("/api/digest/preview/{company_id}")
+async def preview_weekly_digest(company_id: str):
+    """Generate and return preview stats and AI summary for the weekly digest."""
+    from backend.services.digest_service import get_weekly_stats, generate_ai_summary
+    stats = get_weekly_stats(company_id)
+    summary = generate_ai_summary(stats)
+    return {"stats": stats, "ai_summary": summary}
+
+@app.post("/api/digest/send-now")
+async def trigger_weekly_digest(body: DigestSendRequest):
+    """Manually trigger the dispatch of a weekly operations digest email."""
+    from backend.services.digest_service import get_weekly_stats, generate_ai_summary, send_digest_email
+    stats = get_weekly_stats(body.company_id)
+    summary = generate_ai_summary(stats)
+    success = send_digest_email(body.email, stats, summary)
+    
+    if not success:
+        raise HTTPException(
+            status_code=500, 
+            detail="Failed to send digest email. Check if RESEND_API_KEY is configured."
+        )
+        
+    # Track the last sent timestamp in settings
+    if supabase:
+        try:
+            supabase.table("system_settings").update({
+                "digest_last_sent": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            }).eq("company_id", body.company_id).execute()
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"[Digest] Failed to update digest_last_sent: {e}")
+            
+    return {"status": "success", "recipient": body.email}
+
+
+# ---------------------------------------------------------------------------
 # Semantic Duplicate Detection Endpoints
 # ---------------------------------------------------------------------------
 
@@ -2021,6 +2070,21 @@ async def sla_ticket_detail(ticket_id: str):
         "sla_evaluation": result,
         "escalations": escalations,
     }
+
+
+from fastapi import UploadFile, File
+
+@app.post("/api/voice/transcribe")
+async def api_voice_transcribe(audio: UploadFile = File(...)):
+    """Transcribes an audio file into text using OpenAI Whisper asynchronously."""
+    from backend.services.voice_service import transcribe_audio_async
+    try:
+        content = await audio.read()
+        result = await transcribe_audio_async(content)
+        return result
+    except Exception as e:
+        logger.error(f"Voice transcription endpoint error: {e}")
+        raise HTTPException(status_code=500, detail=f"Voice transcription failed: {str(e)}")
 
 
 @app.get("/metrics")
