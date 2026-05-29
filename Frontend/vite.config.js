@@ -16,5 +16,11 @@ export default defineConfig({
   },
   build: {
     sourcemap: true
-  }
+  },
+  test: {
+    // Vitest configuration
+    environment: 'jsdom',
+    globals: true,
+    include: ['src/**/*.test.{js,jsx}'],
+  },
 })
