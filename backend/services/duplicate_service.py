@@ -5,7 +5,15 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
-from sentence_transformers import SentenceTransformer, util
+from typing import Any
+
+try:
+    from sentence_transformers import SentenceTransformer, util
+    _HAS_SENTENCE = True
+except Exception:  # pragma: no cover - optional runtime dependency
+    SentenceTransformer = None
+    util = None
+    _HAS_SENTENCE = False
 
 SIMILARITY_THRESHOLD = 0.70
 
@@ -30,6 +38,17 @@ class DuplicateService:
             return
         
         print("[DuplicateService] Loading model...")
+        if not _HAS_SENTENCE:
+            allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+            self._load_failed = True
+            print("[DuplicateService] sentence-transformers not installed")
+            if allow_degraded:
+                print("[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
+                self.model = None
+                self._loaded = False
+                return
+            else:
+                raise ImportError("sentence-transformers is required for DuplicateService")
         try:
             # Check if a local model path is provided
             model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
@@ -97,6 +116,83 @@ class DuplicateService:
         self._tickets.append((ticket_id, embedding, text))
         self.save_to_disk(ticket_id, text)
 
+    def generate_embedding(self, text: str) -> list[float] | None:
+        """Generate a 384-d embedding for the provided ticket text."""
+        from backend.services.redis_cache import redis_cache
+
+        cached = redis_cache.get_embedding(text)
+        if cached is not None:
+            return cached
+
+        self.load()
+        if not self.is_available():
+            return None
+
+        embedding = self.model.encode(text, convert_to_tensor=False, normalize_embeddings=True)
+        values = [float(value) for value in embedding.tolist()]
+        redis_cache.set_embedding(text, values)
+        return values
+
+    def _build_result(
+        self,
+        *,
+        is_duplicate: bool,
+        duplicate_ticket_id: str | None,
+        similarity: float,
+    ) -> dict:
+        return {
+            "is_duplicate": is_duplicate,
+            "duplicate_ticket_id": duplicate_ticket_id,
+            "parent_ticket_id": duplicate_ticket_id,
+            "is_potential_duplicate": is_duplicate,
+            "similarity": round(similarity, 4),
+        }
+
+    def find_semantic_duplicate(
+        self,
+        text: str,
+        *,
+        threshold: float | None = None,
+        company_id: str | None = None,
+        supabase_client: Any | None = None,
+        match_count: int = 1,
+    ) -> dict:
+        """Find the best duplicate candidate using Supabase vector search, with local fallback."""
+        self.load()
+
+        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
+        embedding = self.generate_embedding(text)
+
+        if embedding and supabase_client and company_id:
+            try:
+                response = supabase_client.rpc(
+                    "match_tickets",
+                    {
+                        "query_vector": embedding,
+                        "match_threshold": float(active_threshold),
+                        "match_count": match_count,
+                        "tenant_company_id": company_id,
+                    },
+                ).execute()
+
+                rows = response.data or []
+                if rows:
+                    best_match = rows[0]
+                    similarity = float(best_match.get("similarity", 0.0))
+                    ticket_identifier = best_match.get("ticket_id") or best_match.get("id")
+                    return self._build_result(
+                        is_duplicate=similarity >= active_threshold,
+                        duplicate_ticket_id=str(ticket_identifier) if ticket_identifier is not None else None,
+                        similarity=similarity,
+                    )
+            except Exception as error:
+                print(f"[DuplicateService] Supabase vector search failed, falling back to local cache: {error}")
+
+        duplicate_result = self.check_duplicate(text, threshold=active_threshold)
+        duplicate_result["parent_ticket_id"] = duplicate_result.get("duplicate_ticket_id")
+        duplicate_result["is_potential_duplicate"] = duplicate_result.get("is_duplicate", False)
+        return duplicate_result
+
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
         """
         Check if a ticket is a duplicate of any stored ticket.
@@ -135,14 +231,20 @@ class DuplicateService:
 
         query_embedding = self.model.encode(text, convert_to_tensor=True)
 
-        best_score = 0.0
-        best_id = None
+        import torch
 
-        for ticket_id, stored_emb, _ in self._tickets:
-            score = util.cos_sim(query_embedding, stored_emb).item()
-            if score > best_score:
-                best_score = score
-                best_id = ticket_id
+        # Stack stored embeddings into a single tensor for vectorized operations
+        embeddings = [stored_emb for _, stored_emb, _ in self._tickets]
+        stacked_embeddings = torch.stack(embeddings)
+
+        # Compute cosine similarity between query and all stored embeddings in one operation
+        similarity_matrix = util.cos_sim(query_embedding, stacked_embeddings)
+
+        # Find the index and score of the most similar ticket
+        best_score_tensor, best_index_tensor = torch.max(similarity_matrix, dim=1)
+        best_score = best_score_tensor.item()
+        best_index = best_index_tensor.item()
+        best_id = self._tickets[best_index][0]
 
         is_dup = best_score >= active_threshold
 
@@ -151,3 +253,4 @@ class DuplicateService:
             "duplicate_ticket_id": best_id if is_dup else None,
             "similarity": round(best_score, 4),
         }
+
