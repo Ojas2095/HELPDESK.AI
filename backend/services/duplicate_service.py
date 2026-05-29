@@ -5,6 +5,8 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
+import torch
+import numpy as np
 from sentence_transformers import SentenceTransformer, util
 
 SIMILARITY_THRESHOLD = 0.70
@@ -17,6 +19,10 @@ class DuplicateService:
         self._load_failed = False
         # In-memory store: list of (ticket_id, embedding, text)
         self._tickets: list[tuple[str, object, str]] = []
+        # Pre-computed embedding matrix for vectorized search
+        self._embedding_matrix: torch.Tensor | None = None
+        self._ticket_ids: list[str] = []
+        self._embedding_matrix_dirty: bool = True
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
 
@@ -87,6 +93,24 @@ class DuplicateService:
         except Exception as e:
             print(f"[DuplicateService] Failed to save to disk: {e}")
 
+    def _rebuild_embedding_matrix(self):
+        """Rebuild the stacked embedding matrix from the ticket list.
+
+        This enables vectorized cosine similarity computation by stacking all
+        stored embeddings into a single 2D tensor, eliminating the per-ticket
+        loop in ``check_duplicate``.
+        """
+        if not self._tickets:
+            self._embedding_matrix = None
+            self._ticket_ids = []
+            self._embedding_matrix_dirty = False
+            return
+
+        self._ticket_ids = [tid for tid, _, _ in self._tickets]
+        embeddings = [emb for _, emb, _ in self._tickets]
+        self._embedding_matrix = torch.stack(embeddings)
+        self._embedding_matrix_dirty = False
+
     def add_ticket(self, ticket_id: str, text: str):
         """Add a ticket to the in-memory store and persist to disk."""
         self.load()
@@ -95,11 +119,18 @@ class DuplicateService:
             return
         embedding = self.model.encode(text, convert_to_tensor=True)
         self._tickets.append((ticket_id, embedding, text))
+        self._embedding_matrix_dirty = True
         self.save_to_disk(ticket_id, text)
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
         """
         Check if a ticket is a duplicate of any stored ticket.
+
+        Uses vectorized cosine similarity: all stored embeddings are stacked
+        into a single 2D tensor and compared against the query embedding in
+        one batched matrix operation, rather than looping over each stored
+        ticket individually.  This reduces the similarity computation from
+        O(n) individual tensor operations to a single O(1) matrix multiply.
 
         Args:
             text: The ticket text to check.
@@ -135,14 +166,21 @@ class DuplicateService:
 
         query_embedding = self.model.encode(text, convert_to_tensor=True)
 
-        best_score = 0.0
-        best_id = None
+        # Rebuild embedding matrix if it is stale
+        if self._embedding_matrix_dirty or self._embedding_matrix is None:
+            self._rebuild_embedding_matrix()
 
-        for ticket_id, stored_emb, _ in self._tickets:
-            score = util.cos_sim(query_embedding, stored_emb).item()
-            if score > best_score:
-                best_score = score
-                best_id = ticket_id
+        # Vectorized cosine similarity: compute all similarities at once
+        # query_embedding shape: (dim,) -> (1, dim)
+        # _embedding_matrix shape: (n_tickets, dim)
+        # cos_sim returns shape: (1, n_tickets)
+        similarity_scores = util.cos_sim(
+            query_embedding.unsqueeze(0), self._embedding_matrix
+        ).squeeze(0)
+
+        best_idx = torch.argmax(similarity_scores).item()
+        best_score = similarity_scores[best_idx].item()
+        best_id = self._ticket_ids[best_idx]
 
         is_dup = best_score >= active_threshold
 
