@@ -1852,7 +1852,7 @@ async def analyze_only(request_body: TicketRequest, request: Request):
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
         image_url=request_body.image_url,
-        highlights=[e.text for e in entities] if entities else [],
+        highlights=[e.get("text", "") for e in entities] if entities else [],
         timeline=timeline,
         env_metadata=env_metadata,
         spam_check=SpamCheck(**spam_result),
