@@ -11,7 +11,9 @@ import { Badge } from "../../components/ui/badge";
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
+import SLABadge from "../../admin/components/SLABadge";
 import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
+import LanguageBadge from "../../components/shared/LanguageBadge";
 import {
     Tooltip,
     TooltipContent,
@@ -119,6 +121,7 @@ function MyTickets() {
         if (p === 'low') return 'text-blue-600 font-bold';
         return 'text-gray-600';
     };
+
 
     return (
         <main className="flex-1 max-w-[1200px] w-full mx-auto px-6 py-10 flex flex-col gap-8">
@@ -269,6 +272,7 @@ function MyTickets() {
                                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Category</th>
                                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Status</th>
                                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Priority</th>
+                                    <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Est. SLA</th>
                                     <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Submitted</th>
                                 </tr>
                             </thead>
@@ -317,6 +321,9 @@ function MyTickets() {
                                                  <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
                                                      {ticket.summary || ticket.subject || ticket.description || "No subject"}
                                                  </p>
+                                                 <div className="mt-1">
+                                                     <LanguageBadge detectedLanguage={ticket?.detected_language} compact />
+                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
@@ -330,6 +337,16 @@ function MyTickets() {
                                                 <span className={`text-sm capitalize ${getPriorityColor(ticket.priority)}`}>
                                                     {ticket.priority || 'medium'}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <SLABadge
+                                                    priority={ticket.priority}
+                                                    createdAt={ticket.created_at}
+                                                    slaBreachAt={ticket.sla_breach_at}
+                                                    slaStatus={ticket.sla_status}
+                                                    status={ticket.status}
+                                                    ticketId={ticket.id}
+                                                />
                                             </td>
                                              <td className="px-6 py-4">
                                                  <div className="flex flex-col">
