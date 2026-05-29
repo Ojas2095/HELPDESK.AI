@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, ChevronDown, Video, PlayCircle, Filter, Search, LifeBuoy } from 'lucide-react';
+import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, ChevronDown, Video, PlayCircle, Filter, Search, LifeBuoy, Keyboard, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
 
@@ -34,6 +34,7 @@ const Help = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 
     const generateMailto = () => {
         const email = "bonthalamadhavi1@gmail.com";
@@ -320,10 +321,91 @@ ${fullName}`;
                             </div>
                             <div className="h-3 w-3 bg-emerald-500 rounded-full animate-pulse ring-4 ring-emerald-50" />
                         </div>
+
+                        {/* Keyboard Shortcuts Sidebar Entry */}
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
+                            <div>
+                                <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                                    <Keyboard className="w-5 h-5 text-emerald-600" /> Keyboard Shortcuts
+                                </h4>
+                                <p className="text-sm text-gray-500 mt-1">Navigate the system faster using global hotkeys.</p>
+                            </div>
+                            <button
+                                onClick={() => setIsShortcutsOpen(true)}
+                                className="mt-4 w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 transition-colors font-bold text-xs uppercase tracking-wider rounded-xl border border-emerald-100 flex items-center justify-center gap-2 cursor-pointer focus:outline-none"
+                            >
+                                View Shortcuts Legend
+                            </button>
+                        </div>
                     </div>
 
                 </div>
             </main>
+
+            {/* Keyboard Shortcuts Legend Modal */}
+            {isShortcutsOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-2xl max-w-md w-full p-6 relative animate-in zoom-in-95 duration-200">
+                        <button 
+                            onClick={() => setIsShortcutsOpen(false)}
+                            className="absolute top-5 right-5 text-slate-400 hover:text-slate-650 transition-colors cursor-pointer"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                        
+                        <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-2 mb-6">
+                            <Keyboard className="text-emerald-600 w-6 h-6" /> Keyboard Shortcuts
+                        </h3>
+                        
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                                <span className="text-sm font-bold text-slate-700">Go to Dashboard</span>
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-800 shadow-sm font-bold">G</kbd>
+                                    <span className="text-xs text-slate-400 font-black">+</span>
+                                    <kbd className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-800 shadow-sm font-bold">D</kbd>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                                <span className="text-sm font-bold text-slate-700">Go to Tickets</span>
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-800 shadow-sm font-bold">G</kbd>
+                                    <span className="text-xs text-slate-400 font-black">+</span>
+                                    <kbd className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-800 shadow-sm font-bold">T</kbd>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                                <span className="text-sm font-bold text-slate-700">Go to Help Page</span>
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-800 shadow-sm font-bold">G</kbd>
+                                    <span className="text-xs text-slate-400 font-black">+</span>
+                                    <kbd className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-800 shadow-sm font-bold">H</kbd>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between py-2">
+                                <span className="text-sm font-bold text-slate-700">Focus Search Input</span>
+                                <div className="flex items-center gap-1">
+                                    <kbd className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-800 shadow-sm font-bold">Ctrl</kbd>
+                                    <span className="text-xs text-slate-400 font-black">+</span>
+                                    <kbd className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg font-mono text-xs text-slate-800 shadow-sm font-bold">F</kbd>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-6">
+                            <button
+                                onClick={() => setIsShortcutsOpen(false)}
+                                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white transition-colors font-bold text-sm uppercase tracking-wider rounded-xl shadow-lg shadow-slate-900/10 active:scale-[0.98] cursor-pointer"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

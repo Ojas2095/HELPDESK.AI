@@ -13,6 +13,7 @@ import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
 import BackToTop from "./components/shared/BackToTop";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
+import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts";
 
 // Auth Components
 import Login from "./pages/Login";
@@ -140,6 +141,9 @@ function AppLayout() {
 
   // Initialize Global Realtime Notifications Listener
   useRealtimeNotifications();
+
+  // Initialize Keyboard Shortcuts
+  useKeyboardShortcuts();
 
   useEffect(() => {
     if (!user) return;
