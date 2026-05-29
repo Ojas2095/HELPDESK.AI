@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { BrainCircuit, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from "lucide-react";
+import { BrainCircuit, Lock, Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
 
 function ResetPassword() {
     const [password, setPassword] = useState("");
@@ -13,7 +13,6 @@ function ResetPassword() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Supabase handles the recovery token via hash automatically
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session && !window.location.hash.includes('access_token')) {
@@ -56,61 +55,61 @@ function ResetPassword() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center font-sans bg-emerald-900 relative overflow-hidden p-6 py-12">
-            {/* Background Patterns */}
-            <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
-            <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-teal-400 rounded-full blur-[120px] opacity-10 pointer-events-none"></div>
+        <div className="min-h-screen flex items-center justify-center font-inter bg-gradient-to-br from-green-50 via-green-100 to-green-200 dark:from-emerald-950 dark:via-slate-900 dark:to-emerald-950 relative overflow-hidden p-4 sm:p-6 py-12">
+            <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
 
             <div className="w-full max-w-md relative z-10">
                 {/* Logo Header */}
                 <div className="flex justify-center mb-8">
-                    <Link to="/" className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition hover:bg-white/20">
-                        <BrainCircuit className="w-5 h-5 text-emerald-300" />
-                        <span className="font-bold text-lg text-white">HelpDesk.ai</span>
+                    <Link to="/" className="flex items-center gap-2 bg-white/40 dark:bg-emerald-500/10 backdrop-blur-xl px-5 py-2.5 rounded-2xl border border-white/40 dark:border-emerald-500/20 shadow-xl transition hover:scale-105 group">
+                        <BrainCircuit className="w-6 h-6 text-green-600 dark:text-emerald-400 transition-transform group-hover:rotate-12" />
+                        <span className="font-syne font-extrabold text-xl tracking-tight text-slate-900 dark:text-white uppercase italic">HelpDesk<span className="text-green-600 dark:text-emerald-400">.ai</span></span>
                     </Link>
                 </div>
 
-                <div className="bg-white shadow-2xl shadow-emerald-900/50 rounded-3xl p-8 border border-gray-100">
+                <div className="bg-white dark:bg-gray-950 shadow-2xl rounded-[2.5rem] p-8 sm:p-10 border border-green-50 dark:border-emerald-900/30 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-emerald-600 opacity-20"></div>
+
                     <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900">Set New Password</h2>
-                        <p className="text-gray-500 mt-1">Choose a strong, secure password.</p>
+                        <h2 className="font-syne text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase italic">Set New Password</h2>
+                        <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium text-sm">Choose a strong, secure password.</p>
                     </div>
 
                     {message ? (
-                        <div className="text-center py-4">
-                            <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-6">
-                                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                        <div className="text-center py-6 animate-in fade-in zoom-in duration-300">
+                            <div className="w-20 h-20 rounded-3xl bg-green-50 dark:bg-emerald-500/10 border border-green-100 dark:border-emerald-500/20 flex items-center justify-center mx-auto mb-8 shadow-inner">
+                                <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-emerald-400" />
                             </div>
-                            <p className="text-gray-900 font-bold text-lg mb-2">{message}</p>
-                            <p className="text-gray-500 text-sm">Redirecting to login...</p>
+                            <p className="text-slate-900 dark:text-white font-bold text-xl mb-2 italic">{message}</p>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm">Redirecting to login sequence...</p>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-6">
                             {error && (
-                                <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium flex items-start gap-3">
+                                <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 px-5 py-4 rounded-2xl text-sm font-semibold flex items-start gap-3">
                                     <p>{error}</p>
                                 </div>
                             )}
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 ml-1">New Security Sequence</label>
                                     <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                                             <Lock className="w-5 h-5" />
                                         </div>
                                         <input
                                             type={showPassword ? "text" : "password"}
                                             placeholder="Min. 8 characters"
-                                            className="w-full pl-12 pr-12 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium bg-white"
+                                            className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 pl-12 pr-12 py-4 rounded-2xl focus:border-green-500 focus:ring-4 focus:ring-green-500/5 transition-all outline-none text-slate-900 dark:text-white font-bold placeholder:text-slate-400 dark:placeholder:text-slate-600"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
+                                            required
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-400 transition-colors"
                                         >
                                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                         </button>
@@ -118,17 +117,18 @@ function ResetPassword() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
+                                    <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 ml-1">Confirm Identity Key</label>
                                     <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                                             <Lock className="w-5 h-5" />
                                         </div>
                                         <input
                                             type={showPassword ? "text" : "password"}
-                                            placeholder="Repeat password"
-                                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium bg-white"
+                                            placeholder="Repeat sequence"
+                                            className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 pl-12 pr-4 py-4 rounded-2xl focus:border-green-500 focus:ring-4 focus:ring-green-500/5 transition-all outline-none text-slate-900 dark:text-white font-bold placeholder:text-slate-400 dark:placeholder:text-slate-600"
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
                                         />
                                     </div>
                                 </div>
@@ -137,10 +137,20 @@ function ResetPassword() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-emerald-900 text-white rounded-xl py-3.5 font-bold hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] disabled:opacity-70 disabled:grayscale flex items-center justify-center gap-2"
+                                className="w-full bg-gradient-to-r from-green-600 to-green-500 dark:from-emerald-600 dark:to-emerald-500 text-white rounded-2xl py-4 font-bold shadow-lg shadow-green-600/20 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2 transition-all"
                             >
                                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}
                             </button>
+
+                            <div className="text-center pt-6 border-t border-slate-50 dark:border-slate-800 mt-4">
+                                <Link
+                                    to="/login"
+                                    className="inline-flex items-center gap-2 text-slate-400 dark:text-slate-500 hover:text-green-600 dark:hover:text-emerald-400 text-[10px] font-bold uppercase tracking-widest transition-all"
+                                >
+                                    <ArrowLeft className="w-4 h-4" />
+                                    Return to Secure Gate
+                                </Link>
+                            </div>
                         </form>
                     )}
                 </div>
