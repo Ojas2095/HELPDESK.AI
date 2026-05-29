@@ -24,6 +24,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
@@ -231,12 +232,117 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+API_DESCRIPTION = """
+# HELPDESK.AI Backend API
+
+A FastAPI service powering AI-driven IT support ticket triage, classification, and
+auto-resolution.
+
+## Capabilities
+- **AI Analysis** — multi-stage NLP cascade (NER, classification, duplicate detection,
+  RAG knowledge base lookup, optional Gemini vision/summary).
+- **Ticket Lifecycle** — create, fetch, patch, and persist tickets via Supabase.
+- **Diagnostics** — health/readiness probes and admin correction logging for
+  continuous improvement.
+
+## Authentication
+Supabase service-role authentication is performed server-side. Frontend clients
+should call these endpoints over HTTPS from the configured CORS origins.
+
+## Rate Limits
+The `/ai/analyze_ticket` endpoint is capped at **10 requests / minute / IP**.
+"""
+
+TAGS_METADATA = [
+    {
+        "name": "System",
+        "description": "Service health, readiness, and landing page.",
+    },
+    {
+        "name": "AI Analysis",
+        "description": "Core NLP endpoints: classification, troubleshooting, bug analysis, and streaming analysis.",
+    },
+    {
+        "name": "Tickets",
+        "description": "CRUD operations over support tickets (Supabase + in-memory).",
+    },
+    {
+        "name": "Admin",
+        "description": "Internal endpoints for correction logging and model feedback loops.",
+    },
+    {
+        "name": "Docs",
+        "description": "Themed API documentation (Swagger UI and ReDoc).",
+    },
+]
+
 app = FastAPI(
-    title="AI Helpdesk Backend",
-    description="Ticket classification, entity extraction, and duplicate detection",
+    title="HELPDESK.AI Backend",
+    description=API_DESCRIPTION,
     version="1.0.0",
     lifespan=lifespan,
+    openapi_tags=TAGS_METADATA,
+    contact={
+        "name": "HELPDESK.AI Project",
+        "url": "https://github.com/ritesh-1918/HELPDESK.AI",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://github.com/ritesh-1918/HELPDESK.AI/blob/main/LICENSE",
+    },
+    docs_url=None,
+    redoc_url=None,
+    swagger_ui_parameters={
+        "docExpansion": "none",
+        "defaultModelsExpandDepth": -1,
+        "displayRequestDuration": True,
+        "filter": True,
+        "tryItOutEnabled": True,
+        "syntaxHighlight.theme": "monokai",
+    },
 )
+
+# Corporate-clean Swagger theme overrides (HELPDESK.AI palette: emerald + slate).
+SWAGGER_CUSTOM_CSS = """
+:root {
+  --hd-bg: #0f172a;
+  --hd-panel: #1e293b;
+  --hd-border: #334155;
+  --hd-text: #f8fafc;
+  --hd-muted: #94a3b8;
+  --hd-accent: #10b981;
+  --hd-accent-2: #3b82f6;
+}
+body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+.swagger-ui, .swagger-ui .info .title, .swagger-ui .opblock-tag, .swagger-ui .opblock .opblock-summary-operation-id,
+.swagger-ui .opblock .opblock-summary-path, .swagger-ui .opblock .opblock-summary-description,
+.swagger-ui table thead tr th, .swagger-ui .parameter__name, .swagger-ui .parameter__type,
+.swagger-ui .response-col_status, .swagger-ui .model-title, .swagger-ui .markdown p,
+.swagger-ui .info p, .swagger-ui label, .swagger-ui .tab li, .swagger-ui section.models h4 { color: var(--hd-text); }
+.swagger-ui .topbar { background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom: 1px solid var(--hd-border); padding: 12px 24px; }
+.swagger-ui .topbar .download-url-wrapper { display: none; }
+.swagger-ui .info { margin: 32px 0; }
+.swagger-ui .info .title { font-weight: 700; letter-spacing: -0.02em; }
+.swagger-ui .info .title small.version-stamp { background: var(--hd-accent); color: #052e1c; }
+.swagger-ui .scheme-container { background: var(--hd-panel); border: 1px solid var(--hd-border); box-shadow: none; padding: 16px 20px; }
+.swagger-ui .opblock-tag { border-bottom: 1px solid var(--hd-border); font-weight: 600; }
+.swagger-ui .opblock { background: var(--hd-panel); border: 1px solid var(--hd-border); border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); margin: 0 0 16px; }
+.swagger-ui .opblock .opblock-summary { border-bottom: 1px solid var(--hd-border); }
+.swagger-ui .opblock.opblock-get .opblock-summary-method { background: var(--hd-accent-2); }
+.swagger-ui .opblock.opblock-post .opblock-summary-method { background: var(--hd-accent); }
+.swagger-ui .opblock.opblock-patch .opblock-summary-method { background: #f59e0b; }
+.swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #ef4444; }
+.swagger-ui .btn { border-radius: 8px; border-color: var(--hd-border); color: var(--hd-text); }
+.swagger-ui .btn.execute { background: var(--hd-accent); border-color: var(--hd-accent); color: #052e1c; }
+.swagger-ui .btn.execute:hover { background: #0ea271; }
+.swagger-ui .btn.authorize { background: var(--hd-accent-2); border-color: var(--hd-accent-2); color: #ffffff; }
+.swagger-ui input[type=text], .swagger-ui textarea, .swagger-ui select { background: #0b1220; color: var(--hd-text); border: 1px solid var(--hd-border); }
+.swagger-ui .markdown code, .swagger-ui .renderedMarkdown code { background: #0b1220; color: #5eead4; padding: 2px 6px; border-radius: 4px; }
+.swagger-ui section.models { background: var(--hd-panel); border: 1px solid var(--hd-border); border-radius: 10px; }
+.swagger-ui .model-box { background: #0b1220; }
+.swagger-ui .responses-inner h4, .swagger-ui .responses-inner h5 { color: var(--hd-muted); }
+.swagger-ui .response-col_description__inner div.markdown, .swagger-ui .response-col_description__inner div.renderedMarkdown { background: #0b1220; color: var(--hd-text); }
+"""
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 limiter = Limiter(key_func=get_remote_address)
@@ -258,9 +364,39 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
+# Themed API documentation (Swagger UI + ReDoc)
+# ---------------------------------------------------------------------------
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    """Serve a corporate-themed Swagger UI for HELPDESK.AI."""
+    base = get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=f"{app.title} — Interactive API Docs",
+        swagger_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
+        swagger_ui_parameters=app.swagger_ui_parameters,
+    )
+    themed_html = base.body.decode("utf-8").replace(
+        "</head>",
+        f"<style>{SWAGGER_CUSTOM_CSS}</style></head>",
+        1,
+    )
+    return HTMLResponse(content=themed_html)
+
+
+@app.get("/redoc", include_in_schema=False)
+async def custom_redoc_html():
+    """Serve a clean ReDoc view backed by the same OpenAPI schema."""
+    return get_redoc_html(
+        openapi_url=app.openapi_url,
+        title=f"{app.title} — Reference",
+        redoc_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
+    )
+
+
+# ---------------------------------------------------------------------------
 # Root & Health check
 # ---------------------------------------------------------------------------
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, tags=["System"], summary="API landing page")
 async def root():
     return """
     <!DOCTYPE html>
@@ -342,8 +478,9 @@ async def root():
     """
 
 
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health", response_model=HealthResponse, tags=["System"], summary="Liveness probe")
 async def health_check():
+    """Return a lightweight status payload showing whether core models are loaded."""
     return HealthResponse(
         status="ok",
         classifier_loaded=classifier_service._loaded,
@@ -351,8 +488,11 @@ async def health_check():
     )
 
 
-@app.get("/ready", response_model=ReadinessResponse)
+@app.get("/ready", response_model=ReadinessResponse, tags=["System"], summary="Readiness probe")
 async def readiness_check():
+    """Return ``ready`` only when all required subsystems (classifier, NER,
+    duplicate index, RAG, and optionally Supabase) report healthy. Returns
+    HTTP 503 otherwise — suitable for Kubernetes / load-balancer probes."""
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
     checks = {
         "api": True,
@@ -383,9 +523,12 @@ class TroubleshootResponse(BaseModel):
     options: list[str]
     is_final: bool
 
-@app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
+@app.post("/ai/troubleshoot", response_model=TroubleshootResponse, tags=["AI Analysis"], summary="Interactive troubleshooting")
 async def troubleshoot(request: TroubleshootRequest):
-    """Get dynamic troubleshooting steps from Gemini."""
+    """Get the next dynamic troubleshooting step from Gemini given the user's
+    ticket text, predicted category, and the conversation history so far.
+    Returns the next ``step_text``, suggested ``options``, and an ``is_final``
+    flag signalling when the wizard should end."""
     if not gemini_service or not gemini_service._initialized:
         return TroubleshootResponse(
             step_text="AI Troubleshooting is currently unavailable.",
@@ -410,9 +553,11 @@ class BugReportAnalysisRequest(BaseModel):
 class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
-@app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
+@app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse, tags=["AI Analysis"], summary="Bug report root-cause analysis")
 async def analyze_bug(request: BugReportAnalysisRequest):
-    """Analyze a bug report using Gemini to generate a Probable Cause."""
+    """Analyze a structured bug report (title, description, repro steps, and any
+    captured console errors) using Gemini and return a short ``probable_cause``
+    explanation that frontends can show to the reporter."""
     if not gemini_service or not gemini_service._initialized:
         return BugReportAnalysisResponse(
             probable_cause="AI Diagnostics are currently unavailable."
@@ -432,9 +577,11 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 # ---------------------------------------------------------------------------
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
-@app.post("/ai/log_correction")
+@app.post("/ai/log_correction", tags=["Admin"], summary="Log admin correction for model retraining")
 async def log_correction(raw_request: Request):
-    """Log an admin correction when the AI prediction differs from the human decision."""
+    """Persist an admin override when the human-confirmed classification differs
+    from the AI prediction. Only changed fields are recorded. Used to build the
+    correction dataset that feeds the next training run."""
     try:
         body = await raw_request.json()
     except Exception as e:
@@ -493,9 +640,10 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
-@app.get("/tickets")
+@app.get("/tickets", tags=["Tickets"], summary="List tickets")
 async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+    """Fetch persistent tickets from Supabase, ordered by creation time
+    (newest first). Optionally filter by ``company_id`` for tenant scoping."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
@@ -506,7 +654,7 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
-@app.post("/tickets/save")
+@app.post("/tickets/save", tags=["Tickets"], summary="Persist analyzed ticket to Supabase")
 async def save_ticket(request_body: TicketSaveRequest):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
@@ -609,9 +757,9 @@ async def save_ticket(request_body: TicketSaveRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/tickets/{ticket_id}")
+@app.get("/tickets/{ticket_id}", tags=["Tickets"], summary="Fetch a single ticket")
 async def get_ticket_by_id(ticket_id: str):
-    """Fetch single persistent ticket."""
+    """Fetch one persistent ticket by its UUID. Returns 404 when not found."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
@@ -621,9 +769,11 @@ async def get_ticket_by_id(ticket_id: str):
     return res.data
 
 
-@app.post("/tickets", response_model=TicketRecord)
+@app.post("/tickets", response_model=TicketRecord, tags=["Tickets"], summary="Create an in-memory ticket")
 async def create_ticket(ticket: TicketRecord):
-    """Save a new ticket into the system."""
+    """Insert a new ticket into the in-memory store (legacy path used by tests
+    and local development). If a ticket with the same ``ticket_id`` already
+    exists, the existing record is returned unchanged."""
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
     if existing:
@@ -634,9 +784,11 @@ async def create_ticket(ticket: TicketRecord):
     return ticket
 
 
-@app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
+@app.patch("/tickets/{ticket_id}", response_model=TicketRecord, tags=["Tickets"], summary="Patch ticket fields")
 async def update_ticket(ticket_id: str, updates: dict):
-    """Partially update a ticket's fields (e.g., status, viewed_at)."""
+    """Partially update a ticket's fields — e.g. ``status``,
+    ``last_user_viewed_at``, ``assigned_team``. Unknown keys are merged into
+    the stored record verbatim. Returns 404 when the ticket is unknown."""
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
             # Convert to dict, update, then back to model
@@ -652,12 +804,13 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
-@app.post("/ai/analyze_ticket", response_model=TicketResponse)
+@app.post("/ai/analyze_ticket", response_model=TicketResponse, tags=["AI Analysis"], summary="Full AI ticket analysis (rate-limited)")
 @limiter.limit("10/minute")
 async def analyze_ticket(request_body: TicketRequest, request: Request):
-    """
-    Main endpoint for analyzing a new ticket using the cascade of local AI models.
-    """
+    """Main entry point for end-to-end ticket triage. Runs OCR (when an image
+    is attached), classification, NER, duplicate check, and RAG lookup, then
+    returns the consolidated ``TicketResponse``. Throttled to 10 requests per
+    minute per IP."""
     text = request_body.text
     
     # Grab client metadata
@@ -683,7 +836,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     # Initalize Timeline
     return await analyze_only(request_body)
 
-@app.post("/ai/analyze")
+@app.post("/ai/analyze", tags=["AI Analysis"], summary="Read-only AI analysis (no persistence)")
 async def analyze_only(request_body: TicketRequest):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
@@ -831,7 +984,7 @@ async def analyze_only(request_body: TicketRequest):
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
 
-@app.post("/ai/analyze_stream")
+@app.post("/ai/analyze_stream", tags=["AI Analysis"], summary="Server-sent events: live analysis progress")
 async def analyze_stream(request_body: TicketRequest):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
@@ -976,16 +1129,17 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket")
+@app.post("/ai/analyze_ticket", tags=["AI Analysis"], summary="Backwards-compatible analyze alias", include_in_schema=False)
 async def legacy_analyze_and_save(request_body: TicketRequest):
-    """
-    BACKWARD COMPATIBILITY: Strictly performs analysis only. 
-    Does NOT persist to DB to avoid foreign key violations.
-    """
+    """Legacy alias kept for older clients. Delegates to ``/ai/analyze`` and
+    intentionally does not persist anything to the database."""
     return await analyze_only(request_body)
 
-@app.post("/ai/analyze-v2")
+@app.post("/ai/analyze-v2", tags=["AI Analysis"], summary="Classifier V2 shadow endpoint")
 async def analyze_ticket_v2(request: TicketRequest):
+    """Run only the V2 classifier (category / subcategory / priority /
+    auto-resolve / assigned team) and return a flat prediction payload. Used
+    for shadow evaluation against the V3 main pipeline."""
     text = request.text
     try:
         prediction = classifier_v2.predict(text)
