@@ -7,12 +7,16 @@ import useTicketStore from './ticketStore';
 const BACKEND_URL = API_CONFIG.BACKEND_URL;
 
 const verifyServerCookieSession = async () => {
-    try {
+   try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
         const res = await fetch(`${BACKEND_URL}/auth/me`, {
             method: 'GET',
             credentials: 'include',
             headers: { Accept: 'application/json' },
+            signal: controller.signal,
         });
+        clearTimeout(timeout);
         if (!res.ok) return null;
         const body = await res.json();
         return body?.user || null;
@@ -24,12 +28,16 @@ const verifyServerCookieSession = async () => {
 
 const mirrorBackendAuth = async (path, payload) => {
     try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
         await fetch(`${BACKEND_URL}${path}`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
+            signal: controller.signal,
         });
+        clearTimeout(timeout);
     } catch (e) {
         console.warn(`Backend auth ${path} failed:`, e?.message || e);
     }
@@ -184,6 +192,26 @@ const useAuthStore = create(
                     throw error;
                 } finally {
                     set({ loading: false });
+                }
+            },
+
+            loginWithGoogle: async () => {
+                const { error } =
+                    await supabase.auth.signInWithOAuth({
+                        provider: 'google',
+                        options: {
+                            redirectTo:
+                                `${window.location.origin}/auth/callback`
+                        }
+                    });
+
+                if (error) {
+                    console.error(
+                        "Google OAuth error:",
+                        error.message
+                    );
+
+                    throw error;
                 }
             },
 
@@ -349,13 +377,19 @@ const useAuthStore = create(
 
                 supabase.auth.onAuthStateChange(async (event, session) => {
                     console.log("Auth state change:", event);
-                    if (session?.user) {
-                        set({ user: session.user, loading: true, isCheckingSession: true });
-                        await get().getProfile(session.user);
-                    } else {
+                    try {
+                        if (session?.user) {
+                            set({ user: session.user, loading: true, isCheckingSession: true });
+                            await get().getProfile(session.user);
+                        } else {
+                            set({ user: null, profile: null });
+                        }
+                    } catch (e) {
+                        console.warn("Auth state change error:", e?.message || e);
                         set({ user: null, profile: null });
+                    } finally {
+                        set({ loading: false, isCheckingSession: false });
                     }
-                    set({ loading: false, isCheckingSession: false });
                 });
             }
         }),
@@ -370,3 +404,4 @@ const useAuthStore = create(
 );
 
 export default useAuthStore;
+
