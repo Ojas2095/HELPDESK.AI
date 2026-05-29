@@ -233,6 +233,7 @@ function App() {
         <ScrollToTop />
         <Toaster />
         <BugReportWidget />
+        <BackToTop />
         <Routes>
           <Route path="/" element={<DocsPortal />} />
           <Route path="/docs" element={<Navigate to="/" replace />} />
