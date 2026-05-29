@@ -292,7 +292,7 @@ const AIProcessing = () => {
 
                 // Graceful fallback for any error (e.g. backend 503 offline, streaming failed, or network protocol errors)
                 if (
-                    true // Always fallback gracefully to keep the ticket creation flow 100% operational!
+                    error !== undefined // Always fallback gracefully to keep the ticket creation flow 100% operational!
                 ) {
 
 
