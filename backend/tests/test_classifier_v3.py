@@ -1,12 +1,15 @@
 import pytest
 import sys
+import os
 from unittest.mock import patch, MagicMock
 
 sys.modules['torch'] = MagicMock()
 sys.modules['torch.nn'] = MagicMock()
 sys.modules['transformers'] = MagicMock()
 
-from backend.services.classifier_v3 import ClassifierServiceV3
+# Ensure we import the real service, bypassing the conftest stub
+sys.path.insert(0, os.path.join(os.getcwd(), 'backend'))
+from services.classifier_v3 import ClassifierServiceV3
 
 
 class TestClassifierV3EdgeCases:
