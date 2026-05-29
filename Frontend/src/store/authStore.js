@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { safePersist } from './middleware/safePersist';
 import { supabase } from '../lib/supabaseClient';
 import useTicketStore from './ticketStore';
 
 const useAuthStore = create(
-    persist(
+    safePersist(
         (set, get) => ({
             // --- AUTH STATE ---
             user: null,

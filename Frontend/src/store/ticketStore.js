@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { safePersist } from './middleware/safePersist';
 
 const useTicketStore = create(
-    persist(
+    safePersist(
         (set) => ({
             aiTicket: null,
             activeTicket: null,
