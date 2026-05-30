@@ -1,9 +1,9 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
  
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-    Menu, X, Check, Activity,
+    Menu, X, Check, Activity, Moon, Sun,
     MapPin, AlertCircle, Folder, Zap, Bot, ArrowRight,
     Clock, CheckCircle,
     Star, Twitter, Linkedin, Github, Globe, MessageSquare,
@@ -13,6 +13,12 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import TeamSection from '../components/landing/TeamSection';
+
+const CTA_TRANSITION = 'transition-all duration-200 ease-out transform-gpu will-change-transform';
+const CTA_SCALE = 'hover:scale-105 active:scale-[0.98]';
+const CTA_PRIMARY_GLOW = 'shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/35';
+const CTA_ICON_SHIFT = 'transition-transform duration-200 group-hover:translate-x-1';
+const CTA_PLAY_SHIFT = 'transition-transform duration-200 group-hover:translate-x-0.5';
 
 // ---- Count-up animation component ----
 function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false }) {
@@ -47,8 +53,8 @@ function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false 
     }, [triggered, target, isWord]);
 
     return (
-        <div ref={ref} className="p-4">
-            <div className="text-4xl font-extrabold mb-1 text-white tabular-nums">
+        <div ref={ref} className="p-3 sm:p-4">
+            <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-1 text-white tabular-nums">
                 {prefix}{display}{suffix}
             </div>
             <div className="text-sm text-white font-medium tracking-wide opacity-75">{label}</div>
@@ -124,9 +130,9 @@ function DemoModal({ onClose }) {
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
                             onClick={() => { onClose(); window.location.href = '/admin-signup'; }}
-                            className="flex-1 md:px-8 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black italic uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                            className={`group flex-1 md:px-8 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black italic uppercase tracking-wider ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW} flex items-center justify-center gap-2`}
                         >
-                            Start Free <ArrowRight className="w-4 h-4 ml-1" />
+                            Start Free <ArrowRight className={`w-4 h-4 ml-1 ${CTA_ICON_SHIFT}`} />
                         </button>
                     </div>
                 </div>
@@ -145,7 +151,7 @@ export default function LandingPage() {
     const [activeStep, setActiveStep] = useState(0);
     const [isRedirecting, setIsRedirecting] = useState(false);
 
-    const steps = [
+    const steps = useMemo(() => [
         {
             num: '01',
             title: 'Messy User Input',
@@ -208,7 +214,7 @@ export default function LandingPage() {
                 </div>
             )
         }
-    ];
+    ], []);
 
     useEffect(() => {
         if (!loading && user && profile) {
@@ -225,7 +231,7 @@ export default function LandingPage() {
             period: '/mo',
             desc: 'Perfect for small teams exploring AI helpdesk.',
             cta: 'Get Started Free',
-            ctaStyle: 'border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800',
+            ctaStyle: `border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800 group ${CTA_TRANSITION} ${CTA_SCALE}`,
             features: ['Up to 50 tickets/mo', 'Basic AI Categorization', 'Email Support', '1 Team Member', 'Public API Access'],
             popular: false,
         },
@@ -235,7 +241,7 @@ export default function LandingPage() {
             period: '/mo',
             desc: 'For growing IT teams needing full automation.',
             cta: 'Start Free Trial',
-            ctaStyle: 'bg-emerald-900 text-white hover:bg-emerald-800 shadow-lg shadow-emerald-900/20',
+            ctaStyle: `bg-emerald-900 text-white hover:bg-emerald-800 group ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW}`,
             features: ['Up to 500 tickets/mo', 'Advanced AI Parsing', 'Priority Detection Engine', 'Duplicate Detection', '5 Team Members', 'Priority Email Support'],
             popular: true,
         },
@@ -245,7 +251,7 @@ export default function LandingPage() {
             period: '',
             desc: 'For large organizations with complex IT landscapes.',
             cta: 'Contact Sales',
-            ctaStyle: 'border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800',
+            ctaStyle: `border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800 group ${CTA_TRANSITION} ${CTA_SCALE}`,
             features: ['Unlimited tickets', 'Custom AI Fine-Tuning', 'SSO & Audit Logs', 'Dedicated SLA Manager', 'Unlimited Members', 'VAPT & Compliance Reports'],
             popular: false,
         },
@@ -273,79 +279,163 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-800">
+        <div className="min-h-screen bg-white dark:bg-gray-900 font-sans text-slate-800 dark:text-white">
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
-            <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        {/* Logo */}
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-                            <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
-                            <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
-                        </div>
+<nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="flex items-center justify-between h-20">
 
-                        {/* Desktop Links */}
-                        <div className="hidden md:flex items-center gap-8">
-                            <a href="#features" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">Features</a>
-                            <a href="#how-it-works" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">How It Works</a>
-                            <a href="#pricing" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">Pricing</a>
-                        </div>
+      {/* Logo */}
+      <div
+        className="flex items-center gap-3 cursor-pointer"
+        onClick={() => navigate('/')}
+      >
+        <img src="/favicon.png" alt="logo" className="w-10 h-10" />
+        <span className="font-black italic text-emerald-900 text-2xl">
+          HELPDESK.AI
+        </span>
+      </div>
 
-                        {/* CTA Buttons */}
-                        <div className="hidden md:flex items-center gap-3">
-                            <button
-                                onClick={() => navigate('/login')}
-                                className="text-sm font-semibold text-gray-700 hover:text-emerald-800 transition-colors px-4 py-2 rounded-lg hover:bg-gray-50"
-                            >
-                                Sign In
-                            </button>
-                            <button
-                                onClick={() => setShowDemo(true)}
-                                className="text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 transition-all flex items-center gap-1.5"
-                            >
-                                <Play className="w-3.5 h-3.5 fill-emerald-700" /> Watch Demo
-                            </button>
-                            <button
-                                onClick={() => navigate('/admin-signup')}
-                                className="bg-emerald-900 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-emerald-900/20"
-                            >
-                                Get Started Free
-                            </button>
-                        </div>
+      {/* Desktop Nav */}
+      <div className="hidden lg:flex items-center gap-10">
 
-                        {/* Mobile Menu Button */}
-                        <div className="md:hidden">
-                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-emerald-800 p-2">
-                                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        <button
+          className="p-2 rounded-lg hover:bg-gray-100 transition"
+        >
+          <Moon className="w-6 h-6 text-gray-600" />
+        </button>
 
-                {/* Mobile Menu */}
-                {isMenuOpen && (
-                    <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-xl z-50">
-                        <div className="px-5 pt-3 pb-6 space-y-4">
-                            <a href="#features" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Features</a>
-                            <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">How It Works</a>
-                            <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Pricing</a>
-                            <div className="pt-4 flex flex-col gap-3 border-t border-gray-100">
-                                <button onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} className="w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2">
-                                    <Play className="w-4 h-4 fill-emerald-700" /> Watch Demo
-                                </button>
-                                <button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg">
-                                    Sign In
-                                </button>
-                                <button onClick={() => navigate('/admin-signup')} className="w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow">
-                                    Get Started Free
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </nav>
+        <a
+          href="#features"
+          className="font-semibold text-gray-600 hover:text-emerald-700 transition"
+        >
+          Features
+        </a>
+
+        <a
+          href="#how-it-works"
+          className="font-semibold text-gray-600 hover:text-emerald-700 transition"
+        >
+          How It Works
+        </a>
+
+        <a
+          href="#pricing"
+          className="font-semibold text-gray-600 hover:text-emerald-700 transition"
+        >
+          Pricing
+        </a>
+      </div>
+
+      {/* Desktop Actions */}
+      <div className="hidden lg:flex items-center gap-4">
+
+        <button
+          onClick={() => navigate('/login')}
+          className="font-semibold text-gray-700 hover:text-emerald-700"
+        >
+          Sign In
+        </button>
+
+        <button
+          onClick={() => setShowDemo(true)}
+          className="flex items-center gap-2 px-6 py-3 border border-emerald-200 rounded-xl text-emerald-700 font-semibold hover:bg-emerald-50 transition"
+        >
+          <Play size={16} fill="currentColor" />
+          Watch Demo
+        </button>
+
+        <button
+          onClick={() => navigate('/admin-signup')}
+          className="px-6 py-3 bg-emerald-900 hover:bg-emerald-800 text-white rounded-xl font-bold shadow-lg"
+        >
+          Get Started Free
+        </button>
+
+      </div>
+
+      {/* Mobile Buttons */}
+      <div className="flex lg:hidden items-center gap-2">
+
+        <button className="p-2">
+          <Moon className="w-5 h-5 text-gray-600" />
+        </button>
+
+        <button
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="p-2 border border-gray-200 rounded-lg"
+        >
+          {isMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+
+  {/* Mobile Menu */}
+  {isMenuOpen && (
+    <div className="lg:hidden absolute top-full left-0 w-full border-t border-gray-100 bg-white shadow-xl dark:bg-gray-900 dark:border-gray-800">
+      <div className="flex flex-col px-4 py-5 gap-4">
+
+        <a
+          href="#features"
+          onClick={() => setIsMenuOpen(false)}
+          className="font-medium text-gray-700"
+        >
+          Features
+        </a>
+
+        <a
+          href="#how-it-works"
+          onClick={() => setIsMenuOpen(false)}
+          className="font-medium text-gray-700"
+        >
+          How It Works
+        </a>
+
+        <a
+          href="#pricing"
+          onClick={() => setIsMenuOpen(false)}
+          className="font-medium text-gray-700"
+        >
+          Pricing
+        </a>
+
+        <hr />
+
+        <button
+          onClick={() => navigate('/login')}
+          className="text-left font-medium"
+        >
+          Sign In
+        </button>
+
+        <button
+          onClick={() => setShowDemo(true)}
+          className="flex items-center gap-2 font-medium"
+        >
+          <Play size={16} />
+          Watch Demo
+        </button>
+
+        <button
+          onClick={() => navigate('/admin-signup')}
+          className="bg-emerald-900 text-white py-3 rounded-xl font-semibold"
+        >
+          Get Started Free
+        </button>
+
+      </div>
+    </div>
+  )}
+</nav>
 
             {/* ==================== HERO ==================== */}
             <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden">
@@ -369,15 +459,15 @@ export default function LandingPage() {
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
                         <button
                             onClick={() => navigate('/admin-signup')}
-                            className="w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/25 hover:bg-emerald-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base"
+                            className={`group w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold ${CTA_PRIMARY_GLOW} hover:bg-emerald-800 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2 text-base`}
                         >
-                            Get Started Free <ArrowRight className="w-5 h-5" />
+                            Get Started Free <ArrowRight className={`w-5 h-5 ${CTA_ICON_SHIFT}`} />
                         </button>
                         <button
                             onClick={() => setShowDemo(true)}
-                            className="w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 text-base"
+                            className={`group w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2 text-base`}
                         >
-                            <Play className="w-4 h-4 fill-gray-500" /> Watch a Demo
+                            <Play className={`w-4 h-4 fill-gray-500 ${CTA_PLAY_SHIFT}`} /> Watch a Demo
                         </button>
                     </div>
 
@@ -414,7 +504,7 @@ export default function LandingPage() {
                                         <div className="mb-4">
                                             <h3 className="text-sm font-bold text-gray-800 mb-1">Subject: Wifi down again in Lab 3??</h3>
                                             <p className="text-sm text-gray-600 leading-relaxed">
-                                                Hey support, the wifi in <span className="bg-yellow-100 px-1 rounded">downstairs lab 3</span> is acting up again.
+                                                Hey support, the wifi in <span className="bg-yellow-200 dark:bg-yellow-500/30 dark:text-yellow-200 text-yellow-900 px-1 rounded font-medium">downstairs lab 3</span> is acting up again.
                                                 Can't connect at all. Class starts in 20 mins, need this fixed ASAP!<br /><br />
                                                 Thanks,<br />Sarah
                                             </p>
@@ -497,9 +587,9 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== STATS BAR ==================== */}
-            <section className="bg-emerald-900 py-12 text-white">
+            <section className="bg-emerald-900 py-8 sm:py-12 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10">
                         <AnimatedStat prefix="+" target="80" suffix="%" label="Faster Ticket Triage" />
                         <AnimatedStat target="99" suffix="%" label="Classification Accuracy" />
                         <AnimatedStat target="Zero" label="Manual Routing Needed" isWord={true} />
@@ -509,18 +599,18 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== FEATURES GRID ==================== */}
-            <section className="py-24 bg-white" id="features">
+            <section className="py-16 sm:py-20 md:py-24 bg-white" id="features">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <span className="text-xs font-bold tracking-widest text-emerald-700 uppercase mb-3 block">Core Intelligence</span>
-                        <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight">Work Smarter, Not Harder</h2>
+                        <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight">Work Smarter, Not Harder</h2>
                         <p className="text-gray-500 mt-4 text-lg max-w-xl mx-auto">Three AI capabilities that eliminate manual helpdesk work.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                         {/* Card 1: Auto-Categorization */}
                         <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
-                            <div className="h-52 bg-gradient-to-br from-blue-50 to-gray-50 p-6 flex items-center justify-center relative overflow-hidden">
+                            <div className="h-40 sm:h-44 md:h-52 bg-gradient-to-br from-blue-50 to-gray-50 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
                                 <div className="relative z-10 flex flex-col gap-3 items-center">
                                     <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-xs font-bold text-gray-400 flex items-center gap-2 transform -translate-x-4 opacity-60">
                                         <div className="w-2 h-2 rounded-full bg-gray-300" /> Ticket #1024
@@ -539,7 +629,7 @@ export default function LandingPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-8">
+                            <div className="p-5 sm:p-6 md:p-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-3">Auto-Categorization</h3>
                                 <p className="text-gray-500 leading-relaxed mb-6">
                                     Instantly detects if an issue is Network, Hardware, Software, or Access-related — no manual tagging.
@@ -555,7 +645,7 @@ export default function LandingPage() {
 
                         {/* Card 2: Priority Detection */}
                         <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
-                            <div className="h-52 bg-gradient-to-br from-red-50 to-orange-50 p-6 flex items-center justify-center relative overflow-hidden">
+                            <div className="h-40 sm:h-44 md:h-52 bg-gradient-to-br from-red-50 to-orange-50 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
                                 <div className="relative z-10 w-full max-w-[200px] space-y-2.5">
                                     <div className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between opacity-50 scale-95">
                                         <div className="flex items-center gap-2">
@@ -580,7 +670,7 @@ export default function LandingPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-8">
+                            <div className="p-5 sm:p-6 md:p-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-3">Priority Detection</h3>
                                 <p className="text-gray-500 leading-relaxed mb-6">
                                     Understands urgency signals in text and automatically flags issues from Low to Critical.
@@ -596,7 +686,7 @@ export default function LandingPage() {
 
                         {/* Card 3: Smart Resolution */}
                         <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
-                            <div className="h-52 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 flex items-center justify-center relative overflow-hidden">
+                            <div className="h-40 sm:h-44 md:h-52 bg-gradient-to-br from-emerald-50 to-teal-50 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
                                 <div className="relative z-10 w-full max-w-[200px] flex flex-col gap-3">
                                     <div className="self-end bg-emerald-600 text-white p-2.5 rounded-2xl rounded-tr-none shadow-sm text-[10px] max-w-[80%]">
                                         Reset password for user@company.com?
@@ -615,7 +705,7 @@ export default function LandingPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-8">
+                            <div className="p-5 sm:p-6 md:p-8">
                                 <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Resolution</h3>
                                 <p className="text-gray-500 leading-relaxed mb-6">
                                     Checks historical data to auto-fix simple issues, or routes complex ones to the right human team.
@@ -633,7 +723,7 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== HOW IT WORKS ==================== */}
-            <section className="bg-emerald-950 py-16 md:py-32 text-white relative overflow-hidden" id="how-it-works">
+            <section className="bg-emerald-950 py-14 sm:py-20 md:py-32 text-white relative overflow-hidden" id="how-it-works">
                 {/* Background Decorations */}
                 <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
@@ -645,7 +735,7 @@ export default function LandingPage() {
                             <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest border border-emerald-500/20 mb-4 md:mb-6">
                                 The Journey
                             </div>
-                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white tracking-tight leading-[0.9] mb-8 md:mb-12 italic uppercase">
+                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[0.95] mb-8 md:mb-12">
                                 From Chaos <br />
                                 to <span className="text-emerald-500">Clarity.</span>
                             </h2>
@@ -656,28 +746,25 @@ export default function LandingPage() {
                                         key={idx}
                                         onMouseEnter={() => setActiveStep(idx)}
                                         onClick={() => setActiveStep(idx)}
-                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-500 border ${activeStep === idx
+                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-300 border ${activeStep === idx
                                             ? 'bg-white/10 border-white/20 shadow-2xl shadow-black/20'
                                             : 'bg-transparent border-transparent hover:bg-white/5 opacity-40 hover:opacity-100'
                                             }`}
                                     >
                                         <div className="flex items-start gap-4 md:gap-6">
-                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-lg md:text-xl italic transition-all duration-500 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 scale-110' : 'bg-white/10 text-white/40'}`}>
+                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-bold text-lg md:text-xl transition-all duration-300 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white/10 text-white/40'}`}>
                                                 {step.num}
                                             </div>
                                             <div>
-                                                <h3 className={`text-xl font-black italic uppercase transition-colors duration-500 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
+                                                <h3 className={`text-xl font-semibold tracking-tight transition-colors duration-300 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
                                                     {step.title}
                                                 </h3>
-                                                {activeStep === idx && (
-                                                    <motion.p
-                                                        initial={{ opacity: 0, height: 0 }}
-                                                        animate={{ opacity: 1, height: 'auto' }}
-                                                        className="text-white/60 text-sm mt-3 leading-relaxed max-w-sm"
-                                                    >
-                                                        {step.desc}
-                                                    </motion.p>
-                                                )}
+                                                <p
+                                                    aria-hidden={activeStep !== idx}
+                                                    className={`text-white/60 text-sm mt-3 leading-relaxed max-w-sm overflow-hidden transition-all duration-300 ${activeStep === idx ? 'opacity-100 max-h-24' : 'opacity-0 max-h-0'}`}
+                                                >
+                                                    {step.desc}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -686,16 +773,16 @@ export default function LandingPage() {
                         </div>
 
                         {/* Right: Visual Display */}
-                        <div className="w-full md:w-1/2 h-[350px] md:h-[500px] relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-6 md:p-12 flex items-center justify-center">
-                                <AnimatePresence mode="wait">
+                        <div className="w-full md:w-1/2 h-[300px] sm:h-[350px] md:h-[500px] relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-2xl sm:rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-4 sm:p-6 md:p-12 flex items-center justify-center">
+                                <AnimatePresence mode="sync">
                                     <motion.div
                                         key={activeStep}
-                                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                        initial={{ opacity: 0, scale: 0.98, y: 10 }}
                                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 1.1, y: -20 }}
-                                        transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-                                        className="w-full h-full flex flex-col items-center justify-center"
+                                        exit={{ opacity: 0, scale: 1.01, y: -8 }}
+                                        transition={{ duration: 0.28, ease: 'easeOut' }}
+                                        className="w-full h-full flex flex-col items-center justify-center will-change-transform"
                                     >
                                         <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 text-white/50 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
                                             <div className={`w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse`} />
@@ -717,10 +804,10 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== PRICING ==================== */}
-            <section className="py-24 bg-gray-50" id="pricing">
+            <section className="py-16 sm:py-20 md:py-24 bg-gray-50" id="pricing">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
                         <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹) · GST applicable</p>
 
                         {/* Billing Toggle */}
@@ -740,11 +827,11 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
                         {pricingPlans.map(({ name, price, priceLabel, period, desc, cta, ctaStyle, features, popular }) => (
                             <div
                                 key={name}
-                                className={`p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
+                                className={`p-5 sm:p-6 md:p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 md:scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
                             >
                                 {popular && (
                                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg">
@@ -753,13 +840,13 @@ export default function LandingPage() {
                                 )}
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">{name}</h3>
                                 <div className="text-4xl font-extrabold text-gray-900 mb-2">
-                                    {priceLabel ? priceLabel : <>₹{price.toLocaleString('en-IN')}<span className="text-base font-normal text-gray-500">{period}</span></>}
+                                    {priceLabel ? priceLabel : <><span className="text-3xl sm:text-4xl">₹{price.toLocaleString('en-IN')}</span><span className="text-base font-normal text-gray-500">{period}</span></>}
                                 </div>
                                 <p className="text-sm text-gray-500 mb-6">{desc}</p>
                                 <button
                                     onClick={() => handlePricingClick(name)}
                                     disabled={isRedirecting && name === 'Growth'}
-                                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all mb-8 text-sm ${ctaStyle} ${isRedirecting && name === 'Growth' ? 'opacity-80 cursor-not-allowed' : ''}`}
+                                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold mb-8 text-sm ${ctaStyle} ${isRedirecting && name === 'Growth' ? 'opacity-80 cursor-not-allowed' : ''}`}
                                 >
                                     {isRedirecting && name === 'Growth' ? (
                                         <>
@@ -787,30 +874,32 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== TEAM SECTION ==================== */}
-            <TeamSection />
+            <div className="px-4 sm:px-6 lg:px-8">
+                <TeamSection />
+            </div>
 
             {/* ==================== FOOTER ==================== */}
             <footer className="bg-emerald-950 text-white">
                 {/* CTA Block */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16 text-center border-b border-white/10">
-                    <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-6 max-w-3xl mx-auto leading-tight">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 md:pt-24 pb-12 md:pb-16 text-center border-b border-white/10">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 sm:mb-6 max-w-3xl mx-auto leading-tight">
                         The Smartest IT Helpdesk for Indian Businesses
                     </h2>
-                    <p className="text-white/70 text-lg mb-10 max-w-xl mx-auto">
+                    <p className="text-white/70 text-base sm:text-lg mb-6 sm:mb-10 max-w-xl mx-auto">
                         Start automating ticket triage today. No credit card required.
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <button
                             onClick={() => navigate('/admin-signup')}
-                            className="w-full sm:w-auto px-8 py-4 bg-white text-emerald-900 font-bold rounded-xl hover:bg-green-50 transition-all shadow-xl"
+                            className={`group w-full sm:w-auto px-8 py-4 bg-white text-emerald-900 font-bold rounded-xl hover:bg-green-50 ${CTA_TRANSITION} ${CTA_SCALE} shadow-xl`}
                         >
                             Get Started Free
                         </button>
                         <button
                             onClick={() => setShowDemo(true)}
-                            className="w-full sm:w-auto px-8 py-4 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                            className={`group w-full sm:w-auto px-8 py-4 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2`}
                         >
-                            <Play className="w-4 h-4 fill-white" /> Watch Demo
+                            <Play className={`w-4 h-4 fill-white ${CTA_PLAY_SHIFT}`} /> Watch Demo
                         </button>
                     </div>
                     <div className="mt-8">
@@ -824,8 +913,8 @@ export default function LandingPage() {
                 </div>
 
                 {/* Footer Links */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-10">
                         {/* Brand Column */}
                         <div className="col-span-2 md:col-span-1">
                             <div className="flex items-center gap-2 mb-4">
@@ -862,17 +951,17 @@ export default function LandingPage() {
                             {
                                 heading: 'Resources',
                                 links: [
-                                    { label: 'Documentation', href: '/docs' },
-                                    { label: 'API Reference', href: '/api-reference' },
+                                    { label: 'Documentation', href: '#' },
+                                    { label: 'API Reference', href: '#' },
                                     { label: 'Changelog', href: '/changelog' },
-                                    { label: 'Status Page', href: '/status' },
+                                    { label: 'Status Page', href: '#' },
                                 ]
                             },
                             {
                                 heading: 'Company',
                                 links: [
-                                    { label: 'About Us', href: '/about' },
-                                    { label: 'Careers', href: '/careers' },
+                                    { label: 'About Us', href: '/about-us' },
+                                    { label: 'Careers', href: '#' },
                                     { label: 'Privacy Policy', href: '/privacy' },
                                     { label: 'Terms of Service', href: '/terms' },
                                 ]
@@ -911,10 +1000,10 @@ export default function LandingPage() {
 
                     {/* Bottom bar */}
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-16 pt-8 border-t border-white/10">
-                        <p className="text-xs text-white/40">
+                        <p className="text-xs text-white/40 text-center md:text-left">
                             © 2026 HelpDesk.ai. All rights reserved. · Registered in India
                         </p>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
                             <button onClick={() => navigate('/terms')} className="text-xs text-white/40 hover:text-white transition-colors">Terms</button>
                             <button onClick={() => navigate('/privacy')} className="text-xs text-white/40 hover:text-white transition-colors">Privacy</button>
                             <button onClick={() => navigate('/security')} className="text-xs text-white/40 hover:text-white transition-colors">Security</button>
