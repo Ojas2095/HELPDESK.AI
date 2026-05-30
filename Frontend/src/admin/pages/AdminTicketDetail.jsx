@@ -17,6 +17,7 @@ import SLABadge from "../components/SLABadge";
 import { formatFullTimestamp } from "../../utils/dateUtils";
 import TicketTimeline from "../../user/components/TicketTimeline";
 import TicketAuditTimeline from "../components/TicketAuditTimeline";
+import { safeDisplayText } from "../../utils/sanitizeText";
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
@@ -197,11 +198,11 @@ const AdminTicketDetail = () => {
     const entities = ticket.metadata?.entities || ticket.entities || [];
     const displayStatus = ticket.status || 'Pending';
     const displayPriority = ticket.priority || 'Medium';
-    const displaySummary = ticket.summary || ticket.subject || 'No Summary';
-    const displayText = ticket.description || ticket.text || displaySummary;
+    const displaySummary = safeDisplayText(ticket.summary || ticket.subject, 'No Summary');
+    const displayText = safeDisplayText(ticket.description || ticket.text, displaySummary);
     const isTranslated = Boolean(ticket.detected_language && ticket.detected_language.toLowerCase() !== 'en' && ticket.original_body);
     const sourceLanguageName = ticket.detected_language ? ticket.detected_language.toUpperCase() : 'Unknown';
-    const renderedText = showOriginalText && isTranslated ? ticket.original_body : displayText;
+    const renderedText = safeDisplayText(showOriginalText && isTranslated ? ticket.original_body : displayText, displaySummary);
 
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="-m-6 p-6 md:-m-10 md:p-10 space-y-6 animate-in fade-in duration-700">

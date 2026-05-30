@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Clock, ExternalLink } from 'lucide-react';
 import { formatTimelineDate } from '../../utils/dateUtils';
+import { safeDisplayText } from '../../utils/sanitizeText';
 
 const categoryDotColors = {
     'Hardware': '#f97316',
@@ -78,7 +79,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                         const sourceLanguageName = translationMeta?.source_language_name || translationMeta?.source_language || 'Unknown';
 
                         // Truncated subject
-                        const subject = ticket.subject || ticket.summary || 'Untitled ticket';
+                        const subject = safeDisplayText(ticket.subject || ticket.summary || ticket.description, 'Untitled ticket');
                         const truncSubject = subject.length > 28 ? subject.slice(0, 28) + '...' : subject;
 
                         // Ticket ID truncated

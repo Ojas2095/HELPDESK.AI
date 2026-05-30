@@ -20,6 +20,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "../../components/ui/tooltip";
+import { safeDisplayText } from "../../utils/sanitizeText";
 
 function MyTickets() {
     const navigate = useNavigate();
@@ -100,7 +101,7 @@ function MyTickets() {
                 const matchesSearch =
                     (ticket.subject || '').toLowerCase().includes(searchLower) ||
                     (ticket.summary || '').toLowerCase().includes(searchLower) ||
-                    (ticket.description || '').toLowerCase().includes(searchLower) ||
+                    safeDisplayText(ticket.description).toLowerCase().includes(searchLower) ||
                     String(ticket.id).includes(searchLower);
 
                 const ticketStatus = ticket.status || 'open';
@@ -297,7 +298,7 @@ function MyTickets() {
                                                         <div className="space-y-3">
                                                             <div>
                                                                  <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Issue Overview</p>
-                                                                 <p className="text-sm font-medium leading-relaxed overflow-hidden text-ellipsis whitespace-nowrap">{ticket.summary || ticket.description || "No description provided"}</p>
+                                                                 <p className="text-sm font-medium leading-relaxed overflow-hidden text-ellipsis whitespace-nowrap">{safeDisplayText(ticket.summary || ticket.description, "No description provided")}</p>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-3">
                                                                 <div>
@@ -319,7 +320,7 @@ function MyTickets() {
                                             </td>
                                             <td className="px-6 py-4 w-1/3 max-w-[300px]">
                                                  <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
-                                                     {ticket.summary || ticket.subject || ticket.description || "No subject"}
+                                                     {safeDisplayText(ticket.summary || ticket.subject || ticket.description, "No subject")}
                                                  </p>
                                                  <div className="mt-1">
                                                      <LanguageBadge detectedLanguage={ticket?.detected_language} compact />

@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { formatTimelineDate } from '../../utils/dateUtils';
 import LanguageBadge from '../../components/shared/LanguageBadge';
 import SLABadge from '../../admin/components/SLABadge';
+import { safeDisplayText } from '../../utils/sanitizeText';
 
 const RecentTickets = () => {
     const navigate = useNavigate();
@@ -133,7 +134,7 @@ const RecentTickets = () => {
                                         </td>
                                         <td className="px-7 py-4">
                                             <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[320px]">
-                                                {ticket.summary || ticket.subject || ticket.description || "No description provided"}
+                                                {safeDisplayText(ticket.summary || ticket.subject || ticket.description, "No description provided")}
                                             </p>
                                             <div className="mt-1">
                                                 <LanguageBadge detectedLanguage={ticket?.detected_language} compact />
