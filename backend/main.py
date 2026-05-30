@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.sanitization import sanitize_text, sanitize_ticket_data, get_security_headers
 
 
 # ---------------------------------------------------------------------------
@@ -273,6 +274,16 @@ app = FastAPI(
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ---------------------------------------------------------------------------
+# Security Headers Middleware — defense-in-depth against XSS (#739)
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    for key, value in get_security_headers().items():
+        response.headers[key] = value
+    return response
 
 # CORS — locked to production + local dev only
 app.add_middleware(
@@ -559,7 +570,7 @@ async def save_ticket(request_body: TicketSaveRequest):
 
     logger = logging.getLogger(__name__)
     try:
-        final_data = request_body.dict()
+        final_data = sanitize_ticket_data(request_body.dict())
 
         # Resolve tenant linkage from user profile with authorization validation.
         profile = {}
@@ -700,7 +711,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
     """
-    text = request_body.text
+    text = sanitize_text(request_body.text) or ""
 
     settings = get_system_settings(request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
@@ -737,7 +748,7 @@ async def analyze_only(request_body: TicketRequest):
     Does NOT persist to DB. This allows the user to review the analysis 
     and duplicate check before committing to a ticket creation.
     """
-    text = request_body.text
+    text = sanitize_text(request_body.text) or ""
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
     settings = get_system_settings(request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
@@ -1053,7 +1064,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
 
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
-    text = request.text
+    text = sanitize_text(request.text) or ""
     try:
         prediction = classifier_v2.predict(text)
         return {
