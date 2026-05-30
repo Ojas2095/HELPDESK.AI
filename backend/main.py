@@ -13,6 +13,7 @@ import traceback
 import warnings
 import logging
 import hashlib
+import html
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -176,6 +177,34 @@ class TicketRecord(BaseModel):
     timeline: dict = {} # Milestones: created, analyzed, triaged, routed, in_progress, resolved
 
 
+<<<<<<< Updated upstream
+=======
+class AuditLogProfile(BaseModel):
+    full_name: str | None = None
+    email: str | None = None
+    profile_picture: str | None = None
+
+
+class AuditLogRecord(BaseModel):
+    id: str
+    ticket_id: str
+    company_id: str
+    performed_by: str | None = None
+    action: str
+    old_value: dict | list | str | None = None
+    new_value: dict | list | str | None = None
+    created_at: str
+    performed_by_profile: AuditLogProfile | None = None
+
+
+def sanitize_text(text: str, max_length: int = 1000) -> str:
+    if not text:
+        return ""
+    text = html.escape(text[:max_length])
+    return text
+
+
+>>>>>>> Stashed changes
 # --- In-Memory Database (to be replaced with SQL later) ---
 TICKETS_DB: list[TicketRecord] = []
 
@@ -670,7 +699,11 @@ async def create_ticket(ticket: TicketRecord):
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
     if existing:
         return existing
-        
+    
+    ticket.summary = sanitize_text(ticket.summary)
+    for msg in ticket.messages:
+        msg.message = sanitize_text(msg.message)
+    
     TICKETS_DB.append(ticket)
     print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
     return ticket
@@ -743,6 +776,51 @@ async def analyze_only(request_body: TicketRequest):
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
+<<<<<<< Updated upstream
+=======
+
+    # --- Vague Input Guard ---
+    # If the text is extremely short or a generic term, skip AI classification and
+    # return a safe low-priority "General Inquiry" to prevent hallucinated critical categories.
+    import re as _re
+    VAGUE_KEYWORDS = {
+        "demo", "test", "hi", "hello", "check", "try", "ping", "ok", "okay",
+        "issue", "problem", "error", "bug", "help", "hey", "asdf", "xyz",
+        "foo", "bar", "nothing", "something", "stuff",
+    }
+    _stripped = text.strip().lower()
+    _word_count = len(_stripped.split())
+    _is_vague = (len(_stripped) < 15) or (_word_count == 1 and _stripped in VAGUE_KEYWORDS)
+    if _is_vague:
+        import datetime as _dt, uuid as _uuid
+        _sla_breach = calculate_sla_breach_at("Low")
+        print(f"[AI] Vague input detected: '{text}'. Returning safe General Inquiry classification.")
+        return TicketResponse(
+            ticket_id=str(_uuid.uuid4()),
+            summary=f"General inquiry: {sanitize_text(text)}",
+            category="General",
+            subcategory="General Inquiry",
+            priority="Low",
+            auto_resolve=False,
+            assigned_team="IT Support",
+            entities=[],
+            duplicate_ticket=DuplicateInfo(is_duplicate=False),
+            confidence=0.1,
+            needs_review=True,
+            reasoning="Input was too brief for accurate classification. Please provide more context.",
+            decision_factors=["Input is too short or generic for AI classification."],
+            image_description="",
+            ocr_text="",
+            highlights=[],
+            timeline={"received": _dt.datetime.utcnow().isoformat() + "Z"},
+            env_metadata={},
+            sla_breach_at=_sla_breach.isoformat().replace("+00:00", "Z"),
+            original_text=sanitize_text(request_body.text),
+            source_language=translation_ctx["source_language"],
+            source_language_name=translation_ctx["source_language_name"],
+            was_translated=translation_ctx["was_translated"],
+        )
+>>>>>>> Stashed changes
     
     # --- Context & Environment ---
     import datetime
@@ -870,7 +948,7 @@ async def analyze_only(request_body: TicketRequest):
 
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
-        summary=summary,
+        summary=sanitize_text(summary),
         category=classification["category"],
         subcategory=classification["subcategory"],
         priority=classification["priority"],
@@ -879,6 +957,7 @@ async def analyze_only(request_body: TicketRequest):
         entities=[EntityInfo(**e) for e in entities],
         duplicate_ticket=DuplicateInfo(**dup_result),
         confidence=classification["confidence"],
+<<<<<<< Updated upstream
         needs_review=classification["confidence"] < confidence_threshold,
         reasoning=reasoning,
         decision_factors=decision_factors,
@@ -889,6 +968,24 @@ async def analyze_only(request_body: TicketRequest):
         timeline=timeline,
         env_metadata=env_metadata,
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
+=======
+        needs_review=classification["confidence"] < 0.20,
+        reasoning=sanitize_text(reasoning),
+        decision_factors=decision_factors,
+        image_description=sanitize_text(gemini_analysis["image_description"]),
+        ocr_text=sanitize_text(gemini_analysis["ocr_text"]),
+        highlights=[sanitize_text(e.get("text", "")) for e in entities],
+        timeline=timeline,
+        env_metadata=env_metadata,
+        spam_check=SpamCheck(**spam_result),
+        is_potential_duplicate=dup_result.get("is_potential_duplicate", False),
+        parent_ticket_id=dup_result.get("parent_ticket_id"),
+        sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z"),
+        original_text=sanitize_text(translation_ctx["original_text"]),
+        source_language=translation_ctx["source_language"],
+        source_language_name=translation_ctx["source_language_name"],
+        was_translated=translation_ctx["was_translated"],
+>>>>>>> Stashed changes
     )
 
 @app.post("/ai/analyze_stream")
