@@ -6,6 +6,7 @@ import {
   useLocation
 } from "react-router-dom";
 import React, { Suspense, useEffect, lazy } from "react";
+import ErrorBoundary from "./components/shared/ErrorBoundary";
 import useTicketStore from "./store/ticketStore";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
 import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
@@ -251,11 +252,12 @@ function App() {
     <BrowserRouter>
       <TitleUpdater />
       <ScrollToTop />
-      <Suspense fallback={<RouteFallback />}>
-        <Toaster />
-        <BugReportWidget />
-        <ScrollToTopButton />
-        <Routes>
+      <ErrorBoundary>
+        <Suspense fallback={<RouteFallback />}>
+          <Toaster />
+          <BugReportWidget />
+          <ScrollToTopButton />
+          <Routes>
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
@@ -298,10 +300,15 @@ function App() {
 
           {/* Protected */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/*" element={<AppLayout />} />
+            <Route path="/*" element={
+              <ErrorBoundary>
+                <AppLayout />
+              </ErrorBoundary>
+            } />
           </Route>
         </Routes>
-      </Suspense>
+        </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
