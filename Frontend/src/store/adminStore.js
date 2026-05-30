@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { DEFAULT_ADMIN_SETTINGS } from '../utils/adminSettingsPersistence';
 
 const useAdminStore = create(
     persist(
@@ -15,6 +16,10 @@ const useAdminStore = create(
             },
             updateProfile: (updates) => set((state) => ({
                 adminProfile: { ...state.adminProfile, ...updates }
+            })),
+            settings: { ...DEFAULT_ADMIN_SETTINGS },
+            updateSettings: (updates) => set((state) => ({
+                settings: { ...state.settings, ...updates }
             })),
         }),
         {
