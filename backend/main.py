@@ -31,6 +31,9 @@ from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+# Import Swagger UI custom styling
+from backend.swagger_config import SWAGGER_UI_CUSTOM_CSS, SWAGGER_UI_CUSTOM_JS
+
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
@@ -267,6 +270,14 @@ app = FastAPI(
     description="Ticket classification, entity extraction, and duplicate detection",
     version="1.0.0",
     lifespan=lifespan,
+    swagger_ui_parameters={
+        "defaultModelsExpandDepth": -1,
+        "docExpansion": "none",
+        "filter": True,
+        "syntaxHighlight.theme": "monokai",
+    },
+    swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
+    swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
 )
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
@@ -286,6 +297,47 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Custom Swagger UI with branding
+# ---------------------------------------------------------------------------
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    """Serve custom Swagger UI with AI Helpdesk branding."""
+    return HTMLResponse(
+        content=f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>AI Helpdesk API Documentation</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+        <style>{SWAGGER_UI_CUSTOM_CSS}</style>
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <script>
+            SwaggerUIBundle({{
+                url: '/openapi.json',
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIBundle.SwaggerUIStandalonePreset
+                ],
+                layout: "BaseLayout",
+                defaultModelsExpandDepth: -1,
+                docExpansion: "none",
+                filter: true,
+                syntaxHighlight: {{ theme: "monokai" }}
+            }});
+        </script>
+        <script>{SWAGGER_UI_CUSTOM_JS}</script>
+    </body>
+    </html>
+    """,
+        media_type="text/html",
+    )
 
 
 # ---------------------------------------------------------------------------
