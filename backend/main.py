@@ -1106,8 +1106,6 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     delegate to analyze_only(), making /ai/analyze_ticket/legacy unnecessary.
     See: https://github.com/ritesh-1918/HELPDESK.AI/issues/751
     """
-    from fastapi.responses import JSONResponse
-
     result = await analyze_only(request_body)
     # Wrap with deprecation warning
     return JSONResponse(
@@ -1116,7 +1114,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
             "Deprecation": "true",
             "Sunset": "2026-12-31",
             "Warning": '10 Deprecation: "/ai/analyze_ticket/legacy is deprecated. Use /ai/analyze instead."',
-            "Link": '<http://localhost:8000/ai/analyze>; rel="alternate"',
+            "Link": '</ai/analyze>; rel="alternate"',
         },
     )
 
