@@ -1,4 +1,4 @@
-import axios from 'axios';
+import apiClient from './apiClient';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
 
@@ -70,7 +70,7 @@ export const api = {
   predictTicket: async (issueText, imageBase64 = "") => {
     try {
       // ALWAYS call the real backend for prediction if possible
-      const response = await axios.post(`${API_BASE_URL}/ai/analyze_ticket`, {
+      const response = await apiClient.post('/ai/analyze_ticket', {
         text: issueText,
         image_base64: imageBase64,
         image_text: ""
@@ -120,7 +120,7 @@ export const api = {
 
   logCorrection: async (correctionPayload) => {
     try {
-      await axios.post(`${API_BASE_URL}/ai/log_correction`, correctionPayload);
+      await apiClient.post('/ai/log_correction', correctionPayload);
     } catch (error) {
       // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);

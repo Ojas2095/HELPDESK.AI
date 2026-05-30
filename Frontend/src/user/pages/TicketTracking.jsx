@@ -8,7 +8,7 @@ import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";
 import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
-import axios from 'axios';
+import apiClient from '../../services/apiClient';
 import { API_CONFIG } from '../../config';
 
 const TicketTracking = () => {
@@ -68,7 +68,7 @@ const TicketTracking = () => {
                     routing_confidence: aiTicket.confidence
                 };
 
-                const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload);
+                const res = await apiClient.post('/tickets/save', savePayload);
 
                 if (res.data?.ticket_id) {
                     const newTicket = { ...aiTicket, id: res.data.ticket_id, ticket_id: res.data.ticket_id, status };
