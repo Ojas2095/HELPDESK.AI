@@ -23,6 +23,28 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 # ---------------------------------------------------------------------------
+# Runtime toggle: controlled by system_settings.enable_pii_redaction
+# ---------------------------------------------------------------------------
+
+_pii_redaction_enabled = False
+
+
+def set_pii_redaction_enabled(enabled: bool) -> None:
+    """Set whether PII redaction is active at runtime.
+
+    Called by the application after reading system_settings.enable_pii_redaction.
+    """
+    global _pii_redaction_enabled
+    _pii_redaction_enabled = bool(enabled)
+    logger.info(f"PII redaction runtime toggle set to {_pii_redaction_enabled}")
+
+
+def is_pii_redaction_enabled() -> bool:
+    """Return whether PII redaction is currently enabled."""
+    return _pii_redaction_enabled
+
+
+# ---------------------------------------------------------------------------
 # PII Detection Patterns
 # ---------------------------------------------------------------------------
 
@@ -32,11 +54,22 @@ EMAIL_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-# Phone numbers: supports multiple international formats
-#   +1-234-567-8901, +44 20 7946 0958, (555) 123-4567, 555.123.4567
+# Phone numbers: narrower pattern to avoid false positives on error codes/ports.
+# Requires either:
+#   - A country-code prefix (+1, +44, etc.) followed by digit groups, OR
+#   - Parenthesized area code (XXX) followed by separator and digits, OR
+#   - Dots as separators with at least 3 groups (e.g. 555.123.4567)
 PHONE_PATTERN = re.compile(
-    r"(?:(?:\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4})"
-    r"|(?:\+?\d{1,3}[-.\s]?\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4})",
+    r"(?:"
+    # With country code: +1-234-567-8901, +44 20 7946 0958
+    r"\+\d{1,3}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{3,4}"
+    r"|"
+    # Parenthesized area code: (555) 123-4567
+    r"\(\d{3}\)\s*\d{3}[-.\s]\d{4}"
+    r"|"
+    # Dot-separated with 3+ groups: 555.123.4567
+    r"\d{3}\.\d{3}\.\d{4}"
+    r")"
 )
 
 # API keys and tokens: common prefixes for cloud/service provider keys
@@ -59,7 +92,7 @@ API_KEY_PATTERNS = [
     re.compile(r"eyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+"),
 ]
 
-# Credit card numbers (basic Luhn-agnostic pattern)
+# Credit card numbers (broad initial pattern, validated with Luhn checksum)
 CREDIT_CARD_PATTERN = re.compile(
     r"\b(?:\d[ -]*?){13,19}\b",
 )
@@ -79,6 +112,28 @@ REDACTED = "[REDACTED]"
 
 
 # ---------------------------------------------------------------------------
+# Luhn Checksum Validation
+# ---------------------------------------------------------------------------
+
+def _luhn_check(digits_str: str) -> bool:
+    """Validate a numeric string using the Luhn algorithm.
+
+    Returns True if the digit sequence passes the Luhn checksum,
+    indicating it is likely a valid credit card number.
+    """
+    digits = [int(d) for d in digits_str]
+    odd_even = len(digits) % 2
+    total = 0
+    for i, d in enumerate(digits):
+        if i % 2 == odd_even:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
+
+
+# ---------------------------------------------------------------------------
 # Redaction Functions
 # ---------------------------------------------------------------------------
 
@@ -92,9 +147,10 @@ def redact_emails(text: str) -> str:
 def redact_phones(text: str) -> str:
     """Replace phone numbers with [REDACTED].
 
-    Uses a conservative approach: only redact strings that look like
-    actual phone numbers (7+ digits with separators) to avoid false
-    positives on short numeric strings like ticket IDs.
+    Uses a conservative approach: only redact strings that match
+    proper phone number formats (country code prefix, parenthesized
+    area code, or dot-separated groups) and have at least 7 digits
+    to avoid false positives on error codes, port numbers, etc.
     """
     if not isinstance(text, str):
         return text
@@ -120,7 +176,11 @@ def redact_api_keys(text: str) -> str:
 
 
 def redact_credit_cards(text: str) -> str:
-    """Replace credit card number patterns with [REDACTED]."""
+    """Replace credit card number patterns with [REDACTED].
+
+    Uses Luhn checksum validation to avoid false positives on
+    order IDs, timestamps, and other long numeric sequences.
+    """
     if not isinstance(text, str):
         return text
     result = text
@@ -129,7 +189,9 @@ def redact_credit_cards(text: str) -> str:
         # Strip separators and check length
         digits_only = re.sub(r"[\s\-]", "", candidate)
         if 13 <= len(digits_only) <= 19 and digits_only.isdigit():
-            result = result.replace(candidate, REDACTED, 1)
+            # Validate with Luhn checksum to avoid false positives
+            if _luhn_check(digits_only):
+                result = result.replace(candidate, REDACTED, 1)
     return result
 
 
@@ -198,14 +260,25 @@ PII_TARGET_FIELDS = {
 def redact_row(row: dict) -> dict:
     """Redact PII from a dictionary row, returning a new dict.
 
-    Only fields in PII_TARGET_FIELDS are processed.
+    Scans fields in PII_TARGET_FIELDS and also recurses into any
+    nested dict or list values (e.g. metadata["original_text"])
+    to ensure deeply nested PII is caught.
     """
     if not isinstance(row, dict):
+        return row
+    if not is_pii_redaction_enabled():
         return row
     new_row = dict(row)
     for field in PII_TARGET_FIELDS:
         if field in new_row and new_row[field] is not None:
-            new_row[field] = redact_all(str(new_row[field]))
+            new_row[field] = _redact_value(new_row[field])
+    # Also scan any other dict/list fields for nested PII
+    for key, value in new_row.items():
+        if key not in PII_TARGET_FIELDS and value is not None:
+            if isinstance(value, (dict, list)):
+                new_row[key] = _redact_value(value)
+            elif isinstance(value, str):
+                new_row[key] = redact_all(value)
     return new_row
 
 
@@ -222,8 +295,11 @@ def _redact_value(value: Any) -> Any:
 
 def redact_payload(payload: Any) -> Any:
     """Redact PII from a payload (dict or list of dicts).
-    
+
     Recursively processes all nested structures to ensure
-    PII is redacted at every level.
+    PII is redacted at every level. Honors the enable_pii_redaction
+    toggle — returns the payload unchanged when redaction is disabled.
     """
+    if not is_pii_redaction_enabled():
+        return payload
     return _redact_value(payload)

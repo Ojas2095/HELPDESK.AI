@@ -1,7 +1,8 @@
 """Self-contained tests for PII Redaction Engine.
 
 Tests verify that all PII patterns are correctly detected and redacted,
-with no false positives on safe data. No external dependencies required.
+with no false positives on safe data. Also tests the runtime toggle
+and Luhn checksum validation. No external dependencies required.
 """
 
 import sys
@@ -20,8 +21,35 @@ from services.pii_redaction import (
     redact_all,
     redact_row,
     redact_payload,
+    set_pii_redaction_enabled,
+    is_pii_redaction_enabled,
+    _luhn_check,
     REDACTED,
 )
+
+
+class TestLuhnChecksum:
+    """Tests for the Luhn checksum validation used by credit card detection."""
+
+    def test_valid_visa(self):
+        # 4111 1111 1111 1111 passes Luhn
+        assert _luhn_check("4111111111111111") is True
+
+    def test_valid_amex(self):
+        # 3782 822463 10005 passes Luhn
+        assert _luhn_check("378282246310005") is True
+
+    def test_invalid_numeric_string(self):
+        # 1234-5678-9012-3456 does NOT pass Luhn (order ID / timestamp)
+        assert _luhn_check("1234567890123456") is False
+
+    def test_sequential_digits_fail(self):
+        # 1234567890123 fails Luhn
+        assert _luhn_check("1234567890123") is False
+
+    def test_timestamp_digits_fail(self):
+        # A unix timestamp like 1700000000000 (13 digits)
+        assert _luhn_check("1700000000000") is False
 
 
 class TestEmailRedaction:
@@ -69,14 +97,33 @@ class TestPhoneRedaction:
         text = "The number 123 is small"
         assert redact_phones(text) == text
 
+    def test_error_code_not_redacted(self):
+        """Error codes like 40401 should NOT be redacted."""
+        text = "Error code 40401 occurred"
+        assert redact_phones(text) == text
+
+    def test_port_number_not_redacted(self):
+        """Port numbers like :8080 or 54321 should NOT be redacted."""
+        text = "Connection on port 54321 failed"
+        assert redact_phones(text) == text
+
+    def test_bare_digit_group_not_redacted(self):
+        """Bare 7-digit groups without phone formatting should not be redacted."""
+        text = "Order ID 1234567 confirmed"
+        assert redact_phones(text) == text
+
+    def test_international_with_country_code(self):
+        result = redact_phones("Phone: +44 20 7946 0958")
+        assert REDACTED in result
+
 
 class TestAPIKeyRedaction:
     def test_aws_access_key(self):
-        result = redact_api_keys("Key: AKIAIOSFODNN7EXAMPLE")
-        assert "AKIAIOSFODNN7EXAMPLE" not in result
+        result = redact_api_keys("Key: AKIAIO...MPLE")
+        assert "AKIAIO...MPLE" not in result
 
     def test_github_pat(self):
-        result = redact_api_keys("token: ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij")
+        result = redact_api_keys("token: ghp_AB...ghij")
         assert "ghp_" not in result
 
     def test_google_api_key(self):
@@ -93,21 +140,34 @@ class TestAPIKeyRedaction:
         assert redact_api_keys(text) == text
 
     def test_bearer_token(self):
-        result = redact_api_keys("Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.test.sig")
+        result = redact_api_keys("Authorization: Bearer eyJhbG...ig")
         assert "eyJhbG" not in result
 
 
 class TestCreditCardRedaction:
     def test_visa_format(self):
+        # 4111-1111-1111-1111 passes Luhn
         result = redact_credit_cards("Card: 4111-1111-1111-1111")
         assert "4111" not in result
 
     def test_amex_format(self):
+        # 3782-822463-10005 passes Luhn
         result = redact_credit_cards("AMEX: 3782-822463-10005")
         assert "3782" not in result
 
-    def test_no_false_positive(self):
+    def test_no_false_positive_on_order_id(self):
+        """Order IDs that are 13-19 digits should NOT be redacted (fail Luhn)."""
         text = "Order #1234-5678-9012 is not a card"
+        assert redact_credit_cards(text) == text
+
+    def test_no_false_positive_on_timestamp(self):
+        """Numeric timestamps should NOT be redacted (fail Luhn)."""
+        text = "Timestamp: 1700000000000"
+        assert redact_credit_cards(text) == text
+
+    def test_no_false_positive_on_sequential_digits(self):
+        """Sequential digit strings should NOT be redacted (fail Luhn)."""
+        text = "Reference 1234567890123456"
         assert redact_credit_cards(text) == text
 
 
@@ -151,6 +211,10 @@ class TestRedactAll:
 
 
 class TestRowRedaction:
+    def setup_method(self):
+        # Enable redaction for these tests
+        set_pii_redaction_enabled(True)
+
     def test_target_fields_redacted(self):
         row = {
             "id": 1,
@@ -171,8 +235,42 @@ class TestRowRedaction:
         result = redact_row(row)
         assert result["contact_email"] is None
 
+    def test_nested_metadata_redacted(self):
+        """Nested dict fields like metadata['original_text'] should be redacted."""
+        row = {
+            "id": 1,
+            "description": "Clean text",
+            "metadata": {
+                "original_text": "Contact alice@example.com for details",
+                "notes": "SSN 123-45-6789 found",
+            },
+        }
+        result = redact_row(row)
+        assert "alice@example.com" not in str(result["metadata"]["original_text"])
+        assert "123-45-6789" not in str(result["metadata"]["notes"])
+
+    def test_nested_list_redacted(self):
+        """Nested list values should be recursively redacted."""
+        row = {
+            "id": 1,
+            "tags": ["Email: test@test.com", "Safe tag"],
+        }
+        result = redact_row(row)
+        assert "test@test.com" not in str(result["tags"])
+
+    def test_toggle_disabled_skips_redaction(self):
+        """When toggle is off, redact_row returns the row unchanged."""
+        set_pii_redaction_enabled(False)
+        row = {"id": 1, "description": "Email: secret@test.com"}
+        result = redact_row(row)
+        assert result["description"] == "Email: secret@test.com"
+        set_pii_redaction_enabled(True)  # restore
+
 
 class TestPayloadRedaction:
+    def setup_method(self):
+        set_pii_redaction_enabled(True)
+
     def test_dict_payload(self):
         payload = {"email": "a@b.com", "subject": "SSN: 123-45-6789"}
         result = redact_payload(payload)
@@ -193,3 +291,33 @@ class TestPayloadRedaction:
         assert "a@b.com" not in str(result)
         assert "123-45-6789" not in str(result)
         assert result["count"] == 1
+
+    def test_toggle_disabled_returns_unchanged(self):
+        """When toggle is off, redact_payload returns the payload unchanged."""
+        set_pii_redaction_enabled(False)
+        payload = {"email": "secret@test.com", "subject": "SSN: 123-45-6789"}
+        result = redact_payload(payload)
+        assert result == payload
+        set_pii_redaction_enabled(True)  # restore
+
+
+class TestToggleMechanism:
+    def test_default_disabled(self):
+        """PII redaction toggle should be disabled by default."""
+        # Reset to default
+        set_pii_redaction_enabled(False)
+        assert is_pii_redaction_enabled() is False
+
+    def test_enable_disable(self):
+        set_pii_redaction_enabled(True)
+        assert is_pii_redaction_enabled() is True
+        set_pii_redaction_enabled(False)
+        assert is_pii_redaction_enabled() is False
+
+    def test_redact_row_respects_toggle(self):
+        set_pii_redaction_enabled(False)
+        row = {"description": "Email: test@test.com"}
+        result = redact_row(row)
+        assert "test@test.com" in result["description"]
+        # Re-enable
+        set_pii_redaction_enabled(True)

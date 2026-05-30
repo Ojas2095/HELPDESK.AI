@@ -269,16 +269,31 @@ def get_system_settings(company_id: str) -> dict:
     defaults = {
         "ai_confidence_threshold": 0.80,
         "duplicate_sensitivity": 0.85,
-        "enable_auto_resolve": False
+        "enable_auto_resolve": False,
+        "enable_encryption": False,
+        "enable_pii_redaction": False,
     }
     if not supabase or not company_id:
         return defaults
     try:
         res = supabase.table("system_settings").select(
-            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
+            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, "
+            "enable_encryption, enable_pii_redaction"
         ).eq("company_id", company_id).single().execute()
         if res.data:
-            return {**defaults, **res.data}
+            settings = {**defaults, **res.data}
+            # Wire the toggles into the runtime modules
+            try:
+                from backend.auth.crypto import set_encryption_setting_enabled
+                set_encryption_setting_enabled(bool(settings.get("enable_encryption", False)))
+            except Exception:
+                pass
+            try:
+                from backend.services.pii_redaction import set_pii_redaction_enabled
+                set_pii_redaction_enabled(bool(settings.get("enable_pii_redaction", False)))
+            except Exception:
+                pass
+            return settings
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
