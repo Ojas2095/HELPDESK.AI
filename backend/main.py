@@ -27,6 +27,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from fastapi.encoders import jsonable_encoder
@@ -756,14 +757,33 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS — locked to production + local dev only
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+# Security headers middleware
+class _SecurityHeadersMiddleware(_BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        return response
+
+app.add_middleware(_SecurityHeadersMiddleware)
+
+# CORS — locked to production + local dev only, configurable via ALLOWED_ORIGINS env
+_cors_origins_raw = os.environ.get("ALLOWED_ORIGINS", "")
+if _cors_origins_raw:
+    _cors_origins = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+else:
+    _cors_origins = [
         "https://helpdeskaiv1.vercel.app",
         "http://localhost:5173",
         "http://localhost:3000",
-    ],
+    ]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
