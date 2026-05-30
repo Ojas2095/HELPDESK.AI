@@ -9,7 +9,10 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "prepare": "husky install",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "cy:run:headless": "cypress run --headless"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -58,7 +61,8 @@
     "postcss": "^8.5.6",
     "prettier": "^3.8.1",
     "tailwindcss": "^3.4.19",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "cypress": "^14.0.0"
   },
   "lint-staged": "{'*.{js,jsx}': ['eslint --fix', 'prettier --write']}"
 }
