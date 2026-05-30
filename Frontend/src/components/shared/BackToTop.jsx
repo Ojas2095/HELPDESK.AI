@@ -1,34 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUp } from 'lucide-react';
 
 const BackToTop = () => {
     const [isVisible, setIsVisible] = useState(false);
+    const visibilityCount = useRef(0);
 
     useEffect(() => {
         const toggleVisibility = () => {
-            if (window.scrollY > 300) {
-                setIsVisible(true);
-            } else {
-                setIsVisible(false);
+            const shouldShow = window.scrollY > 300;
+            if (shouldShow && !isVisible) {
+                visibilityCount.current += 1;
             }
+            setIsVisible(shouldShow);
         };
 
         window.addEventListener('scroll', toggleVisibility);
         return () => window.removeEventListener('scroll', toggleVisibility);
-    }, []);
+    }, [isVisible]);
 
-    const scrollToTop = () => {
+    const scrollToTop = useCallback(() => {
         window.scrollTo({
             top: 0,
             behavior: 'smooth'
         });
-    };
+    }, []);
 
     return (
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
             {isVisible && (
                 <motion.button
+                    key={`backtotop-${visibilityCount.current}`}
                     initial={{ opacity: 0, scale: 0.8, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.8, y: 10 }}
