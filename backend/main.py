@@ -28,7 +28,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+import base64 as _base64_mod
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -90,6 +91,39 @@ class TicketRequest(BaseModel):
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
+
+    @field_validator("image_base64")
+    @classmethod
+    def validate_image_base64(cls, v: str) -> str:
+        if not v:
+            return v
+        # Strip data URI prefix if present
+        raw = v
+        if "," in v:
+            prefix, raw = v.split(",", 1)
+            # Validate MIME type from data URI
+            allowed_types = {"image/png", "image/jpeg", "image/tiff", "application/pdf"}
+            mime = prefix.split(":")[1].split(";")[0] if ":" in prefix else ""
+            if mime and mime not in allowed_types:
+                raise ValueError(
+                    f"Unsupported file type '{mime}'. Allowed: PNG, JPEG, TIFF, PDF"
+                )
+        # Validate decoded size (max 10MB)
+        try:
+            missing_padding = len(raw) % 4
+            if missing_padding:
+                raw += "=" * (4 - missing_padding)
+            decoded = _base64_mod.b64decode(raw, validate=True)
+            max_size = 10 * 1024 * 1024  # 10MB
+            if len(decoded) > max_size:
+                raise ValueError(
+                    f"File size {len(decoded) / 1024 / 1024:.1f}MB exceeds 10MB limit"
+                )
+        except Exception as e:
+            if "exceeds" in str(e) or "Unsupported" in str(e):
+                raise
+            raise ValueError("Invalid base64 image data")
+        return v
 
 class TicketSaveRequest(BaseModel):
     user_id: str
