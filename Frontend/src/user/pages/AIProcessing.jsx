@@ -44,6 +44,7 @@ const AIProcessing = () => {
 
         const analyzeTicket = async () => {
             console.log("[AIProcessing] Starting analysis for:", text);
+            let uploadedImageUrl = null;
 
             try {
 
@@ -52,7 +53,6 @@ const AIProcessing = () => {
 
 
                 // ── Upload Image if present ──
-                let uploadedImageUrl = null;
 
                 if (image_base64) {
 
@@ -296,10 +296,8 @@ const AIProcessing = () => {
 
                 console.error("[AIProcessing] Analysis Failed:", error);
 
-                // Graceful fallback for any error (e.g. backend 503 offline, streaming failed, or network protocol errors)
-                if (
-                    true // Always fallback gracefully to keep the ticket creation flow 100% operational!
-                ) {
+                const alwaysFallback = true; // Always fallback gracefully to keep the ticket creation flow 100% operational!
+                if (alwaysFallback) {
 
 
                     console.warn(
