@@ -8,6 +8,7 @@ import {
 import React, { useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
+import ErrorBoundary from "./components/ui/ErrorBoundary";
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
@@ -232,14 +233,16 @@ function App() {
         <ScrollToTop />
         <Toaster />
         <BugReportWidget />
-        <Routes>
-          <Route path="/" element={<DocsPortal />} />
-          <Route path="/docs" element={<Navigate to="/" replace />} />
-          <Route path="/api-reference" element={<ApiReference />} />
-          <Route path="/changelog" element={<Changelog />} />
-          <Route path="/status" element={<StatusPage />} />
-          <Route path="*" element={<DocsPortal />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<DocsPortal />} />
+            <Route path="/docs" element={<Navigate to="/" replace />} />
+            <Route path="/api-reference" element={<ApiReference />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/status" element={<StatusPage />} />
+            <Route path="*" element={<DocsPortal />} />
+          </Routes>
+        </ErrorBoundary>
       </BrowserRouter>
     );
   }
@@ -250,7 +253,8 @@ function App() {
       <ScrollToTop />
       <Toaster />
       <BugReportWidget />
-      <Routes>
+      <ErrorBoundary>
+        <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -298,6 +302,7 @@ function App() {
           <Route path="/*" element={<AppLayout />} />
         </Route>
       </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
