@@ -553,8 +553,8 @@ async def get_tickets(request: Request, user: dict = Depends(get_current_user)):
     try:
         profile_res = supabase.table("profiles").select("company_id").eq("id", user_id).single().execute()
         company_id = profile_res.data.get("company_id") if profile_res.data else None
-    except Exception:
-        raise HTTPException(status_code=403, detail="Unable to verify company access")
+    except Exception as exc:
+        raise HTTPException(status_code=403, detail="Unable to verify company access") from exc
 
     if not company_id:
         raise HTTPException(status_code=403, detail="User not assigned to any company")
@@ -684,8 +684,8 @@ async def get_ticket_by_id(ticket_id: str, request: Request, user: dict = Depend
     try:
         profile_res = supabase.table("profiles").select("company_id").eq("id", user_id).single().execute()
         company_id = profile_res.data.get("company_id") if profile_res.data else None
-    except Exception:
-        raise HTTPException(status_code=403, detail="Unable to verify company access")
+    except Exception as exc:
+        raise HTTPException(status_code=403, detail="Unable to verify company access") from exc
 
     if not company_id:
         raise HTTPException(status_code=403, detail="User not assigned to any company")
