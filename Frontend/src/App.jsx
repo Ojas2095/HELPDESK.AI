@@ -5,6 +5,13 @@ import {
   Navigate,
   useLocation
 } from "react-router-dom";
+// Lazy-loaded route components with skeleton fallbacks
+import React, { lazy, Suspense } from "react";
+import SkeletonLoader from "./components/SkeletonLoader";
+
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+
 import React, { useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
