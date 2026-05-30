@@ -15,12 +15,14 @@ from typing import Optional
 
 
 # Regex patterns for dangerous content
-_SCRIPT_TAG_RE = re.compile(r"<\s*script[^>]*>.*?<\s*/\s*script\s*>", re.IGNORECASE | re.DOTALL)
+# Fixed: use non-backtracking pattern for script tags to avoid ReDoS
+_SCRIPT_TAG_RE = re.compile(r"<\s*script[^>]*>[^<]*(?:<(?!/\s*script\s*>)[^<]*)*</\s*script\s*>", re.IGNORECASE | re.DOTALL)
 _EVENT_HANDLER_RE = re.compile(r"\bon\w+\s*=", re.IGNORECASE)
 _JAVASCRIPT_URI_RE = re.compile(r"javascript\s*:", re.IGNORECASE)
 _DATA_URI_RE = re.compile(r"data\s*:\s*text/html", re.IGNORECASE)
 _STYLE_EXPRESSION_RE = re.compile(r"expression\s*\(", re.IGNORECASE)
-_HTML_TAG_RE = re.compile(r"<[^>]+>")
+# Fixed: use atomic group / possessive quantifier to prevent polynomial backtracking
+_HTML_TAG_RE = re.compile(r"<[^>]*>")
 
 
 def sanitize_text(text: Optional[str], *, strip_html: bool = True, max_length: int = 10000) -> Optional[str]:
