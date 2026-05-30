@@ -106,6 +106,7 @@ function Login() {
   };
 
   const [googleLoading, setGoogleLoading] = useState(false);
+  const isDark = document.documentElement.classList.contains('dark');
 
   const handleGoogleLogin = async () => {
     setError("");
@@ -120,30 +121,6 @@ function Login() {
       }
       setError(errMsg);
       setGoogleLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      setError("");
-      await loginWithGoogle();
-    } catch (err) {
-      console.error("Google login error:", err);
-      setError(err.message || "Google Sign-In failed.");
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError("");
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      console.error("Google login error:", err);
-      let errMsg = err.message || "Failed to sign in with Google.";
-      if (errMsg.toLowerCase().includes("failed to fetch")) {
-        errMsg = "Network Error: Failed to fetch. Please try disabling your ad-blocker for this site and refresh!";
-      }
-      setError(errMsg);
     }
   };
 
@@ -226,22 +203,6 @@ function Login() {
                 <span style={{ fontWeight: 800, fontSize: '16px', color: '#0f1f12' }}>HelpDesk.ai</span>
               </Link>
             </div>
-            <h2
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: '28px',
-                fontWeight: 800,
-                color: isDark ? '#ffffff' : '#0f1f12',
-                letterSpacing: '-0.02em',
-                marginBottom: '8px',
-              }}
-            >
-              <div className="p-2 rounded-full bg-slate-50 dark:bg-[#1a2e24] border border-slate-200 dark:border-[#2a4034] group-hover:border-emerald-500 transition-colors">
-                <ArrowLeft className="w-4 h-4" />
-              </div>
-              <span className="text-sm font-semibold">Back to Home</span>
-            </Link>
-
             {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-3xl font-black text-[#0f1f12] dark:text-emerald-400 tracking-tight mb-2 font-syne">

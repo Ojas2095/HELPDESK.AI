@@ -12,7 +12,11 @@ second copy of all-MiniLM-L6-v2.
 import os
 import time
 import uuid
-from sentence_transformers import util
+
+try:
+    from sentence_transformers import util
+except ImportError:
+    util = None
 
 
 # Defaults are tunable via env without code changes.
@@ -55,7 +59,7 @@ class IncidentService:
         # Lazily ensure embedding model is loaded.
         self._duplicate_service.load()
         model = self._duplicate_service.model
-        if model is None:
+        if model is None or util is None:
             return {
                 "incident_id": None,
                 "is_major_incident": False,

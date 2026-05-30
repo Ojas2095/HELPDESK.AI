@@ -77,6 +77,7 @@ from backend.services.audit_service import AuditLogService, AuditLogAccessError
 from backend.services.onnx_service import onnx_classifier
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
+from backend.services.incident_service import IncidentService
 from backend.services.semantic_duplicate_service import SemanticDuplicateService
 from backend.services.rag_service import RagService
 from backend.services.spam_service import SpamService
