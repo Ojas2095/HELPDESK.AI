@@ -289,6 +289,29 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
+
+# Prometheus Metrics
+from prometheus_fastapi_instrumentator import Instrumentator, metrics
+from prometheus_client import CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST
+
+# Initialize Prometheus instrumentator
+instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=["/health", "/ready", "/metrics"],
+    inprogress_name="helpdesk_requests_in_progress",
+    inprogress_labels=True,
+)
+
+# Add custom metrics
+instrumentator.add(metrics.latency(buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)))
+instrumentator.add(metrics.request_size(buckets=(100, 1000, 10000, 100000, 1000000)))
+instrumentator.add(metrics.response_size(buckets=(100, 1000, 10000, 100000, 1000000)))
+
+# Instrument the app
+instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
 # Root & Health check
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
