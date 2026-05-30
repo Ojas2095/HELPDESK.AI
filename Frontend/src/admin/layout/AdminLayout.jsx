@@ -3,6 +3,8 @@ import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
+import KeyboardShortcutsHelp from '../components/KeyboardShortcutsHelp';
 
 /**
  * AdminLayout Component
@@ -12,6 +14,13 @@ import NotificationToast from '../../user/components/NotificationToast';
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [showShortcuts, setShowShortcuts] = useState(false);
+
+    // Activate keyboard shortcuts for the admin dashboard
+    useKeyboardShortcuts({
+        enabled: true,
+        onHelpToggle: () => setShowShortcuts(prev => !prev),
+    });
 
     return (
         <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
@@ -43,6 +52,9 @@ const AdminLayout = () => {
 
             {/* Real-time System Notifications */}
             <NotificationToast />
+
+            {/* Keyboard Shortcuts Help Overlay */}
+            <KeyboardShortcutsHelp isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
