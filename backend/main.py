@@ -475,8 +475,8 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
-    """Log an admin correction when the AI prediction differs from the human decision."""
+async def log_correction(raw_request: Request, user: dict = Depends(get_current_user)):
+    """Log an admin correction when the AI prediction differs from the human decision. Requires authentication."""
     try:
         body = await raw_request.json()
     except Exception as e:
@@ -536,15 +536,35 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(
+    company_id: str | None = None,
+    user: dict = Depends(get_current_user),
+):
+    """Fetch persistent tickets from Supabase. Requires authentication."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    # Resolve company_id from user profile if not explicitly provided
+    if not company_id:
+        user_id = user.get("id")
+        if user_id:
+            try:
+                profile_res = (
+                    supabase.table("profiles")
+                    .select("company_id")
+                    .eq("id", user_id)
+                    .single()
+                    .execute()
+                )
+                profile = profile_res.data or {}
+                company_id = profile.get("company_id")
+            except Exception:
+                pass  # Fall through to unfiltered query
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
     if company_id:
         query = query.eq("company_id", company_id)
-        
+
     res = query.execute()
     return res.data
 
