@@ -1,16 +1,23 @@
 /**
  * Unified Date Utility for HELPDESK.AI
  * Fixes timezone shift issues by explicitly forcing local display.
+ * Now also fixes Safari date parsing by normalizing ISO-8601 separators.
  */
 
 export const formatTimelineDate = (dateStr) => {
     if (!dateStr) return null;
     
-    // Ensure the date string is interpreted as UTC if it's an ISO string from DB
     let date;
-    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
-        // If it's a raw string without TZ, assume it was intended as UTC from our backend
-        date = new Date(dateStr + 'Z');
+    if (typeof dateStr === 'string') {
+        // Normalize: Replace ' ' with 'T' for Safari compatibility (Safari cannot parse '2024-01-15 14:30:00')
+        const normalized = dateStr.replace(' ', 'T');
+        
+        if (!normalized.includes('Z') && !normalized.includes('+')) {
+            // If it's a raw string without TZ, assume it was intended as UTC from our backend
+            date = new Date(normalized + 'Z');
+        } else {
+            date = new Date(normalized);
+        }
     } else {
         date = new Date(dateStr);
     }
@@ -34,9 +41,9 @@ export const getTimeZoneAbbr = () => {
             timeZoneName: 'short'
         })
         .formatToParts(new Date())
-        .find(part => part.type === 'timeZoneName')?.value || 'IST';
+        .find(part => part.type === 'timeZoneName')?.value || 'UTC';
     } catch (_e) {
-        return 'IST';
+        return 'UTC';
     }
 };
 
