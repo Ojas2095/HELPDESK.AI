@@ -7,7 +7,7 @@ sys.modules['easyocr'] = MagicMock()
 from backend.services.ocr_service import OCRService
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 class TestOCRServiceInputValidation:
     """Tests for input validation in ocr_service"""
 
