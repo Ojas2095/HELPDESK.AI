@@ -42,7 +42,7 @@ def _remove_script_tags(text: str) -> str:
         # Find the closing > of the opening tag
         tag_end = text.find(">", start)
         if tag_end == -1:
-            # Malformed — no closing >, just escape the rest
+            # Malformed — no closing >, escape the <script tag and keep rest
             result.append(html.escape(text[start:]))
             break
 
@@ -50,8 +50,10 @@ def _remove_script_tags(text: str) -> str:
         close_pattern = "</script"
         close_start = lower.find(close_pattern, tag_end + 1)
         if close_start == -1:
-            # No closing tag — remove from <script to end
-            break
+            # No closing tag — escape the <script tag, keep the rest
+            result.append(html.escape(text[start:tag_end + 1]))
+            i = tag_end + 1
+            continue
 
         # Find the > after </script
         close_end = text.find(">", close_start)
@@ -157,6 +159,7 @@ def sanitize_ticket_data(data: dict, *, fields: Optional[list[str]] = None) -> d
         fields = [
             "text", "description", "subject", "summary",
             "company", "category", "priority",
+            "subcategory", "assigned_team", "ocr_text",
         ]
 
     sanitized = dict(data)
@@ -176,10 +179,10 @@ def get_security_headers() -> dict[str, str]:
     return {
         "Content-Security-Policy": (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com; "
+            "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; "
             "img-src 'self' data: https:; "
-            "font-src 'self' data:; "
+            "font-src 'self' data: https://fonts.gstatic.com; "
             "connect-src 'self' wss: ws: https:; "
             "frame-ancestors 'none';"
         ),
