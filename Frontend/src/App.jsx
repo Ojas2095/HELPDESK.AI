@@ -6,6 +6,7 @@ import {
   useLocation
 } from "react-router-dom";
 import React, { useEffect } from "react";
+import ErrorBoundary from "./components/shared/ErrorBoundary";
 import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
@@ -248,9 +249,10 @@ function App() {
     <BrowserRouter>
       <TitleUpdater />
       <ScrollToTop />
-      <Toaster />
-      <BugReportWidget />
-      <Routes>
+      <ErrorBoundary>
+        <Toaster />
+        <BugReportWidget />
+        <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -295,9 +297,14 @@ function App() {
 
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/*" element={<AppLayout />} />
+          <Route path="/*" element={
+            <ErrorBoundary>
+              <AppLayout />
+            </ErrorBoundary>
+          } />
         </Route>
-      </Routes>
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
