@@ -536,16 +536,31 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(request: Request, user: dict = Depends(get_current_user)):
+    """Fetch persistent tickets from Supabase, filtered by user's company.
+
+    Security: Requires authentication. Users can only see tickets from their own company.
+    This prevents cross-tenant data access (CVE-equivalent: unauthorized ticket enumeration).
+    """
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
-    res = query.execute()
+
+    # Get company_id from authenticated user's profile
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid user session")
+
+    try:
+        profile_res = supabase.table("profiles").select("company_id").eq("id", user_id).single().execute()
+        company_id = profile_res.data.get("company_id") if profile_res.data else None
+    except Exception:
+        raise HTTPException(status_code=403, detail="Unable to verify company access")
+
+    if not company_id:
+        raise HTTPException(status_code=403, detail="User not assigned to any company")
+
+    # Filter tickets by company — prevents cross-tenant ticket enumeration
+    res = supabase.table("tickets").select("*").eq("company_id", company_id).order("created_at", desc=True).execute()
     return res.data
 
 @app.post("/tickets/save")
@@ -652,15 +667,39 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
-    """Fetch single persistent ticket."""
+async def get_ticket_by_id(ticket_id: str, request: Request, user: dict = Depends(get_current_user)):
+    """Fetch single persistent ticket.
+
+    Security: Requires authentication. Users can only see tickets from their own company.
+    This prevents unauthorized cross-tenant ticket access.
+    """
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    # Get company_id from authenticated user's profile
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid user session")
+
+    try:
+        profile_res = supabase.table("profiles").select("company_id").eq("id", user_id).single().execute()
+        company_id = profile_res.data.get("company_id") if profile_res.data else None
+    except Exception:
+        raise HTTPException(status_code=403, detail="Unable to verify company access")
+
+    if not company_id:
+        raise HTTPException(status_code=403, detail="User not assigned to any company")
+
+    # Fetch ticket and verify it belongs to the user's company
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return res.data
+
+    ticket = res.data
+    if ticket.get("company_id") != company_id:
+        raise HTTPException(status_code=404, detail="Ticket not found")  # Hide existence to prevent enumeration
+
+    return ticket
 
 
 @app.post("/tickets", response_model=TicketRecord)
