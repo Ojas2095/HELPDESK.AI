@@ -348,153 +348,161 @@ export default function LandingPage() {
             </nav>
 
             {/* ==================== HERO ==================== */}
-            <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10" />
+            {/* ==================== HERO ==================== */}
+<section className="relative overflow-hidden min-h-[calc(100vh-64px)] flex items-center">
+    
+    {/* Background */}
+    <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-white to-white" />
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-8">
-                        <Activity className="w-3 h-3" />
-                        <span>AI-Powered Helpdesk Automation · Made in India 🇮🇳</span>
+    <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-emerald-100/40 blur-[140px] rounded-full pointer-events-none" />
+
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+
+        <div className="grid lg:grid-cols-2 gap-20 items-center">
+
+            {/* LEFT SIDE */}
+            <div>
+
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-600 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-8">
+                    <Activity className="w-3 h-3" />
+                    <span>AI-Powered Helpdesk Automation · Made in India 🇮🇳</span>
+                </div>
+
+                <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-6">
+                    Your IT Helpdesk,
+                    <br />
+                    <span className="text-emerald-700">
+                        Fully Automated.
+                    </span>
+                </h1>
+
+                <p className="text-lg md:text-xl text-gray-500 max-w-xl leading-relaxed mb-10">
+                    Turn messy user complaints into structured,
+                    categorized, and prioritized support tickets —
+                    instantly. No manual triage.
+                    No missed urgencies.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 mb-12">
+
+                    <button
+                        onClick={() => navigate('/admin-signup')}
+                        className="px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/20 hover:bg-emerald-800 transition-all flex items-center justify-center gap-2"
+                    >
+                        Get Started Free
+                        <ArrowRight className="w-5 h-5" />
+                    </button>
+
+                    <button
+                        onClick={() => setShowDemo(true)}
+                        className="px-8 py-4 bg-white border border-gray-200 rounded-xl font-semibold text-gray-700 hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2"
+                    >
+                        <Play className="w-4 h-4 fill-current" />
+                        Watch Demo
+                    </button>
+
+                </div>
+
+                {/* Trust Stats */}
+                <div className="grid grid-cols-3 gap-8 pt-4 mt-5 border-t border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <BrainCircuit className="w-8 h-8 text-emerald-600" />
+                        <div>
+                            <div className="text-2xl font-bold text-gray-900">99%</div>
+                            <div className="text-sm text-gray-500">Classification Accuracy</div>
+                        </div>
                     </div>
-
-                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
-                        Your IT Helpdesk,<br />
-                        <span className="text-emerald-700">Fully Automated.</span>
-                    </h1>
-
-                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 mb-10 leading-relaxed">
-                        Turn messy user complaints into structured, categorized, and prioritized support tickets — instantly. No manual triage. No missed urgencies.
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-                        <button
-                            onClick={() => navigate('/admin-signup')}
-                            className="w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/25 hover:bg-emerald-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base"
-                        >
-                            Get Started Free <ArrowRight className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={() => setShowDemo(true)}
-                            className="w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 text-base"
-                        >
-                            <Play className="w-4 h-4 fill-gray-500" /> Watch a Demo
-                        </button>
+                    <div className="flex items-center gap-3">
+                        <Zap className="w-8 h-8 text-emerald-600" />
+                        <div>
+                            <div className="text-2xl font-bold text-gray-900">80%</div>
+                            <div className="text-sm text-gray-500">Faster Routing</div>
+                        </div>
                     </div>
-
-            
-                    {/* BENTO VISUAL */}
-                    <div className="relative max-w-6xl mx-auto">
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl opacity-60 -z-10 rounded-full" />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
-                            {/* LEFT: Email */}
-                            <div className="relative group perspective-1000">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-gray-200 to-gray-100 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000" />
-                                <div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/60 overflow-hidden transform transition-transform group-hover:scale-[1.01]">
-                                    <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-                                        <div className="flex gap-1.5">
-                                            <div className="w-3 h-3 rounded-full bg-red-400" />
-                                            <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                                            <div className="w-3 h-3 rounded-full bg-green-400" />
-                                        </div>
-                                        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                                            <Mail className="w-3 h-3" /> Incoming Request
-                                        </div>
-                                    </div>
-                                    <div className="p-6">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm">SC</div>
-                                                <div>
-                                                    <div className="font-semibold text-gray-900 text-sm">Sarah Connors</div>
-                                                    <div className="text-xs text-gray-500">sarah@university.edu</div>
-                                                </div>
-                                            </div>
-                                            <div className="text-xs text-gray-400">2 mins ago</div>
-                                        </div>
-                                        <div className="mb-4">
-                                            <h3 className="text-sm font-bold text-gray-800 mb-1">Subject: Wifi down again in Lab 3??</h3>
-                                            <p className="text-sm text-gray-600 leading-relaxed">
-                                                Hey support, the wifi in <span className="bg-yellow-100 px-1 rounded">downstairs lab 3</span> is acting up again.
-                                                Can't connect at all. Class starts in 20 mins, need this fixed ASAP!<br /><br />
-                                                Thanks,<br />Sarah
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="hidden md:flex absolute -right-8 top-1/2 -translate-y-1/2 z-20 text-emerald-300">
-                                    <ArrowRight className="w-8 h-8 animate-pulse" />
-                                </div>
-                            </div>
-
-                            {/* RIGHT: Processed Ticket */}
-                            <div className="relative group">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000" />
-                                <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all group-hover:-translate-y-1">
-                                    <div className="bg-white border-b border-gray-100 px-5 py-3 flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs font-bold text-gray-500">#T-4029</span>
-                                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 uppercase tracking-wide">AI Processed</span>
-                                        </div>
-                                        <div className="flex gap-2 text-gray-400">
-                                            <Search className="w-4 h-4" />
-                                            <Bell className="w-4 h-4" />
-                                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-[10px]">AI</div>
-                                        </div>
-                                    </div>
-                                    <div className="p-6 space-y-5">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-bold text-gray-800 text-lg mb-1">WiFi Connectivity Issue</h3>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                                    <Clock className="w-3 h-3" /> Created 1m ago
-                                                    <span>•</span> via Email
-                                                </div>
-                                            </div>
-                                            <button className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200">
-                                                Resolve
-                                            </button>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
-                                                    <AlertCircle className="w-3 h-3" /> Priority
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                                    <span className="text-sm font-bold text-gray-800">High</span>
-                                                </div>
-                                            </div>
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
-                                                    <Folder className="w-3 h-3" /> Category
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-sm font-bold text-gray-800">Network</span>
-                                                </div>
-                                            </div>
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 col-span-2">
-                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
-                                                    <MapPin className="w-3 h-3" /> Location
-                                                </div>
-                                                <div className="text-sm font-bold text-gray-800">Lab 3 (Downstairs)</div>
-                                            </div>
-                                        </div>
-                                        <div className="border-t border-gray-100 pt-3 flex items-center justify-between">
-                                            <div className="text-xs text-gray-500 flex items-center gap-1">
-                                                Assigned to <span className="font-bold text-gray-700">NetOps Team</span>
-                                            </div>
-                                            <div className="flex -space-x-1">
-                                                <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white" />
-                                                <div className="w-6 h-6 rounded-full bg-green-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-green-700">+3</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div className="flex items-center gap-3">
+                        <Clock className="w-8 h-8 text-emerald-600" />
+                        <div>
+                            <div className="text-2xl font-bold text-gray-900">24/7</div>
+                            <div className="text-sm text-gray-500">AI Processing</div>
                         </div>
                     </div>
                 </div>
-            </section>
+
+            </div>
+
+            {/* RIGHT SIDE */}
+            <div className="relative h-[500px] flex items-center justify-center">
+                {/* Glow */}
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl rounded-full opacity-70 -z-10" />
+
+                {/* Incoming Email Card */}
+                <motion.div 
+                    className="absolute top-0 left-0 w-[340px] bg-white/80 backdrop-blur-md rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.07)] border border-white overflow-hidden z-10"
+                    initial={{ opacity: 0, x: 50, rotate: 5 }}
+                    animate={{ opacity: 1, x: 0, rotate: -3 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                    <div className="p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Mail className="w-5 h-5 text-blue-500" />
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm text-gray-800">Jane Doe</p>
+                                <p className="text-xs text-gray-500">jane.doe@example.com</p>
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-700 italic">"Hey support, the wifi in downstream lab 3 is acting up again. Can't connect. Need fixed ASAP!"</p>
+                    </div>
+                </motion.div>
+
+                {/* Center AI Badge & Arrow */}
+                <motion.div 
+                    className="absolute z-20 flex flex-col items-center gap-2"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 0.6 }}
+                >
+                    <div className="w-1 h-12 bg-gradient-to-b from-transparent via-emerald-300 to-transparent" />
+                    <div className="bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl shadow-emerald-500/30 flex items-center gap-2">
+                        <Bot className="w-5 h-5" />
+                        <span className="font-bold">AI Processing</span>
+                    </div>
+                    <div className="w-1 h-12 bg-gradient-to-b from-transparent via-emerald-300 to-transparent" />
+                </motion.div>
+
+                {/* Processed Ticket */}
+                <motion.div 
+                    className="absolute bottom-0 right-0 w-[420px] bg-white rounded-3xl shadow-[0_30px_90px_rgba(16,185,129,0.15)] border border-gray-100 overflow-hidden z-10"
+                    initial={{ opacity: 0, x: -50, rotate: -5 }}
+                    animate={{ opacity: 1, x: 0, rotate: 3 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                >
+                    <div className="bg-emerald-500 px-4 py-2 flex justify-between items-center">
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">Ticket #4029</span>
+                        <span className="text-[10px] font-bold text-white/80">RESOLVED</span>
+                    </div>
+                    <div className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                                <Bot className="w-4 h-4 text-emerald-600" />
+                            </div>
+                            <span className="text-sm font-bold text-gray-800 italic">HelpDesk AI Assistant</span>
+                        </div>
+                        <p className="text-xs text-gray-600 leading-snug mb-4">"Remotely reset the Lab 3 router. Connectivity restored. Total downtime: 143ms."</p>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-[10px] text-emerald-700 font-bold uppercase tracking-widest text-center">Category: Network</div>
+                            <div className="bg-red-500/10 border border-red-500/20 p-2 rounded-lg text-[10px] text-red-700 font-bold uppercase tracking-widest text-center">Priority: High</div>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
 
             {/* ==================== STATS BAR ==================== */}
             <section className="bg-emerald-900 py-12 text-white">
