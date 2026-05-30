@@ -426,6 +426,7 @@ class TroubleshootResponse(BaseModel):
     is_final: bool
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
+@limiter.limit("10/minute")
 async def troubleshoot(request: TroubleshootRequest):
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
@@ -453,6 +454,7 @@ class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
+@limiter.limit("10/minute")
 async def analyze_bug(request: BugReportAnalysisRequest):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
@@ -475,6 +477,7 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
+@limiter.limit("30/minute")
 async def log_correction(raw_request: Request):
     """Log an admin correction when the AI prediction differs from the human decision."""
     try:
@@ -731,6 +734,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze")
+@limiter.limit("10/minute")
 async def analyze_only(request_body: TicketRequest):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
@@ -892,6 +896,7 @@ async def analyze_only(request_body: TicketRequest):
     )
 
 @app.post("/ai/analyze_stream")
+@limiter.limit("10/minute")
 async def analyze_stream(request_body: TicketRequest):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
@@ -1044,6 +1049,7 @@ async def analyze_stream(request_body: TicketRequest):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/ai/analyze_ticket/legacy")
+@limiter.limit("10/minute")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
@@ -1052,6 +1058,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze-v2")
+@limiter.limit("10/minute")
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
     try:
