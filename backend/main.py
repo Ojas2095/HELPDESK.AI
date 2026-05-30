@@ -28,6 +28,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
+from backend.utils.encryption import encrypt_aes256_gcm, decrypt_aes256_gcm, redact_pii, redact_and_encrypt
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -535,6 +536,43 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Encryption endpoints
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel
+
+class EncryptRequest(BaseModel):
+    text: str
+    password: str | None = None
+    redact_first: bool = True
+
+class DecryptRequest(BaseModel):
+    encrypted_text: str
+    password: str | None = None
+
+@app.post("/api/encrypt", response_model=dict)
+async def encrypt_payload(request: EncryptRequest):
+    """Encrypt text payload with optional PII redaction."""
+    try:
+        if request.redact_first:
+            result = redact_and_encrypt(request.text, request.password)
+        else:
+            result = encrypt_aes256_gcm(request.text, request.password)
+        return {"status": "ok", "encrypted": result}
+    except Exception as e:
+        logger.error(f"Encryption failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Encryption failed: {str(e)}")
+
+@app.post("/api/decrypt", response_model=dict)
+async def decrypt_payload(request: DecryptRequest):
+    """Decrypt previously encrypted text."""
+    try:
+        result = decrypt_aes256_gcm(request.encrypted_text, request.password)
+        return {"status": "ok", "decrypted": result}
+    except Exception as e:
+        logger.error(f"Decryption failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Decryption failed: {str(e)}")
 @app.get("/tickets")
 async def get_tickets(company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
