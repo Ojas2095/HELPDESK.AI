@@ -20,7 +20,7 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
     const selectedOption = options.find(opt => String(opt.value) === String(value)) || null;
 
     return (
-        <div ref={containerRef} className={`relative ${className || 'flex-1'}`} role="group" aria-label={ariaLabel} {...props}>
+        <div ref={containerRef} className={`relative ${className || 'flex-1'}`} {...props}>
             <button
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}

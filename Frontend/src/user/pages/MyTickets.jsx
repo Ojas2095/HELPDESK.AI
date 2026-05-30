@@ -124,7 +124,7 @@ function MyTickets() {
         <main className="flex-1 max-w-[1200px] w-full mx-auto px-6 py-10 flex flex-col gap-8">
             {/* Live region for screen reader announcements */}
             <div aria-live="polite" aria-atomic="true" className="sr-only">
-                {filteredTickets.length > 0 && `Showing ${filteredTickets.length} tickets`}
+                Showing {filteredTickets.length} {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
             </div>
             {/* Header section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
