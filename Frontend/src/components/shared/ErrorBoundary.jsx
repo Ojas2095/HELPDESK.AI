@@ -12,9 +12,23 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
-    // Log to console in development
+    // Log to console in development, report to monitoring in production
     if (import.meta.env.DEV) {
       console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+    } else {
+      // Production: report to monitoring endpoint (non-blocking)
+      try {
+        fetch('/api/error-report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: error?.message,
+            componentStack: errorInfo?.componentStack,
+            url: window.location.href,
+            timestamp: new Date().toISOString(),
+          }),
+        }).catch(() => {}); // Silently ignore report failures
+      } catch (_) {} // Never let reporting break the error boundary
     }
   }
 

@@ -39,10 +39,13 @@ class FakeTable:
 
     def insert(self, payload):
         rows = payload if isinstance(payload, list) else [payload]
+        existing = self.db.setdefault(self.name, [])
         for r in rows:
             if "id" not in r:
-                r["id"] = len(self.db.get(self.name, [])) + 1
-        self.db.setdefault(self.name, []).extend(rows)
+                r["id"] = len(existing) + 1
+                existing.append(r)
+            else:
+                existing.append(r)
         self.inserted_rows = rows
         return self
 

@@ -253,6 +253,8 @@ class TestTranslateText(unittest.TestCase):
         long_text = "a" * (MAX_TEXT_LENGTH + 500)
         result = translate_text(long_text, target_lang="es", source_lang="en")
         self.assertIsNotNone(result["translated"])
+        # Verify text was actually truncated (not passed through at full length)
+        self.assertLessEqual(len(result["translated"]), MAX_TEXT_LENGTH + 100)
 
     def test_model_load_failure_returns_original(self):
         """When model loading fails, should return original text."""
