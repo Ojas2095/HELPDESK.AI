@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -221,11 +221,11 @@ async def lifespan(app: FastAPI):
     print("[Startup] Loading AI models ...")
     try:
         classifier_service.load()
-    except FileNotFoundError as e:
+    except Exception as e:
         print(f"[WARNING] Classifier not loaded: {e}")
     try:
         ner_service.load()
-    except FileNotFoundError as e:
+    except Exception as e:
         print(f"[WARNING] NER not loaded: {e}")
     try:
         duplicate_service.load()
