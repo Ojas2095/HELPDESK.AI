@@ -544,27 +544,34 @@ async def get_tickets(
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
-    # Resolve company_id from user profile if not explicitly provided
+    # SECURITY: Always resolve company_id from authenticated user profile.
+    # Ignore any client-provided company_id to prevent cross-tenant data leaks.
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=403, detail="User ID not found in token")
+
+    try:
+        profile_res = (
+            supabase.table("profiles")
+            .select("company_id")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        profile = profile_res.data or {}
+        company_id = profile.get("company_id")
+    except Exception:
+        raise HTTPException(status_code=403, detail="Unable to resolve tenant for this user")
+
     if not company_id:
-        user_id = user.get("id")
-        if user_id:
-            try:
-                profile_res = (
-                    supabase.table("profiles")
-                    .select("company_id")
-                    .eq("id", user_id)
-                    .single()
-                    .execute()
-                )
-                profile = profile_res.data or {}
-                company_id = profile.get("company_id")
-            except Exception:
-                pass  # Fall through to unfiltered query
+        raise HTTPException(status_code=403, detail="No company assigned to this user")
 
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-
+    query = (
+        supabase.table("tickets")
+        .select("*")
+        .eq("company_id", company_id)
+        .order("created_at", desc=True)
+    )
     res = query.execute()
     return res.data
 
