@@ -128,15 +128,11 @@ class TestSaveTags:
 
     @patch("tag_service._get_supabase")
     def test_max_10_tags_enforced(self, mock_sb):
-        saved_tags = []
-        def capture_update(data):
-            saved_tags.extend(data.get("tags", []))
-            return MagicMock(eq=lambda *a, **kw: MagicMock(execute=lambda: None))
-        mock_sb.return_value.table.return_value.update.side_effect = capture_update
+        mock_sb.return_value.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock()
 
         from tag_service import save_tags
-        save_tags("ticket-123", ["t1","t2","t3","t4","t5","t6","t7","t8","t9","t10","t11","t12"])
-        # Shouldn't crash — max 10 enforced internally
+        result = save_tags("ticket-123", ["t1","t2","t3","t4","t5","t6","t7","t8","t9","t10","t11","t12"])
+        assert result is True
 
     @patch("tag_service._get_supabase")
     def test_tags_sanitized_before_save(self, mock_sb):

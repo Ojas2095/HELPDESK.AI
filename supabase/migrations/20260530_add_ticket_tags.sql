@@ -23,4 +23,4 @@ BEGIN
   ORDER BY count DESC
   LIMIT p_limit;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -71,17 +71,14 @@ export default function TicketTagManager({
         });
         const data = await res.json();
         if (data.success) {
-          const fresh = (data.suggested_tags || []).filter(
-            (t) => !acceptedTags.includes(t)
-          );
-          setSuggestedTags(fresh);
+          setSuggestedTags(data.suggested_tags || []);
         }
       } catch (e) {
         console.error("[TagManager] suggest tags:", e);
       }
       setLoadingSuggest(false);
     })();
-  }, [ticketTitle, ticketBody, category, acceptedTags]);
+  }, []);
 
   // ── Load popular tags for autocomplete when companyId provided ─────────────
   useEffect(() => {
@@ -120,7 +117,9 @@ export default function TicketTagManager({
   function handleKeyDown(e) {
     if (e.key === "Enter" && inputValue.trim()) {
       e.preventDefault();
-      const tag = inputValue.trim().toLowerCase().replace(/\s+/g, "-");
+      const tag = inputValue.trim().toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "");
       if (!acceptedTags.includes(tag)) setAcceptedTags((p) => [...p, tag]);
       setInputValue("");
       setShowDropdown(false);

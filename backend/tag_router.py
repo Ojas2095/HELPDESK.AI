@@ -97,19 +97,3 @@ async def save_ticket_tags_endpoint(
     return {"success": True, "ticket_id": ticket_id, "tags": saved}
 
 
-# ---------------------------------------------------------------------------
-# Backwards-compatible aliases under /api/tickets/{ticket_id}/tags
-# ---------------------------------------------------------------------------
-
-
-@router.get("/tickets/{ticket_id}/tags")
-async def get_ticket_tags_alias(ticket_id: str, authorization: Optional[str] = Header(None)):
-    _require_auth(authorization)
-    return await get_ticket_tags_endpoint(ticket_id, authorization)
-
-
-@router.post("/tickets/{ticket_id}/tags")
-async def save_ticket_tags_alias(ticket_id: str, req: SaveTagsRequest, authorization: Optional[str] = Header(None)):
-    _require_auth(authorization)
-    return await save_ticket_tags_endpoint(ticket_id, req, authorization)
-

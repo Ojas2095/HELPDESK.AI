@@ -7,26 +7,39 @@ import json
 import google.generativeai as genai
 from supabase import create_client
 
-# ── Initialize clients ────────────────────────────────────────────────────────
-_supabase = None
-_gemini_model = None
+def _make_supabase():
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_SERVICE_KEY", "")
+    if not url or not key:
+        return None
+    try:
+        return create_client(url, key)
+    except Exception as e:
+        print(f"[tag_service] Supabase init failed: {e}")
+        return None
+
+
+def _make_gemini():
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    if not api_key:
+        return None
+    try:
+        genai.configure(api_key=api_key)
+        return genai.GenerativeModel("gemini-pro")
+    except Exception as e:
+        print(f"[tag_service] Gemini init failed: {e}")
+        return None
+
+
+_supabase = _make_supabase()
+_gemini_model = _make_gemini()
 
 
 def _get_supabase():
-    global _supabase
-    if _supabase is None:
-        _supabase = create_client(
-            os.getenv("SUPABASE_URL", ""),
-            os.getenv("SUPABASE_SERVICE_KEY", "")
-        )
     return _supabase
 
 
 def _get_gemini():
-    global _gemini_model
-    if _gemini_model is None:
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
-        _gemini_model = genai.GenerativeModel("gemini-pro")
     return _gemini_model
 
 
