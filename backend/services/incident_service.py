@@ -12,7 +12,14 @@ second copy of all-MiniLM-L6-v2.
 import os
 import time
 import uuid
-from sentence_transformers import util
+
+try:
+    from sentence_transformers import SentenceTransformer, util
+    _HAS_SENTENCE = True
+except Exception:
+    SentenceTransformer = None
+    util = None
+    _HAS_SENTENCE = False
 
 
 # Defaults are tunable via env without code changes.
