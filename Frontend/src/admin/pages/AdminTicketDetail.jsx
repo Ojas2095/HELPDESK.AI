@@ -19,6 +19,7 @@ import TicketTimeline from "../../user/components/TicketTimeline";
 import TicketAuditTimeline from "../components/TicketAuditTimeline";
 import TicketTagManager from '../../components/TicketTagManager';
 import TagChip from '../../components/TagChip';
+import { safeDisplayText } from "../../utils/sanitizeText";
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
