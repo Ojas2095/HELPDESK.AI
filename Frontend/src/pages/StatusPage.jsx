@@ -1,7 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, CheckCircle, AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Activity, CheckCircle, ArrowLeft, RefreshCw, Server, ShieldCheck, Cpu, Globe, CreditCard } from 'lucide-react';
 import { Card } from '../components/ui/card';
+import Header from "../components/landing/Header";
+import Footer from "../components/landing/Footer";
 
 export default function StatusPage() {
     const navigate = useNavigate();
@@ -9,79 +12,140 @@ export default function StatusPage() {
 
     const handleRefresh = () => {
         setIsRefreshing(true);
-        setTimeout(() => setIsRefreshing(false), 1000);
+        setTimeout(() => setIsRefreshing(false), 1200);
     };
 
     const services = [
-        { name: 'AI Triage Engine (NER & Categorization)', status: 'Operational', desc: 'Active pipeline & Gemini Model backup failovers' },
-        { name: 'Supabase Data Gateway', status: 'Operational', desc: 'Secure database endpoints & real-time socket connections' },
-        { name: 'Speech Dictation Interface', status: 'Operational', desc: 'Local Web Speech Recognition browser framework compatibility' },
-        { name: 'Client-Side OCR Telemetry', status: 'Operational', desc: 'Tesseract.js script injection & parallel image worker processes' },
-        { name: 'Stripe Payment Processor Integration', status: 'Operational', desc: 'Live billing checkout links & dynamic upgrade callbacks' }
+        { 
+            name: 'AI Triage Engine (NER & Categorization)', 
+            status: 'Operational', 
+            desc: 'Active pipeline & Gemini Model backup failovers',
+            icon: Cpu,
+            color: 'emerald'
+        },
+        { 
+            name: 'Supabase Data Gateway', 
+            status: 'Operational', 
+            desc: 'Secure database endpoints & real-time socket connections',
+            icon: Server,
+            color: 'blue'
+        },
+        { 
+            name: 'Speech Dictation Interface', 
+            status: 'Operational', 
+            desc: 'Local Web Speech Recognition browser compatibility',
+            icon: Globe,
+            color: 'purple'
+        },
+        { 
+            name: 'Client-Side OCR Telemetry', 
+            status: 'Operational', 
+            desc: 'Tesseract.js script injection & parallel worker processes',
+            icon: ShieldCheck,
+            color: 'amber'
+        },
+        { 
+            name: 'Stripe Payment Processor Integration', 
+            status: 'Operational', 
+            desc: 'Live billing checkout links & dynamic upgrade callbacks',
+            icon: CreditCard,
+            color: 'emerald'
+        }
     ];
 
     return (
-        <div className="min-h-screen bg-[#f6f8f7] pb-20">
-            {/* Header */}
-            <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
-                <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
-                        <img src="/favicon.png" alt="HELPDESK.AI Logo" className="w-7 h-7 object-contain" />
-                        <div className="flex items-baseline gap-2">
-                            <h1 className="text-xl font-black tracking-tighter text-gray-900 italic">HELPDESK.AI</h1>
-                            <span className="px-2 py-0.5 text-[10px] font-black bg-emerald-100 text-emerald-800 rounded-md uppercase tracking-wider">Status</span>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={() => navigate('/')}
-                        className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-emerald-600 transition-colors bg-gray-50 hover:bg-emerald-50 px-3.5 py-2 rounded-xl border border-gray-200"
-                    >
-                        <ArrowLeft size={14} /> Back to Home
-                    </button>
-                </div>
-            </header>
+        <div className="min-h-screen bg-white dark:bg-slate-900 flex flex-col transition-colors duration-300 w-full overflow-x-hidden">
+            <Header />
 
-            <div className="max-w-[800px] mx-auto px-4 md:px-6 mt-12 space-y-10">
-                {/* Hero Banner */}
-                <div className="bg-emerald-950 text-white rounded-[2rem] p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="absolute -right-10 -top-10 w-44 h-44 bg-emerald-500/10 rounded-full blur-3xl" />
+            <main className="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 py-12 sm:py-20 space-y-12 relative z-10">
+
+                {/* Hero Banner Radar */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-emerald-950 dark:bg-slate-900 text-white rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-8 border border-white/5"
+                >
+                    <div className="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
                     
-                    <div className="space-y-3 z-10">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/20 rounded-full border border-emerald-500/30">
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Live Status Radar</span>
+                    <div className="space-y-4 z-10 text-left">
+                        <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                            <div className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400">Live System Radar</span>
                         </div>
-                        <h2 className="text-3xl font-black italic tracking-tight">All Systems Operational</h2>
-                        <p className="text-slate-300 text-xs font-semibold">100% of microservices running successfully within target parameters.</p>
+                        <h2 className="text-4xl sm:text-5xl font-black tracking-tight font-syne">All Systems Operational</h2>
+                        <p className="text-slate-400 text-base font-medium max-w-lg">
+                            100% of microservices are performing within target latency and throughput parameters.
+                        </p>
                     </div>
 
                     <button 
                         onClick={handleRefresh}
                         disabled={isRefreshing}
-                        className="self-start md:self-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 border border-white/15 transition-all active:scale-95 disabled:opacity-50"
+                        className="self-start md:self-auto px-6 py-4 rounded-2xl bg-white/5 hover:bg-white/10 font-bold text-sm uppercase tracking-widest flex items-center gap-2 border border-white/10 transition-all active:scale-95 disabled:opacity-50"
                     >
-                        <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} /> {isRefreshing ? 'Checking...' : 'Refresh Status'}
+                        <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} /> 
+                        {isRefreshing ? 'Syncing...' : 'Refresh'}
                     </button>
+                </motion.div>
+
+                {/* Service List */}
+                <div className="space-y-6 text-left">
+                    <div className="flex items-center gap-3 px-2">
+                        <Activity size={18} className="text-slate-400" />
+                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Infrastructure Nodes</h3>
+                    </div>
+                    
+                    <motion.div 
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                            visible: { transition: { staggerChildren: 0.1 } }
+                        }}
+                        className="space-y-4"
+                    >
+                        {services.map((service, idx) => (
+                            <motion.div
+                                key={idx}
+                                variants={{
+                                    hidden: { opacity: 0, x: -20 },
+                                    visible: { opacity: 1, x: 0 }
+                                }}
+                            >
+                                <Card className="p-6 sm:p-8 rounded-[2rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between shadow-sm dark:shadow-none hover:shadow-lg transition-all duration-300 group gap-6">
+                                    <div className="flex items-center gap-6">
+                                        <div className={`w-12 h-12 rounded-xl bg-${service.color}-500/10 text-${service.color}-500 flex items-center justify-center shrink-0 border border-${service.color}-500/20 group-hover:scale-110 transition-transform`}>
+                                            <service.icon size={22} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="font-extrabold text-slate-900 dark:text-white text-lg tracking-tight leading-tight">{service.name}</h4>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{service.desc}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/5 border border-emerald-500/10 shrink-0">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-xs font-black uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
+                                            {service.status}
+                                        </span>
+                                    </div>
+                                </Card>
+                            </motion.div>
+                        ))}
+                    </motion.div>
                 </div>
 
-                {/* Service Cards */}
-                <div className="space-y-4">
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Active Services</h3>
-                    <div className="space-y-3">
-                        {services.map((service, idx) => (
-                            <Card key={idx} className="p-6 rounded-[1.5rem] border border-slate-200/80 bg-white flex items-center justify-between shadow-sm flex-wrap gap-4">
-                                <div className="space-y-1">
-                                    <h4 className="font-extrabold text-slate-900 text-sm">{service.name}</h4>
-                                    <p className="text-xs text-slate-400 font-semibold">{service.desc}</p>
-                                </div>
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">
-                                    <CheckCircle size={10} /> {service.status}
-                                </span>
-                            </Card>
-                        ))}
-                    </div>
+                {/* Bottom Metadata */}
+                <div className="pt-12 text-center">
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-600">
+                        Operational Telemetry &copy; 2026 HELPDESK.AI
+                    </p>
                 </div>
-            </div>
+            </main>
+
+            <Footer />
         </div>
     );
 }
