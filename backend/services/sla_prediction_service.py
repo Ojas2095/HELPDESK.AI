@@ -87,6 +87,11 @@ class SLAPredictionService:
         now = now or _utcnow()
         created = _parse_iso(created_at)
 
+        if priority not in DEFAULT_SLA_HOURS:
+            raise ValueError(
+                f"Invalid priority '{priority}'. Must be one of: {', '.join(DEFAULT_SLA_HOURS.keys())}"
+            )
+
         sla_hours = DEFAULT_SLA_HOURS.get(priority, 72)
         if sla_breach_at:
             breach_dt = _parse_iso(sla_breach_at)
