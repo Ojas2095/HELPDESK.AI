@@ -342,6 +342,22 @@ ${fullName}`;
                             </div>
                             <div className="h-3 w-3 bg-emerald-500 rounded-full animate-pulse ring-4 ring-emerald-50" />
                         </div>
+
+                        {/* Keyboard Shortcuts Sidebar Entry */}
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between">
+                            <div>
+                                <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                                    <Keyboard className="w-5 h-5 text-emerald-600" /> Keyboard Shortcuts
+                                </h4>
+                                <p className="text-sm text-gray-500 mt-1">Navigate the system faster using global hotkeys.</p>
+                            </div>
+                            <button
+                                onClick={() => setIsShortcutsOpen(true)}
+                                className="mt-4 w-full py-2.5 px-4 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 transition-colors font-bold text-xs uppercase tracking-wider rounded-xl border border-emerald-100 flex items-center justify-center gap-2 cursor-pointer focus:outline-none"
+                            >
+                                View Shortcuts Legend
+                            </button>
+                        </div>
                     </div>
 
                 </div>
