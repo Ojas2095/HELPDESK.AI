@@ -1,3 +1,4 @@
+import torch
 """
 Duplicate Detection Service
 Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
