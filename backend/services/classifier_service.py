@@ -6,6 +6,7 @@ Priority and other fields are derived from the category mapping.
 
 import os
 import json
+import time
 try:
     import torch
     import torch.nn.functional as F
@@ -27,6 +28,8 @@ try:
         CLASSIFIER_LATENCY,
         CLASSIFIER_REQUESTS,
         CLASSIFIER_TOKENS,
+        MODEL_PREDICTIONS_TOTAL,
+        MODEL_PREDICTION_LATENCY,
     )
     _METRICS_ENABLED = True
 except Exception:
@@ -122,6 +125,7 @@ class ClassifierService:
         Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
         """
         start_time = time.time()
+        _t0 = time.perf_counter()
         try:
             self.load()
 
@@ -135,9 +139,6 @@ class ClassifierService:
             input_ids = encoding["input_ids"].to(DEVICE)
             attention_mask = encoding["attention_mask"].to(DEVICE)
 
-        import time
-        _t0 = time.perf_counter()
-        try:
             with torch.no_grad():
                 outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
                 logits = outputs.logits

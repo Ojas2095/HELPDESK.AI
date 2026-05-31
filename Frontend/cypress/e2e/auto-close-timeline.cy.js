@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* global describe, beforeEach, cy, it, expect, Cypress */
 /**
  * E2E test suite — Auto-Close Ticket Notification & Timeline Workflows
  * Covers: WebSocket mocked events, status transitions, timeline rendering

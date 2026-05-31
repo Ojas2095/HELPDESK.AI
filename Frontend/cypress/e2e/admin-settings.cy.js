@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* global describe, beforeEach, cy, it, expect, Cypress */
 describe('Admin Settings Page', () => {
   beforeEach(() => {
     cy.visit('/admin/settings');

@@ -17,7 +17,6 @@ export default function TicketTagManager({
 }) {
   const [suggestedTags, setSuggestedTags]   = useState([]);
   const [acceptedTags, setAcceptedTags]     = useState([]);
-  const [dismissedTags, setDismissedTags]   = useState([]);
   const [popularTags, setPopularTags]       = useState([]);
   const [inputValue, setInputValue]         = useState("");
   const [showDropdown, setShowDropdown]     = useState(false);
@@ -105,7 +104,6 @@ export default function TicketTagManager({
   }
 
   function dismissTag(tag) {
-    setDismissedTags((p) => [...p, tag]);
     setSuggestedTags((p) => p.filter((t) => t !== tag));
   }
 
