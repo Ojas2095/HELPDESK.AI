@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* global describe, beforeEach, cy, it, expect, Cypress */
 describe('Auto-Close Notification Workflows', () => {
   it('should display ticket status options', () => {
     cy.visit('/tickets');

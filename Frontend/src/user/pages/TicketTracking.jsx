@@ -6,9 +6,9 @@ import {
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";
+import axios from 'axios';
 import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
-import apiClient from '../../services/apiClient';
 import { API_CONFIG } from '../../config';
 import { supabase } from '../../lib/supabaseClient';
 

@@ -3,7 +3,7 @@
  * Provides global keyboard shortcuts for rapid navigation.
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Default shortcuts configuration
@@ -42,7 +42,7 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
 
     const navigate = useNavigate();
     const location = useLocation();
-    const pendingKeyRef = useRef(null);
+    const [pendingKey, setPendingKey] = useState(null);
     const timeoutRef = useRef(null);
 
     // Merge default and custom shortcuts
@@ -76,7 +76,7 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
                     modal.click();
                 });
             }
-            pendingKeyRef.current = null;
+            setPendingKey(null);
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
                 timeoutRef.current = null;
@@ -103,7 +103,7 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
         }
 
         // Handle G + key combinations (vim-style navigation)
-        if (pendingKeyRef.current === 'g') {
+        if (pendingKey === 'g') {
             const combo = `g,${key}`;
             const target = shortcuts[combo];
 
@@ -112,7 +112,7 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
                 navigate(target);
             }
 
-            pendingKeyRef.current = null;
+            setPendingKey(null);
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
                 timeoutRef.current = null;
@@ -122,13 +122,13 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
 
         // Set pending key for G combinations
         if (key === 'g' && !ctrl && !shift && !alt) {
-            pendingKeyRef.current = 'g';
+            setPendingKey('g');
             timeoutRef.current = setTimeout(() => {
-                pendingKeyRef.current = null;
+                setPendingKey(null);
             }, 1000); // 1 second timeout for key sequence
             return;
         }
-    }, [enabled, shortcuts, navigate, location, onSearch, onShortcutsHelp]);
+    }, [enabled, shortcuts, navigate, location, onSearch, onShortcutsHelp, pendingKey]);
 
     useEffect(() => {
         if (!enabled) return;
@@ -144,7 +144,7 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
 
     return {
         shortcuts,
-        pendingKey: pendingKeyRef.current,
+        pendingKey,
     };
 };
 

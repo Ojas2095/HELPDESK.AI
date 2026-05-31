@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* global describe, beforeEach, cy, it, expect, Cypress */
 Cypress.Commands.add('login', (email, password) => {
   cy.visit('/login');
   cy.get('input[type="email"]').type(email);
