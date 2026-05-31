@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Bot, TrendingUp, Clock, Shield, Inbox, AlertTriangle } from 'lucide-react';
 
 // ─── Circular Score Ring ──────────────────────────────────────────────────────

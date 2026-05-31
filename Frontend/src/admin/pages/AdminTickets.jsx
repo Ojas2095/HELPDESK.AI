@@ -44,7 +44,6 @@ const AdminTickets = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null); // ID of ticket being updated
-    const [newlyBreachedTicketIds, setNewlyBreachedTicketIds] = useState([]);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
@@ -172,12 +171,6 @@ const AdminTickets = () => {
                     // Show custom toast
                     const formattedId = String(ticketId).slice(0, 8).toUpperCase();
                     showToast(`⚠️ SLA BREACH: Ticket #${formattedId} ("${subject}") escalated from '${originalTeam}' to '${escalatedTeam}'!`, "error");
-
-                    // Highlight the row
-                    setNewlyBreachedTicketIds(prev => [...prev, ticketId]);
-                    setTimeout(() => {
-                        setNewlyBreachedTicketIds(prev => prev.filter(id => id !== ticketId));
-                    }, 12000);
 
                     // Update ticket in state
                     setTickets(prev => prev.map(t => 

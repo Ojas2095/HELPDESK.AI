@@ -29,7 +29,7 @@ class ErrorBoundary extends Component {
         console.error('[ErrorBoundary] Error info:', errorInfo);
 
         // In production, you could send to error tracking service
-        if (process.env.NODE_ENV === 'production') {
+        if (import.meta.env.PROD) {
             this.logErrorToService(error, errorInfo, errorId);
         }
     }
@@ -173,7 +173,7 @@ class ErrorBoundary extends Component {
                             </div>
 
                             {/* Development Details */}
-                            {process.env.NODE_ENV === 'development' && errorInfo && (
+                            {import.meta.env.DEV && errorInfo && (
                                 <details className="mt-4">
                                     <summary className="cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-700">
                                         Technical Details (Development Only)
