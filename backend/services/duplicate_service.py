@@ -38,11 +38,22 @@ class DuplicateService:
         """Check if the model is available for duplicate detection."""
         return self._loaded and not self._load_failed
 
+    def _encode(self, text: str) -> np.ndarray:
+        """Encode text to an L2-normalized float32 numpy embedding."""
+        emb = self.model.encode(text, convert_to_numpy=True, normalize_embeddings=True)
+        return emb.astype(np.float32, copy=False)
+
+    def _rebuild_matrix(self):
+        if self._tickets:
+            self._embedding_matrix = np.vstack([emb for _, emb, _ in self._tickets])
+        else:
+            self._embedding_matrix = None
+
     def load(self):
         """Load the sentence-transformer model and saved tickets."""
         if self._loaded or self._load_failed:
             return
-        
+
         print("[DuplicateService] Loading model...")
         if not _HAS_SENTENCE:
             allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
@@ -265,7 +276,7 @@ class DuplicateService:
                 "similarity": 0.0,
             }
 
-        query_embedding = self.model.encode(text, convert_to_tensor=True)
+        query_embedding = self._encode(text)
 
         import torch
 
