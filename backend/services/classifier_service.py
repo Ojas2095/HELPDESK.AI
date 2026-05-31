@@ -6,6 +6,7 @@ Priority and other fields are derived from the category mapping.
 
 import os
 import json
+import time
 try:
     import torch
     import torch.nn.functional as F
@@ -135,7 +136,6 @@ class ClassifierService:
             input_ids = encoding["input_ids"].to(DEVICE)
             attention_mask = encoding["attention_mask"].to(DEVICE)
 
-        import time
         _t0 = time.perf_counter()
         try:
             with torch.no_grad():
