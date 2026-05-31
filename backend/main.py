@@ -1729,9 +1729,8 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
 @limiter.limit("10/minute")
 async def analyze_only(request_body: TicketRequest, request: Request):
     """
-    PERFORMANCE UPGRADE: AI Analysis phase only. 
-    Does NOT persist to DB. This allows the user to review the analysis 
-    and duplicate check before committing to a ticket creation.
+    Centralized analysis logic used by `/ai/analyze`, `/ai/analyze_ticket`, and `/ai/analyze_stream`.
+    Returns a serializable dict representing the ticket analysis result.
     """
     text = request_body.text
     translation_ctx = await detect_and_translate_ticket_text(text)
@@ -1792,26 +1791,20 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     env_metadata = {
         "timestamp": get_now_ist(),
         "model_version": "3.0.0-PRO",
-        "api_endpoint": "/ai/analyze"
+        "api_endpoint": api_endpoint
     }
-    
+
     timeline = {"received": get_now_ist()}
 
-    # --- Vision Logic (OCR Awareness) ---
-    gemini_analysis = {
-        "ocr_text": request_body.image_text or "",
-        "image_description": ""
-    }
-    
-    if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+    gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
+    if request_body.image_base64 and not gemini_analysis["ocr_text"] and gemini_service:
         try:
-            print("[AI] Detecting visual context via Gemini...")
             vision_result = gemini_service.analyze_image(request_body.image_base64, text)
             gemini_analysis.update(vision_result)
         except Exception as e:
             print(f"[VISION ERROR] {e}")
 
-    summary = text[:100] + ("…" if len(text) > 100 else "") 
+    summary = text[:100] + ("…" if len(text) > 100 else "")
 
     # --- Spam / Phishing Detection (runs before classification) ---
     try:
@@ -1831,15 +1824,12 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     timeline["ai_analyzed"] = get_now_ist()
     timeline["triaged"] = get_now_ist()
 
-    # --- NER ---
     try:
         entities = ner_service.extract_entities(text)
     except Exception:
         entities = []
-    
     timeline["metadata_harvested"] = get_now_ist()
 
-    # --- Duplicate detection ---
     try:
         dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
     except Exception:
@@ -1872,7 +1862,6 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     except Exception as e:
         print(f"[RAG ERROR] {e}")
 
-    # --- Reasoning ---
     decision_factors = []
     if classification["confidence"] > request_body.confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
@@ -1909,9 +1898,11 @@ async def analyze_only(request_body: TicketRequest, request: Request):
 
     # --- Gemini Summary ---
     if gemini_service and gemini_service._initialized:
-        summary = gemini_service.get_summary(text)
-    
-    # Convert priority to SLA breached timestamp (for preview)
+        try:
+            summary = gemini_service.get_summary(text)
+        except Exception:
+            pass
+
     hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
     sla_hours = hours_map.get(classification["priority"], 72)
     sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
@@ -1968,7 +1959,10 @@ async def analyze_stream(request_body: TicketRequest):
 
         # 1. Reading
         yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.15)
+        yield f"data: {json.dumps({'step': 'Analyzing', 'status': 'in_progress'})}\n\n"
+        # Centralized computation
+        result = compute_analysis(request_body, api_endpoint="/ai/analyze_stream")
 
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
