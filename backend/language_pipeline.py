@@ -192,7 +192,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             detected_lang,
         )
 
-    if not translated_text or translated_text.strip() == original_text:
+    if not translated_text or not translated_text.strip() or translated_text.strip() == original_text:
         return {
             "text_for_analysis": original_text,
             "source_language": detected_lang,
