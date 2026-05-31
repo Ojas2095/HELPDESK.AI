@@ -9,6 +9,8 @@ import {
     Bell,
     Save,
     ShieldCheck,
+    Lock,
+    Eye
     Mail,
     Send,
     Lock,
@@ -254,7 +256,71 @@ const AdminSettings = () => {
                     </CardContent>
                 </Card>
 
-                {/* 4. Notification Settings */}
+                {/* 4. Security & Encryption Settings */}
+                <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
+                    <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                        <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-3">
+                            <Lock size={18} className="text-emerald-400" /> Security &amp; Encryption
+                        </h3>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-950 px-3 py-1 rounded-full">
+                            AES-256-GCM
+                        </span>
+                    </div>
+                    <CardContent className="p-8 space-y-6">
+                        {/* Master encryption toggle */}
+                        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                            <div>
+                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Backup Payload Encryption</h4>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    Encrypt all ticket data with AES-256-GCM before writing to Supabase bucket storage.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => handleChange('backupEncryptionEnabled', !settings.backupEncryptionEnabled)}
+                                className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.backupEncryptionEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                            >
+                                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.backupEncryptionEnabled ? 'right-1' : 'left-1'}`}></div>
+                            </button>
+                        </div>
+
+                        {/* PII redaction toggle */}
+                        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                            <div>
+                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                                    <Eye size={14} className="text-indigo-500" /> PII Auto-Redaction
+                                </h4>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    Automatically mask emails, phone numbers, and API keys in ticket descriptions before backup.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => handleChange('piiRedactionEnabled', !settings.piiRedactionEnabled)}
+                                className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.piiRedactionEnabled ? 'bg-indigo-500' : 'bg-slate-200'}`}
+                            >
+                                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.piiRedactionEnabled ? 'right-1' : 'left-1'}`}></div>
+                            </button>
+                        </div>
+
+                        {/* IP address redaction sub-toggle */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Redact IP Addresses</h4>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    Also strip IPv4 addresses from ticket content (requires PII Redaction enabled).
+                                </p>
+                            </div>
+                            <button
+                                disabled={!settings.piiRedactionEnabled}
+                                onClick={() => handleChange('redactIpAddresses', !settings.redactIpAddresses)}
+                                className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.piiRedactionEnabled && settings.redactIpAddresses ? 'bg-indigo-400' : 'bg-slate-200'} disabled:opacity-40 disabled:cursor-not-allowed`}
+                            >
+                                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.piiRedactionEnabled && settings.redactIpAddresses ? 'right-1' : 'left-1'}`}></div>
+                            </button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 5. Notification Settings */}
                 <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
                     <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                         <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-3">
