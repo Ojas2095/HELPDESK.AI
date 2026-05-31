@@ -4,7 +4,12 @@ Issue #404 — Smart Ticket Tagging System
 """
 import os
 import json
-import google.generativeai as genai
+try:
+    import google.generativeai as genai
+    _HAS_GENAI = True
+except ImportError:
+    genai = None
+    _HAS_GENAI = False
 from supabase import create_client
 
 def _make_supabase():
