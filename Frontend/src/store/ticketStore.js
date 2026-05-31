@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { createPersistedStore } from './persistenceMiddleware';
 
 const useTicketStore = create(
+    safePersist(
+        (set) => ({
     persist(
         (set, get) => ({
             aiTicket: null,
