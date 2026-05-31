@@ -82,11 +82,11 @@ async def get_current_user(request: Request) -> dict:
     try:
         client = _anon_supabase()
         result = client.auth.get_user(token)
-    except Exception as exc:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid session: {exc}",
-        ) from exc
+            detail="Invalid session",
+        )
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
@@ -117,13 +117,13 @@ async def auth_login(body: LoginBody, response: Response):
         result = client.auth.sign_in_with_password(
             {"email": str(body.email), "password": body.password}
         )
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
     if not session or not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     _set_session_cookies(response, session)
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
@@ -149,8 +149,8 @@ async def auth_signup(body: SignupBody, response: Response):
                 "options": {"data": metadata} if metadata else {},
             }
         )
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Signup failed. Please check your inputs and try again.")
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
