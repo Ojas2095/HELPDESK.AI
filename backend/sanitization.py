@@ -162,6 +162,7 @@ def sanitize_ticket_data(data: dict, *, fields: Optional[list[str]] = None) -> d
             "text", "description", "subject", "summary",
             "company", "category", "priority",
             "subcategory", "assigned_team", "ocr_text",
+            "status", "image_url", "metadata",
         ]
 
     sanitized = dict(data)
