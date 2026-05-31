@@ -5,13 +5,15 @@ import {
   Navigate,
   useLocation
 } from "react-router-dom";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
+import useKeyboardShortcuts from "./hooks/useKeyboardShortcuts";
+import ShortcutsHelp from "./components/shared/ShortcutsHelp";
 
 // Auth Components
 import Login from "./pages/Login";
@@ -151,9 +153,23 @@ function ScrollToTop() {
 
 function AppLayout() {
   const { user, profile } = useAuthStore();
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Initialize Global Realtime Notifications Listener
   useRealtimeNotifications();
+
+  // Initialize keyboard shortcuts
+  const { shortcuts } = useKeyboardShortcuts(
+    // Add role-specific shortcuts
+    profile?.role === 'admin' || profile?.role === 'super_admin'
+      ? { 'g,a': '/admin/dashboard', 'g,k': '/admin/tickets', 'g,u': '/admin/users', 'g,s': '/admin/settings' }
+      : profile?.role === 'master_admin'
+        ? { 'g,a': '/master-admin/dashboard', 'g,k': '/master-admin/admin-requests', 'g,u': '/master-admin/all-admins' }
+        : {},
+    {
+      onShortcutsHelp: () => setShowShortcuts(true),
+    }
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -169,6 +185,11 @@ function AppLayout() {
   // but we still need to handle role-based navigation here
   return (
     <>
+      <ShortcutsHelp
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        shortcuts={shortcuts}
+      />
       <Routes>
         <Route path="/knowledge-check" element={<DuplicateDetection />} />
         <Route path="/auto-resolve" element={<AutoResolveChat />} />
