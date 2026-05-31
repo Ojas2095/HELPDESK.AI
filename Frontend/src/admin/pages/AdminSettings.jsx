@@ -10,11 +10,9 @@ import {
     Save,
     ShieldCheck,
     Lock,
-    Eye
+    Eye,
     Mail,
-    Send,
-    Lock,
-    Eye
+    Send
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
 import useAuthStore from '../../store/authStore';

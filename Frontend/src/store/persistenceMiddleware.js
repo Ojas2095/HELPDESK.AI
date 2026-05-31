@@ -1,149 +1,104 @@
 /**
- * Standardized Zustand persistence middleware
- * Handles quota errors, read-write failures, and provides clean error handling.
+ * Centralized Store Sync Middleware for Zustand.
+ * Provides a unified point of entry for all LocalStorage operations,
+ * quota management, and cross-tab state synchronization.
  */
 
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+
+const STORAGE_PREFIX = 'helpdesk-v2-';
 
 /**
- * Custom storage wrapper with error handling
+ * Custom storage adapter with centralized error handling and quota recovery.
  */
-const createSafeStorage = (storageType = 'localStorage') => {
-    const storage = storageType === 'sessionStorage' ? sessionStorage : localStorage;
-
-    return {
-        getItem: (name) => {
-            try {
-                const value = storage.getItem(name);
-                if (value === null) return null;
-                return JSON.parse(value);
-            } catch (error) {
-                console.warn(`[Zustand] Failed to read ${name} from ${storageType}:`, error);
-                // Clean up corrupted data
+const safeLocalStorage = {
+    getItem: (name) => {
+        try {
+            const str = localStorage.getItem(name);
+            if (!str) return null;
+            return JSON.parse(str);
+        } catch (e) {
+            console.error(`[Sync] Read failed for ${name}:`, e);
+            return null;
+        }
+    },
+    setItem: (name, value) => {
+        try {
+            localStorage.setItem(name, JSON.stringify(value));
+        } catch (e) {
+            if (e.name === 'QuotaExceededError') {
+                console.warn(`[Sync] Storage quota exceeded. Cleaning up...`);
+                recoverStorageQuota();
+                // Retry once
                 try {
-                    storage.removeItem(name);
-                } catch (e) {
-                    // Ignore cleanup errors
-                }
-                return null;
-            }
-        },
-
-        setItem: (name, value) => {
-            try {
-                const serialized = JSON.stringify(value);
-                storage.setItem(name, serialized);
-            } catch (error) {
-                if (error.name === 'QuotaExceededError') {
-                    console.error(`[Zustand] Storage quota exceeded for ${name}. Attempting cleanup...`);
-                    // Try to free up space by removing old data
-                    try {
-                        const keys = Object.keys(storage);
-                        const storeKeys = keys.filter(k => k.startsWith('helpdesk-'));
-                        // Remove oldest entries (first 25%)
-                        const removeCount = Math.ceil(storeKeys.length * 0.25);
-                        for (let i = 0; i < removeCount; i++) {
-                            storage.removeItem(storeKeys[i]);
-                        }
-                        // Retry the save
-                        storage.setItem(name, serialized);
-                    } catch (retryError) {
-                        console.error(`[Zustand] Failed to save ${name} even after cleanup:`, retryError);
-                    }
-                } else {
-                    console.error(`[Zustand] Failed to save ${name}:`, error);
+                    localStorage.setItem(name, JSON.stringify(value));
+                } catch (retryError) {
+                    console.error(`[Sync] Failed after cleanup:`, retryError);
                 }
             }
-        },
-
-        removeItem: (name) => {
-            try {
-                storage.removeItem(name);
-            } catch (error) {
-                console.warn(`[Zustand] Failed to remove ${name}:`, error);
-            }
-        },
-    };
+        }
+    },
+    removeItem: (name) => localStorage.removeItem(name),
 };
 
 /**
- * Create a persisted store with standardized error handling
- * @param {string} name - Store name for persistence key
- * @param {Function} stateCreator - Zustand state creator function
- * @param {Object} options - Additional options
- * @param {string} options.storage - 'localStorage' or 'sessionStorage'
- * @param {Array} options.partialize - Array of state keys to persist
- * @returns {Function} - Zustand store hook
+ * Attempt to free up storage by removing older or non-essential Helpdesk keys.
  */
-export const createPersistedStore = (name, stateCreator, options = {}) => {
-    const {
-        storage = 'localStorage',
-        partialize = null,
+function recoverStorageQuota() {
+    try {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith(STORAGE_PREFIX));
+        // Remove 20% of stored keys to free up block
+        const toRemove = keys.slice(0, Math.ceil(keys.length * 0.2));
+        toRemove.forEach(k => localStorage.removeItem(k));
+    } catch (e) {
+        console.error("[Sync] Recovery failed:", e);
+    }
+}
+
+/**
+ * Centralized persisted store creator.
+ * 
+ * @param {string} storeName - Unique identifier for the store
+ * @param {Function} creator - Zustand state creator
+ * @param {Object} options - Configuration (partialize, version, etc)
+ */
+export const createPersistedStore = (storeName, creator, options = {}) => {
+    const { 
+        partialize, 
         version = 1,
-        migrate = null,
+        onRehydrate
     } = options;
 
-    const persistOptions = {
-        name: `helpdesk-${name}`,
+    return persist(creator, {
+        name: `${STORAGE_PREFIX}${storeName}`,
+        storage: createJSONStorage(() => safeLocalStorage),
         version,
-        storage: createSafeStorage(storage),
-    };
-
-    if (partialize) {
-        persistOptions.partialize = (state) => {
-            const persisted = {};
-            for (const key of partialize) {
-                if (key in state) {
-                    persisted[key] = state[key];
+        partialize,
+        onRehydrateStorage: (state) => {
+            return (rehydratedState, error) => {
+                if (error) {
+                    console.error(`[Sync] Rehydration error for ${storeName}:`, error);
+                } else if (onRehydrate) {
+                    onRehydrate(rehydratedState);
                 }
-            }
-            return persisted;
-        };
-    }
-
-    if (migrate) {
-        persistOptions.migrate = migrate;
-    }
-
-    return persist(stateCreator, persistOptions);
+            };
+        }
+    });
 };
 
 /**
- * Utility to clear all Helpdesk stores from storage
+ * Force sync all stores across tabs by triggering a storage event.
  */
-export const clearAllStores = () => {
-    try {
-        const keys = Object.keys(localStorage);
-        const storeKeys = keys.filter(k => k.startsWith('helpdesk-'));
-        storeKeys.forEach(key => localStorage.removeItem(key));
-        console.log(`[Zustand] Cleared ${storeKeys.length} store entries`);
-    } catch (error) {
-        console.error('[Zustand] Failed to clear stores:', error);
-    }
+export const broadcastStoreSync = () => {
+    localStorage.setItem(`${STORAGE_PREFIX}sync-trigger`, Date.now().toString());
 };
 
 /**
- * Utility to get storage usage info
+ * Clear all project-related storage.
  */
-export const getStorageInfo = () => {
-    try {
-        const keys = Object.keys(localStorage);
-        const storeKeys = keys.filter(k => k.startsWith('helpdesk-'));
-        let totalSize = 0;
-
-        storeKeys.forEach(key => {
-            const value = localStorage.getItem(key);
-            totalSize += value ? value.length : 0;
-        });
-
-        return {
-            storeCount: storeKeys.length,
-            totalSize,
-            totalSizeKB: Math.round(totalSize / 1024 * 100) / 100,
-            keys: storeKeys,
-        };
-    } catch (error) {
-        console.error('[Zustand] Failed to get storage info:', error);
-        return { storeCount: 0, totalSize: 0, totalSizeKB: 0, keys: [] };
-    }
+export const clearGlobalState = () => {
+    Object.keys(localStorage)
+        .filter(key => key.startsWith(STORAGE_PREFIX) || key.startsWith('helpdesk-'))
+        .forEach(key => localStorage.removeItem(key));
+    window.location.reload();
 };
