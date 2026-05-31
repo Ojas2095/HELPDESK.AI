@@ -8,6 +8,8 @@ import {
 import React, { useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
+import { useTheme } from "./hooks/useTheme";
+
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
@@ -217,6 +219,7 @@ function AppLayout() {
 
 
 function App() {
+  useTheme();
   const { initialize } = useAuthStore();
 
   useEffect(() => {
