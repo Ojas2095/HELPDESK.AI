@@ -973,8 +973,8 @@ instrumentator = Instrumentator(
 
 # Add custom metrics
 instrumentator.add(metrics.latency(buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)))
-instrumentator.add(metrics.request_size(buckets=(100, 1000, 10000, 100000, 1000000)))
-instrumentator.add(metrics.response_size(buckets=(100, 1000, 10000, 100000, 1000000)))
+instrumentator.add(metrics.request_size())
+instrumentator.add(metrics.response_size())
 
 # Instrument the app
 instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
