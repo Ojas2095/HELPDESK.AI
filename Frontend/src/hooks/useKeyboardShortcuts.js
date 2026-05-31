@@ -26,6 +26,18 @@ const DEFAULT_SHORTCUTS = {
 };
 
 /**
+ * Human-readable shortcuts legend for UI display.
+ */
+export const SHORTCUTS_LEGEND = [
+    { key: 'G + D', label: 'Dashboard' },
+    { key: 'G + T', label: 'My Tickets' },
+    { key: 'G + N', label: 'Create Ticket' },
+    { key: 'G + P', label: 'Profile' },
+    { key: 'Ctrl + K', label: 'Search' },
+    { key: 'Esc', label: 'Close Modal' },
+];
+
+/**
  * Hook to register keyboard shortcuts
  * @param {Object} customShortcuts - Additional shortcuts to merge with defaults
  * @param {Object} options - Configuration options
