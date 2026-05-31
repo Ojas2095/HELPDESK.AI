@@ -98,6 +98,16 @@ def translate_text(
     if not text or not text.strip():
         return {"translated": "", "source_lang": source_lang, "target_lang": target_lang, "cached": False}
 
+    # Validate target language is supported
+    if target_lang not in SUPPORTED_LANGUAGES:
+        return {
+            "translated": text,
+            "source_lang": source_lang,
+            "target_lang": target_lang,
+            "cached": False,
+            "error": "unsupported_language",
+        }
+
     # Truncate very long text
     if len(text) > MAX_TEXT_LENGTH:
         text = text[:MAX_TEXT_LENGTH] + "..."
