@@ -16,6 +16,7 @@ import {
     Settings,
     Activity
 } from "lucide-react";
+import ThemeToggle from "../../components/ThemeToggle";
 
 /**
  * MasterAdminLayout — Professional sidebar-based layout for platform oversight.
@@ -58,7 +59,7 @@ function MasterAdminLayout() {
     ];
 
     return (
-        <div className="min-h-screen bg-[#050508] flex font-sans overflow-hidden text-slate-300">
+        <div className="min-h-screen bg-white dark:bg-slate-900 flex font-sans overflow-hidden text-slate-900 dark:text-slate-300">
             {/* Ambient Background Glows */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full blur-[150px] mix-blend-screen" />
@@ -67,15 +68,15 @@ function MasterAdminLayout() {
             </div>
 
             {/* Sidebar */}
-            <aside className="w-64 border-r border-white/5 bg-white/[0.02] backdrop-blur-xl z-20 flex flex-col shrink-0">
-                <div className="p-6 border-b border-white/5">
+            <aside className="w-64 border-r border-slate-200 dark:border-white/5 bg-white/95 dark:bg-white/[0.02] backdrop-blur-xl z-20 flex flex-col shrink-0">
+                <div className="p-6 border-b border-slate-200 dark:border-white/5">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.2)]">
                             <ShieldCheck className="w-5 h-5 text-indigo-400" />
                         </div>
                         <div>
-                            <h1 className="text-white font-bold tracking-tight">HelpDesk.ai</h1>
-                            <p className="text-[10px] text-indigo-400 uppercase tracking-widest font-semibold">Master Admin</p>
+                            <h1 className="text-slate-900 dark:text-white font-bold tracking-tight">HelpDesk.ai</h1>
+                            <p className="text-xs text-indigo-600 dark:text-emerald-400 uppercase tracking-widest font-semibold">Master Admin</p>
                         </div>
                     </div>
                 </div>
@@ -97,7 +98,7 @@ function MasterAdminLayout() {
                                 })}
                                 {item.label}
                                 {item.count > 0 && (
-                                    <span className="ml-auto px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">
+                                    <span className="ml-auto px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-black border border-emerald-500/20">
                                         {item.count}
                                     </span>
                                 )}
@@ -123,24 +124,25 @@ function MasterAdminLayout() {
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col min-w-0 relative z-10 h-screen overflow-hidden">
                 {/* Top Bar */}
-                <header className="h-16 border-b border-white/5 bg-white/[0.01] backdrop-blur-md flex items-center justify-between px-8 shrink-0">
+                <header className="h-16 border-b border-slate-200 dark:border-white/5 bg-white dark:bg-slate-900/95 backdrop-blur-md flex items-center justify-between px-8 shrink-0 text-slate-900 dark:text-slate-200">
                     <div className="flex items-center gap-4 flex-1 max-w-xl">
                         <div className="relative w-full group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-400 group-focus-within:text-indigo-400 transition-colors" />
                             <input
                                 type="text"
                                 placeholder="Global search admins, companies, or IDs..."
-                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                                className="w-full bg-white/95 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
                                 onChange={(e) => console.log("Global search:", e.target.value)}
                             />
                         </div>
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-3 pl-6 border-l border-white/10">
+                        <ThemeToggle />
+                        <div className="flex items-center gap-3 pl-6 border-l border-slate-200 dark:border-white/10">
                             <div className="text-right hidden sm:block">
-                                <p className="text-sm font-semibold text-white truncate max-w-[150px]">{profile?.full_name}</p>
-                                <p className="text-[10px] text-emerald-400 font-medium uppercase tracking-wider">Superuser Access</p>
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[150px]">{profile?.full_name}</p>
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wider">Superuser Access</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center overflow-hidden">
                                 <UserCircle className="w-6 h-6 text-indigo-400" />

@@ -14,7 +14,7 @@ const AdminLayout = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     return (
-        <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
+        <div className="flex h-screen bg-white dark:bg-slate-900 overflow-hidden font-sans text-slate-900 dark:text-slate-200">
             {/* Master Navigation Column (Responsive) */}
             <div 
                 className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
