@@ -144,14 +144,11 @@ class ClassifierService:
                 logits = outputs.logits
                 probs = F.softmax(logits, dim=1)
                 confidence, pred_idx = torch.max(probs, dim=1)
-        except Exception:
+            
             if _METRICS_ENABLED:
-                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
-            raise
-        if _METRICS_ENABLED:
-            CLASSIFIER_LATENCY.labels(model="distilbert").observe(time.perf_counter() - _t0)
-            CLASSIFIER_REQUESTS.labels(model="distilbert", status="ok").inc()
-            CLASSIFIER_TOKENS.labels(model="distilbert").inc(int(attention_mask.sum().item()))
+                CLASSIFIER_LATENCY.labels(model="distilbert").observe(time.perf_counter() - _t0)
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="ok").inc()
+                CLASSIFIER_TOKENS.labels(model="distilbert").inc(int(attention_mask.sum().item()))
 
             pred_idx = pred_idx.item()
             confidence = round(confidence.item(), 4)
@@ -189,7 +186,9 @@ class ClassifierService:
                         confidence = max(confidence, 0.92) 
                         break
 
-            MODEL_PREDICTIONS_TOTAL.labels(status="success").inc()
+            if _METRICS_ENABLED:
+                MODEL_PREDICTIONS_TOTAL.labels(status="success").inc()
+            
             return {
                 "category": category,
                 "subcategory": subcategory,
@@ -199,8 +198,11 @@ class ClassifierService:
                 "confidence": confidence,
             }
         except Exception as e:
-            MODEL_PREDICTIONS_TOTAL.labels(status="failure").inc()
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
+                MODEL_PREDICTIONS_TOTAL.labels(status="failure").inc()
             raise e
         finally:
-            duration = time.time() - start_time
-            MODEL_PREDICTION_LATENCY.observe(duration)
+            if _METRICS_ENABLED:
+                duration = time.time() - start_time
+                MODEL_PREDICTION_LATENCY.observe(duration)
