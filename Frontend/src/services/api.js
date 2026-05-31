@@ -1,7 +1,6 @@
 import apiClient from './apiClient';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
-import { supabase } from '../lib/supabaseClient';
 
 const USE_MOCK = API_CONFIG.USE_MOCK;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
@@ -70,7 +69,7 @@ export const api = {
       return getStorage('tickets', MOCK_TICKETS);
     }
     try {
-      const response = await axios.get(`${API_BASE_URL}/tickets`);
+      const response = await apiClient.get(`/tickets`);
       const data = response?.data;
 
       // Normalize to the mock shape: an array of tickets
@@ -92,7 +91,7 @@ export const api = {
       return createTicketMock(ticketData);
     }
     try {
-      const response = await axios.post(`${API_BASE_URL}/tickets/save`, ticketData);
+      const response = await apiClient.post(`/tickets/save`, ticketData);
       const created = response?.data;
 
       // Normalize to mock shape: { data: <createdTicket> }
@@ -153,7 +152,7 @@ export const api = {
 
   getSlaEstimate: async (ticketId) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/tickets/${ticketId}/sla-estimate`);
+      const response = await apiClient.get(`/tickets/${ticketId}/sla-estimate`);
       return response.data;
     } catch (error) {
       console.error(`[SLA Estimate Error] Failed to fetch for ${ticketId}:`, error);
@@ -163,13 +162,8 @@ export const api = {
 
   logCorrection: async (correctionPayload) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      await axios.post(`${API_BASE_URL}/ai/log_correction`, correctionPayload, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      await apiClient.post(`/ai/log_correction`, correctionPayload);
     } catch (error) {
-      // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);
     }
   }
