@@ -2340,16 +2340,24 @@ async def sla_tickets(
     current_user: dict = Depends(get_current_user),
 ):
     """
-    List tickets with SLA status. Filter by sla_status and/or priority.
+    List tickets with SLA status. Requires authentication.
+    Results are scoped to the caller's company unless the caller has a master admin role.
+    Filter by sla_status and/or priority.
     """
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
+
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile)
 
     query = (
         supabase.table("tickets")
         .select("id, ticket_id, subject, summary, priority, status, assigned_team, sla_status, escalation_level, remaining_seconds, created_at, sla_breach_at, sla_warning_at, last_escalated_at")
         .order("created_at", desc=True)
     )
+
+    if company_scope:
+        query = query.eq("company_id", company_scope)
 
     if status and status != "all":
         query = query.eq("sla_status", status)
@@ -2529,6 +2537,14 @@ async def sla_ticket_detail(ticket_id: str, current_user: dict = Depends(get_cur
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     ticket = res.data
+
+    # Enforce company-level authorization so callers cannot view tickets from
+    # other tenants by guessing or iterating ticket IDs.
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile)
+    if company_scope and ticket.get("company_id") != company_scope:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+
     result = sla_engine.evaluate_ticket(ticket)
 
     # Fetch escalation history for this ticket
