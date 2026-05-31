@@ -2659,34 +2659,3 @@ async def sla_ticket_detail(ticket_id: str, current_user: dict = Depends(get_cur
         "sla_evaluation": result,
         "escalations": escalations,
     }
-
-
-
-@app.get("/metrics")
-async def metrics(request: Request):
-    """Prometheus scrape endpoint — exposes HTTP request, AI inference, and system metrics.
-
-    Secured via optional ``METRICS_TOKEN`` bearer token and IP allowlist
-    (``METRICS_ALLOWED_IPS`` env var, defaults to private ranges).
-    """
-    # --- IP allowlist check ---
-    client_ip = request.client.host if request.client else ""
-    if METRICS_ALLOWED_IPS:
-        import ipaddress
-        try:
-            client_addr = ipaddress.ip_address(client_ip)
-        except ValueError:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        allowed = any(
-            client_addr in ipaddress.ip_network(cidr, strict=False)
-            for cidr in METRICS_ALLOWED_IPS
-        )
-        if not allowed:
-            # Fall back to token check if IP not in allowlist
-            auth = request.headers.get("authorization", "")
-            if METRICS_TOKEN and auth == f"Bearer {METRICS_TOKEN}":
-                pass  # Token grants access
-            else:
-                raise HTTPException(status_code=403, detail="Forbidden")
-
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
