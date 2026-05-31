@@ -95,8 +95,9 @@ import NotApproved from "./pages/NotApproved";
 
 // Loading fallback component
 const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
+  <div className="flex items-center justify-center min-h-screen" role="status" aria-live="polite">
     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    <span className="sr-only">Loading page content…</span>
   </div>
 );
 
