@@ -40,10 +40,10 @@ describe('formatTimelineDate', () => {
         expect(result).not.toBe('Invalid Date');
     });
 
-    it('should return null for null/undefined', () => {
-        expect(formatTimelineDate(null)).toBeNull();
-        expect(formatTimelineDate(undefined)).toBeNull();
-        expect(formatTimelineDate('')).toBeNull();
+    it('should return Invalid Date for null/undefined/empty', () => {
+        expect(formatTimelineDate(null)).toBe('Invalid Date');
+        expect(formatTimelineDate(undefined)).toBe('Invalid Date');
+        expect(formatTimelineDate('')).toBe('Invalid Date');
     });
 
     it('should return Invalid Date for garbage input', () => {

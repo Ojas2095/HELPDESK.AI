@@ -22,6 +22,15 @@ const parseDate = (dateStr) => {
     const str = String(dateStr).trim();
     if (!str) return null;
 
+    // Support epoch timestamps (milliseconds or seconds)
+    if (/^\d+$/.test(str)) {
+        const num = parseInt(str, 10);
+        // If > 1e12, treat as milliseconds; otherwise seconds
+        const ms = num > 1e12 ? num : num * 1000;
+        const epochDate = new Date(ms);
+        return isNaN(epochDate.getTime()) ? null : epochDate;
+    }
+
     // Normalize common problematic formats for Safari
     let normalized = str
         // Replace space between date and time with 'T' (Safari requires 'T')
