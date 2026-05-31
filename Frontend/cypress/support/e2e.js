@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* global describe, beforeEach, cy, it, expect, Cypress */
 // Cypress E2E support commands
 import './commands';
 
