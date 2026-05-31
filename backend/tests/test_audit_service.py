@@ -1,87 +1,180 @@
-import unittest
+"""
+Unit tests for audit_service.py
+"""
 
-from backend.services.audit_service import AuditLogAccessError, AuditLogService
-
-
-class FakeResult:
-    def __init__(self, data):
-        self.data = data
-
-
-class FakeQuery:
-    def __init__(self, result):
-        self._result = result
-        self.calls = []
-
-    def select(self, *_args, **_kwargs):
-        self.calls.append(("select", _args, _kwargs))
-        return self
-
-    def eq(self, *_args, **_kwargs):
-        self.calls.append(("eq", _args, _kwargs))
-        return self
-
-    def single(self):
-        self.calls.append(("single", (), {}))
-        return self
-
-    def order(self, *_args, **_kwargs):
-        self.calls.append(("order", _args, _kwargs))
-        return self
-
-    def execute(self):
-        self.calls.append(("execute", (), {}))
-        return self._result
+import pytest
+from unittest.mock import MagicMock
+from backend.services.audit_service import AuditLogService, AuditLogAccessError
 
 
-class FakeSupabaseClient:
-    def __init__(self, ticket_row, audit_rows):
-        self.ticket_query = FakeQuery(FakeResult(ticket_row))
-        self.audit_query = FakeQuery(FakeResult(audit_rows))
+class TestAuditLogService:
+    def test_get_ticket_audit_logs_success(self):
+        mock_ticket_result = MagicMock()
+        mock_ticket_result.data = {"id": "ticket1", "company_id": "company_A"}
 
-    def table(self, name):
-        if name == "tickets":
-            return self.ticket_query
-        if name == "audit_logs":
-            return self.audit_query
-        raise AssertionError(f"Unexpected table: {name}")
-
-
-class AuditLogServiceTests(unittest.IsolatedAsyncioTestCase):
-    async def test_rejects_cross_company_ticket_access(self):
-        client = FakeSupabaseClient({"id": "ticket-1", "company_id": "company-a"}, [])
-        service = AuditLogService(client)
-
-        with self.assertRaises(AuditLogAccessError) as ctx:
-            service.get_ticket_audit_logs("ticket-1", "company-b")
-
-        self.assertEqual(ctx.exception.status_code, 404)
-        self.assertEqual(ctx.exception.detail, "Ticket not found")
-
-    async def test_returns_logs_for_matching_company(self):
-        rows = [
+        mock_logs_result = MagicMock()
+        mock_logs_result.data = [
             {
-                "id": "log-1",
-                "ticket_id": "ticket-1",
-                "company_id": "company-a",
-                "performed_by": "user-1",
-                "action": "STATUS_CHANGED",
-                "old_value": {"field": "status", "value": "open"},
-                "new_value": {"field": "status", "value": "in_progress"},
-                "created_at": "2026-05-22T10:00:00Z",
-                "performed_by_profile": {"full_name": "Alex Admin"},
-            }
+                "id": "log1",
+                "ticket_id": "ticket1",
+                "company_id": "company_A",
+                "performed_by": "user_A",
+                "action": "created",
+                "old_value": None,
+                "new_value": "open",
+                "created_at": "2026-05-30T10:00:00Z",
+            },
+            {
+                "id": "log2",
+                "ticket_id": "ticket1",
+                "company_id": "company_A",
+                "performed_by": "user_B",
+                "action": "status_changed",
+                "old_value": "open",
+                "new_value": "pending",
+                "created_at": "2026-05-30T11:00:00Z",
+            },
         ]
-        client = FakeSupabaseClient({"id": "ticket-1", "company_id": "company-a"}, rows)
-        service = AuditLogService(client)
 
-        result = service.get_ticket_audit_logs("ticket-1", "company-a")
+        mock_table = MagicMock()
+        mock_table.select.return_value = mock_table
+        mock_table.eq.return_value = mock_table
+        mock_table.single.return_value = mock_table
+        mock_table.execute.return_value = mock_ticket_result
 
-        self.assertEqual(result, rows)
-        self.assertEqual(client.ticket_query.calls[0][0], "select")
-        self.assertEqual(client.audit_query.calls[0][0], "select")
-        self.assertEqual(client.audit_query.calls[-1][0], "execute")
+        mock_table2 = MagicMock()
+        mock_table2.select.return_value = mock_table2
+        mock_table2.eq.return_value = mock_table2
+        mock_table2.order.return_value = mock_table2
+        mock_table2.execute.return_value = mock_logs_result
 
+        mock_supabase = MagicMock()
+        mock_supabase.table.side_effect = [mock_table, mock_table2]
 
-if __name__ == "__main__":
-    unittest.main()
+        audit_service = AuditLogService(mock_supabase)
+        logs = audit_service.get_ticket_audit_logs("ticket1", "company_A")
+
+        assert len(logs) == 2
+        assert logs[0]["action"] == "created"
+        assert logs[1]["action"] == "status_changed"
+
+    def test_get_ticket_audit_logs_missing_ticket(self):
+        mock_ticket_result = MagicMock()
+        mock_ticket_result.data = None
+
+        mock_table = MagicMock()
+        mock_table.select.return_value = mock_table
+        mock_table.eq.return_value = mock_table
+        mock_table.single.return_value = mock_table
+        mock_table.execute.return_value = mock_ticket_result
+
+        mock_supabase = MagicMock()
+        mock_supabase.table.return_value = mock_table
+
+        audit_service = AuditLogService(mock_supabase)
+
+        with pytest.raises(AuditLogAccessError) as exc_info:
+            audit_service.get_ticket_audit_logs("nonexistent", "company_A")
+
+        assert exc_info.value.status_code == 404
+        assert "Ticket not found" in str(exc_info.value.detail)
+
+    def test_get_ticket_audit_logs_company_mismatch(self):
+        mock_ticket_result = MagicMock()
+        mock_ticket_result.data = {"id": "ticket1", "company_id": "company_A"}
+
+        mock_table = MagicMock()
+        mock_table.select.return_value = mock_table
+        mock_table.eq.return_value = mock_table
+        mock_table.eq.return_value = mock_table
+        mock_table.single.return_value = mock_table
+        mock_table.execute.return_value = mock_ticket_result
+
+        mock_supabase = MagicMock()
+        mock_supabase.table.return_value = mock_table
+
+        audit_service = AuditLogService(mock_supabase)
+
+        with pytest.raises(AuditLogAccessError) as exc_info:
+            audit_service.get_ticket_audit_logs("ticket1", "company_B")
+
+        assert exc_info.value.status_code == 404
+        assert "Ticket not found" in str(exc_info.value.detail)
+
+    def test_get_ticket_audit_logs_empty_results(self):
+        mock_ticket_result = MagicMock()
+        mock_ticket_result.data = {"id": "ticket1", "company_id": "company_A"}
+
+        mock_logs_result = MagicMock()
+        mock_logs_result.data = []
+
+        mock_table = MagicMock()
+        mock_table.select.return_value = mock_table
+        mock_table.eq.return_value = mock_table
+        mock_table.single.return_value = mock_table
+        mock_table.execute.return_value = mock_ticket_result
+
+        mock_table2 = MagicMock()
+        mock_table2.select.return_value = mock_table2
+        mock_table2.eq.return_value = mock_table2
+        mock_table2.order.return_value = mock_table2
+        mock_table2.execute.return_value = mock_logs_result
+
+        mock_supabase = MagicMock()
+        mock_supabase.table.side_effect = [mock_table, mock_table2]
+
+        audit_service = AuditLogService(mock_supabase)
+        logs = audit_service.get_ticket_audit_logs("ticket1", "company_A")
+
+        assert logs == []
+
+    def test_audit_log_access_error_attributes(self):
+        error = AuditLogAccessError(404, "Not found")
+
+        assert error.status_code == 404
+        assert error.detail == "Not found"
+        assert str(error) == "Not found"
+
+    def test_get_ticket_audit_logs_with_profile_join(self):
+        mock_ticket_result = MagicMock()
+        mock_ticket_result.data = {"id": "ticket1", "company_id": "company_A"}
+
+        mock_logs_result = MagicMock()
+        mock_logs_result.data = [
+            {
+                "id": "log1",
+                "ticket_id": "ticket1",
+                "company_id": "company_A",
+                "performed_by": "user_A",
+                "action": "created",
+                "old_value": None,
+                "new_value": "open",
+                "created_at": "2026-05-30T10:00:00Z",
+                "performed_by_profile": {
+                    "full_name": "Test User",
+                    "email": "test@example.com",
+                    "profile_picture": None,
+                },
+            },
+        ]
+
+        mock_table = MagicMock()
+        mock_table.select.return_value = mock_table
+        mock_table.eq.return_value = mock_table
+        mock_table.single.return_value = mock_table
+        mock_table.execute.return_value = mock_ticket_result
+
+        mock_table2 = MagicMock()
+        mock_table2.select.return_value = mock_table2
+        mock_table2.eq.return_value = mock_table2
+        mock_table2.order.return_value = mock_table2
+        mock_table2.execute.return_value = mock_logs_result
+
+        mock_supabase = MagicMock()
+        mock_supabase.table.side_effect = [mock_table, mock_table2]
+
+        audit_service = AuditLogService(mock_supabase)
+        logs = audit_service.get_ticket_audit_logs("ticket1", "company_A")
+
+        assert len(logs) == 1
+        assert logs[0]["performed_by_profile"]["full_name"] == "Test User"
