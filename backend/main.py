@@ -389,6 +389,13 @@ class TicketRequest(BaseModel):
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
+    @field_validator("confidence_threshold", "duplicate_sensitivity")
+    @classmethod
+    def validate_threshold_range(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(f"Value must be between 0.0 and 1.0, got {v}")
+        return v
+
     def __init__(self, **data):
         super().__init__(**data)
         # Validate image size to prevent memory exhaustion DoS
@@ -1245,16 +1252,23 @@ def _ticket_company_scope(profile: dict, requested_company_id: str | None = None
 @app.get("/tickets")
 async def get_tickets(
     company_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
     current_user: dict = Depends(get_current_user),
 ):
-    """Fetch persistent tickets from Supabase."""
+    """Fetch persistent tickets from Supabase with pagination."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    if limit < 1 or limit > 200:
+        raise HTTPException(status_code=400, detail="Limit must be between 1 and 200")
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="Offset must be non-negative")
 
     profile = _get_authenticated_profile(current_user)
     company_scope = _ticket_company_scope(profile, company_id)
     
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
+    query = supabase.table("tickets").select("*").order("created_at", desc=True).limit(limit).offset(offset)
     if company_scope:
         query = query.eq("company_id", company_scope)
         
@@ -1738,7 +1752,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
 
     # Pass OCR-enriched text downstream so the analyze_only endpoint uses it.
     enriched = request_body.model_copy(update={"text": text, "image_text": local_ocr_text})
-    return await analyze_only(enriched)
+    return await analyze_only(enriched, request)
 
 @app.post("/ai/analyze")
 @limiter.limit("10/minute")
@@ -1940,7 +1954,7 @@ async def analyze_only(request_body: TicketRequest, request: Request):
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
         image_url=request_body.image_url,
-        highlights=[e.text for e in entities] if entities else [],
+        highlights=[e.get("text") if isinstance(e, dict) else getattr(e, "text", "") for e in entities] if entities else [],
         timeline=timeline,
         env_metadata=env_metadata,
         spam_check=SpamCheck(**spam_result),
