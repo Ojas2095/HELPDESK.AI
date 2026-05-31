@@ -58,8 +58,17 @@ class TestInit:
         assert service._load_failed is False
         assert service._tickets == []
 
-    def test_storage_dir_created(self, service, tmp_path):
-        assert os.path.exists(os.path.dirname(service.storage_file))
+    def test_storage_dir_created(self, _no_model_imports, tmp_path):
+        """DuplicateService should create its storage directory if missing."""
+        from backend.services.duplicate_service import DuplicateService
+        nested_dir = tmp_path / "deeply" / "nested" / "cache"
+        svc = DuplicateService()
+        svc.storage_file = str(nested_dir / "data.json")
+        # The directory should not exist yet
+        assert not nested_dir.exists()
+        # After save_to_disk, the directory should be created
+        svc.save_to_disk("t1", "hello")
+        assert nested_dir.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -128,8 +137,11 @@ class TestCheckDuplicate:
     def test_degraded_returns_no_duplicate(self, service):
         service._loaded = False
         service._load_failed = True
-        result = loaded_service_result = service.check_duplicate("text")
+        # Add a ticket to ensure degraded mode skips matching, not just empty-list path
+        service._tickets = [("t1", MagicMock(), "stored text")]
+        result = service.check_duplicate("query text")
         assert result["is_duplicate"] is False
+        assert result["duplicate_ticket_id"] is None
 
     def test_duplicate_detected_above_threshold(self, loaded_service):
         """When cosine similarity is above threshold, flag as duplicate."""
