@@ -28,6 +28,12 @@
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="/favicon.png" />
+
+  <!-- Security Headers (Content Security Policy) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' http://localhost:8000 https://ritesh19180-ai-helpdesk-api.hf.space https://helpdeskaiv1.vercel.app https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; form-action 'self'; base-uri 'self'" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
 </head>
 
 <body>
