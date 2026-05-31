@@ -149,9 +149,23 @@ function ScrollToTop() {
 
 function AppLayout() {
   const { user, profile } = useAuthStore();
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Initialize Global Realtime Notifications Listener
   useRealtimeNotifications();
+
+  // Initialize keyboard shortcuts
+  const { shortcuts } = useKeyboardShortcuts(
+    // Add role-specific shortcuts
+    profile?.role === 'admin' || profile?.role === 'super_admin'
+      ? { 'g,a': '/admin/dashboard', 'g,k': '/admin/tickets', 'g,u': '/admin/users', 'g,s': '/admin/settings' }
+      : profile?.role === 'master_admin'
+        ? { 'g,a': '/master-admin/dashboard', 'g,k': '/master-admin/admin-requests', 'g,u': '/master-admin/all-admins' }
+        : {},
+    {
+      onShortcutsHelp: () => setShowShortcuts(true),
+    }
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -167,6 +181,11 @@ function AppLayout() {
   // but we still need to handle role-based navigation here
   return (
     <>
+      <ShortcutsHelp
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+        shortcuts={shortcuts}
+      />
       <Routes>
         <Route path="/knowledge-check" element={<DuplicateDetection />} />
         <Route path="/auto-resolve" element={<AutoResolveChat />} />
