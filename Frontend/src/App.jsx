@@ -86,6 +86,35 @@ function RouteFallback() {
 }
 
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("React ErrorBoundary caught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-[40vh] items-center justify-center px-6 py-16">
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-4 text-sm font-semibold text-red-600 shadow-sm">
+            Something went wrong. Please refresh the page.
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+
 function TitleUpdater() {
   const location = useLocation();
 
