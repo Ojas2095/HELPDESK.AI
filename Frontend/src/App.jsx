@@ -225,7 +225,6 @@ function AppLayout() {
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/sla" element={<SLAPage />} />
           </Route>
-        </Route>
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
@@ -326,4 +325,3 @@ function App() {
 }
 
 export default App;
-
