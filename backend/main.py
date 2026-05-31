@@ -773,9 +773,53 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+API_DESCRIPTION = """
+# HELPDESK.AI Backend API
+
+A FastAPI service powering AI-driven IT support ticket triage, classification, and
+auto-resolution.
+
+## Capabilities
+- **AI Analysis** — multi-stage NLP cascade (NER, classification, duplicate detection,
+  RAG knowledge base lookup, optional Gemini vision/summary).
+- **Ticket Lifecycle** — create, fetch, patch, and persist tickets via Supabase.
+- **Diagnostics** — health/readiness probes and admin correction logging for
+  continuous improvement.
+
+## Authentication
+Supabase service-role authentication is performed server-side. Frontend clients
+should call these endpoints over HTTPS from the configured CORS origins.
+
+## Rate Limits
+The `/ai/analyze_ticket` endpoint is capped at **10 requests / minute / IP**.
+"""
+
+TAGS_METADATA = [
+    {
+        "name": "System",
+        "description": "Service health, readiness, and landing page.",
+    },
+    {
+        "name": "AI Analysis",
+        "description": "Core NLP endpoints: classification, troubleshooting, bug analysis, and streaming analysis.",
+    },
+    {
+        "name": "Tickets",
+        "description": "CRUD operations over support tickets (Supabase + in-memory).",
+    },
+    {
+        "name": "Admin",
+        "description": "Internal endpoints for correction logging and model feedback loops.",
+    },
+    {
+        "name": "Docs",
+        "description": "Themed API documentation (Swagger UI and ReDoc).",
+    },
+]
+
 app = FastAPI(
-    title="AI Helpdesk Backend",
-    description="Ticket classification, entity extraction, and duplicate detection",
+    title="HELPDESK.AI Backend",
+    description=API_DESCRIPTION,
     version="1.0.0",
     lifespan=lifespan,
     swagger_ui_parameters={
@@ -787,6 +831,48 @@ app = FastAPI(
     swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
     swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
 )
+
+# Corporate-clean Swagger theme overrides (HELPDESK.AI palette: emerald + slate).
+SWAGGER_CUSTOM_CSS = """
+:root {
+  --hd-bg: #0f172a;
+  --hd-panel: #1e293b;
+  --hd-border: #334155;
+  --hd-text: #f8fafc;
+  --hd-muted: #94a3b8;
+  --hd-accent: #10b981;
+  --hd-accent-2: #3b82f6;
+}
+body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+.swagger-ui, .swagger-ui .info .title, .swagger-ui .opblock-tag, .swagger-ui .opblock .opblock-summary-operation-id,
+.swagger-ui .opblock .opblock-summary-path, .swagger-ui .opblock .opblock-summary-description,
+.swagger-ui table thead tr th, .swagger-ui .parameter__name, .swagger-ui .parameter__type,
+.swagger-ui .response-col_status, .swagger-ui .model-title, .swagger-ui .markdown p,
+.swagger-ui .info p, .swagger-ui label, .swagger-ui .tab li, .swagger-ui section.models h4 { color: var(--hd-text); }
+.swagger-ui .topbar { background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom: 1px solid var(--hd-border); padding: 12px 24px; }
+.swagger-ui .topbar .download-url-wrapper { display: none; }
+.swagger-ui .info { margin: 32px 0; }
+.swagger-ui .info .title { font-weight: 700; letter-spacing: -0.02em; }
+.swagger-ui .info .title small.version-stamp { background: var(--hd-accent); color: #052e1c; }
+.swagger-ui .scheme-container { background: var(--hd-panel); border: 1px solid var(--hd-border); box-shadow: none; padding: 16px 20px; }
+.swagger-ui .opblock-tag { border-bottom: 1px solid var(--hd-border); font-weight: 600; }
+.swagger-ui .opblock { background: var(--hd-panel); border: 1px solid var(--hd-border); border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); margin: 0 0 16px; }
+.swagger-ui .opblock .opblock-summary { border-bottom: 1px solid var(--hd-border); }
+.swagger-ui .opblock.opblock-get .opblock-summary-method { background: var(--hd-accent-2); }
+.swagger-ui .opblock.opblock-post .opblock-summary-method { background: var(--hd-accent); }
+.swagger-ui .opblock.opblock-patch .opblock-summary-method { background: #f59e0b; }
+.swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #ef4444; }
+.swagger-ui .btn { border-radius: 8px; border-color: var(--hd-border); color: var(--hd-text); }
+.swagger-ui .btn.execute { background: var(--hd-accent); border-color: var(--hd-accent); color: #052e1c; }
+.swagger-ui .btn.execute:hover { background: #0ea271; }
+.swagger-ui .btn.authorize { background: var(--hd-accent-2); border-color: var(--hd-accent-2); color: #ffffff; }
+.swagger-ui input[type=text], .swagger-ui textarea, .swagger-ui select { background: #0b1220; color: var(--hd-text); border: 1px solid var(--hd-border); }
+.swagger-ui .markdown code, .swagger-ui .renderedMarkdown code { background: #0b1220; color: #5eead4; padding: 2px 6px; border-radius: 4px; }
+.swagger-ui section.models { background: var(--hd-panel); border: 1px solid var(--hd-border); border-radius: 10px; }
+.swagger-ui .model-box { background: #0b1220; }
+.swagger-ui .responses-inner h4, .swagger-ui .responses-inner h5 { color: var(--hd-muted); }
+.swagger-ui .response-col_description__inner div.markdown, .swagger-ui .response-col_description__inner div.renderedMarkdown { background: #0b1220; color: var(--hd-text); }
+"""
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 limiter = Limiter(key_func=get_remote_address)
@@ -960,7 +1046,7 @@ instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schem
 
 # Root & Health check
 # ---------------------------------------------------------------------------
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, tags=["System"], summary="API landing page")
 async def root():
     return """
     <!DOCTYPE html>
@@ -1055,6 +1141,7 @@ def metrics():
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
+    """Return a lightweight status payload showing whether core models are loaded."""
     return HealthResponse(
         status="ok",
         classifier_loaded=classifier_service._loaded,
@@ -1062,8 +1149,11 @@ async def health_check():
     )
 
 
-@app.get("/ready", response_model=ReadinessResponse)
+@app.get("/ready", response_model=ReadinessResponse, tags=["System"], summary="Readiness probe")
 async def readiness_check():
+    """Return ``ready`` only when all required subsystems (classifier, NER,
+    duplicate index, RAG, and optionally Supabase) report healthy. Returns
+    HTTP 503 otherwise — suitable for Kubernetes / load-balancer probes."""
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
     checks = {
         "api": True,
@@ -1140,7 +1230,10 @@ class TroubleshootResponse(BaseModel):
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
 @limiter.limit("10/minute")
 async def troubleshoot(request: TroubleshootRequest):
-    """Get dynamic troubleshooting steps from Gemini."""
+    """Get the next dynamic troubleshooting step from Gemini given the user's
+    ticket text, predicted category, and the conversation history so far.
+    Returns the next ``step_text``, suggested ``options``, and an ``is_final``
+    flag signalling when the wizard should end."""
     if not gemini_service or not gemini_service._initialized:
         return TroubleshootResponse(
             step_text="AI Troubleshooting is currently unavailable.",
@@ -1168,7 +1261,9 @@ class BugReportAnalysisResponse(BaseModel):
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 @limiter.limit("10/minute")
 async def analyze_bug(request: BugReportAnalysisRequest):
-    """Analyze a bug report using Gemini to generate a Probable Cause."""
+    """Analyze a structured bug report (title, description, repro steps, and any
+    captured console errors) using Gemini and return a short ``probable_cause``
+    explanation that frontends can show to the reporter."""
     if not gemini_service or not gemini_service._initialized:
         return BugReportAnalysisResponse(
             probable_cause="AI Diagnostics are currently unavailable."
@@ -1896,12 +1991,13 @@ async def search_tickets(
 # ---------------------------------------------------------------------------
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
-@app.post("/ai/analyze_ticket", response_model=TicketResponse)
+@app.post("/ai/analyze_ticket", response_model=TicketResponse, tags=["AI Analysis"], summary="Full AI ticket analysis (rate-limited)")
 @limiter.limit("10/minute")
 async def analyze_ticket(request_body: TicketRequest, request: Request):
-    """
-    Main endpoint for analyzing a new ticket using the cascade of local AI models.
-    """
+    """Main entry point for end-to-end ticket triage. Runs OCR (when an image
+    is attached), classification, NER, duplicate check, and RAG lookup, then
+    returns the consolidated ``TicketResponse``. Throttled to 10 requests per
+    minute per IP."""
     text = request_body.text
     
     # Grab client metadata
