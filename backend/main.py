@@ -972,6 +972,7 @@ class TroubleshootResponse(BaseModel):
     is_final: bool
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
+@limiter.limit("10/minute")
 async def troubleshoot(request: TroubleshootRequest):
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
@@ -999,6 +1000,7 @@ class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
+@limiter.limit("10/minute")
 async def analyze_bug(request: BugReportAnalysisRequest):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
@@ -1888,6 +1890,7 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     )
 
 @app.post("/ai/analyze_stream")
+@limiter.limit("10/minute")
 async def analyze_stream(request_body: TicketRequest):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
@@ -2076,6 +2079,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     )
 
 @app.post("/ai/analyze-v2")
+@limiter.limit("10/minute")
 async def analyze_ticket_v2(request: TicketRequest):
     text = sanitize_text(request.text) or ""
     try:
