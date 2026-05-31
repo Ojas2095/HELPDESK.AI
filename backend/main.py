@@ -802,8 +802,28 @@ async def add_security_headers(request, call_next):
     return response
 
 # CORS — locked to production + local dev only
+# CORS configuracion restrictiva para produccion
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "https://helpdesk.ai,https://staging.helpdesk.ai,http://localhost:5173,http://localhost:3000").split(","),
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    return response
     allow_origins=[
         "https://helpdeskaiv1.vercel.app",
         "http://localhost:5173",
