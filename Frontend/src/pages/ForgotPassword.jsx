@@ -173,7 +173,7 @@ function ForgotPassword() {
                                 </p>
                                 <Link
                                     to="/login"
-                                    className="inline-flex items-center justify-center w-full px-8 py-4 bg-[#0f1f12] text-white rounded-2xl font-bold hover:bg-emerald-900 transition-all shadow-xl shadow-emerald-900/20 active:scale-[0.98]"
+                                    className="inline-flex items-center justify-center w-full px-8 py-4 bg-slate-950 text-white rounded-2xl font-bold hover:bg-emerald-900 transition-all shadow-xl shadow-emerald-900/20 active:scale-[0.98]"
                                 >
                                     Proceed to Terminal
                                 </Link>
@@ -331,4 +331,5 @@ function ForgotPassword() {
 }
 
 export default ForgotPassword;
+
 

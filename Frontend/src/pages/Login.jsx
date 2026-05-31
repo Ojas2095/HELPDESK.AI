@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
- 
 import { motion } from "framer-motion";
 import useAuthStore from "../store/authStore";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
@@ -17,7 +16,6 @@ function Login() {
   const navigate = useNavigate();
   const { login, signInWithMagicLink, loading, user, profile } = useAuthStore();
 
-  // Auto-redirect if already logged in
   useEffect(() => {
     if (user && profile) {
       if (profile.status === "active") {
@@ -55,7 +53,7 @@ function Login() {
 
       if (profile.status === "rejected") {
         navigate("/not-approved");
-        return; // Navigation will happen, but just return to prevent further execution
+        return;
       }
 
       if (profile.role === "master_admin" && profile.status === "active") {
@@ -101,76 +99,37 @@ function Login() {
   const currentSubmitHandler = isMagicLink ? handleMagicLink : handleLogin;
 
   return (
-    <div className="min-h-screen flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
 
       {/* ── Left Panel ── */}
-      <div
-        className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)',
-        }}
-      >
-        {/* Radial glow */}
-        <div
-          className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)',
-          }}
-        />
+      <div className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden bg-gradient-to-br from-green-50 via-green-100/30 to-emerald-100/50 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950 border-r border-slate-100 dark:border-slate-900">
+        <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none bg-radial from-emerald-500/10 dark:from-emerald-500/5 to-transparent blur-3xl" />
 
         <div className="relative z-10 max-w-lg">
-          {/* Logo / Icon */}
-          <div
-            className="p-3 rounded-2xl w-fit mb-8"
-            style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }}
-          >
-            <BrainCircuit className="w-10 h-10" style={{ color: '#16a34a' }} />
+          <div className="p-3 rounded-2xl w-fit mb-8 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-100 dark:border-emerald-900/30">
+            <BrainCircuit className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
           </div>
 
-          {/* Headline */}
-          <h1
-            style={{
-              fontFamily: "'Syne', sans-serif",
-              fontSize: '48px',
-              fontWeight: 800,
-              color: '#0f1f12',
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
-              marginBottom: '24px',
-            }}
-          >
-            Automate your{' '}
-            <span style={{ color: '#16a34a' }}>IT Support</span>
+          <h1 className="font-black text-5xl text-slate-900 dark:text-white tracking-tight leading-[1.1] mb-6 font-syne uppercase">
+            Automate your <br/>
+            <span className="text-emerald-600 dark:text-emerald-400">IT Support</span>
           </h1>
 
-          {/* Subtext */}
-          <p style={{ color: '#374151', fontSize: '16px', lineHeight: 1.7, marginBottom: '32px' }}>
+          <p className="text-slate-600 dark:text-slate-400 text-base leading-relaxed mb-8 font-medium">
             Join thousands of IT teams using HelpDesk.ai to categorize, route, and resolve tickets instantly.
           </p>
 
-          {/* System Status Badge */}
-          <div
-            style={{
-              background: '#ffffff',
-              border: '1px solid #d1fae5',
-              borderRadius: '14px',
-              padding: '14px 18px',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-            }}
-          >
+          <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-[14px] px-[18px] shadow-sm dark:shadow-none backdrop-blur-sm">
             <div className="flex gap-4 items-start">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: '#f0fdf4' }}>
-                <div style={{ color: '#0f1f12', fontWeight: 800, fontSize: '14px' }}>AI</div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100/40 dark:border-emerald-900/20">
+                <div className="text-emerald-700 dark:text-emerald-400 font-black text-sm">AI</div>
               </div>
               <div>
-                <p className="flex items-center gap-2" style={{ fontSize: '12px', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
-                  <span
-                    className="inline-block w-2 h-2 rounded-full animate-pulse"
-                    style={{ background: '#22c55e' }}
-                  />
+                <p className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   System Status
                 </p>
-                <p style={{ color: '#111827', fontWeight: 500, fontSize: '14px' }}>All systems operational. 99.9% uptime this month.</p>
+                <p className="text-slate-800 dark:text-slate-200 font-bold text-sm">All systems operational. 99.9% uptime this month.</p>
               </div>
             </div>
           </div>
@@ -178,114 +137,73 @@ function Login() {
       </div>
 
       {/* ── Right Panel ── */}
-      <div
-        className="flex w-full lg:w-1/2 items-center justify-center p-6 relative"
-        style={{ background: '#ffffff', borderLeft: '1px solid #f0fdf4' }}
-      >
-        {/* Back Button */}
+      <div className="flex w-full lg:w-1/2 items-center justify-center p-6 relative bg-white dark:bg-slate-900 transition-colors duration-300">
         <Link
           to="/"
-          className="absolute top-8 left-8 flex items-center gap-2 transition-all group"
-          style={{ color: '#374151', fontWeight: 500, fontSize: '14px' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#16a34a'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#374151'}
+          className="absolute top-8 left-8 flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group"
         >
-          <div className="p-2 rounded-full transition-all" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
+          <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group-hover:border-emerald-500/30 transition-all">
             <ArrowLeft className="w-4 h-4" />
           </div>
           <span>Back to Home</span>
         </Link>
 
-        <div className="w-full max-w-md mt-8 lg:mt-0" style={{ padding: '32px' }}>
-          {/* Header */}
-          <div className="text-center" style={{ marginBottom: '40px' }}>
-            <h2
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: '28px',
-                fontWeight: 800,
-                color: '#0f1f12',
-                letterSpacing: '-0.02em',
-                marginBottom: '8px',
-              }}
-            >
+        <div className="w-full max-w-md mt-8 lg:mt-0 p-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2 font-syne uppercase">
               Welcome Back
             </h2>
-            <p style={{ color: '#6b7280', fontSize: '14px' }}>Please sign in to continue</p>
+            <p className="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest">Please sign in to continue</p>
           </div>
 
-          {/* Role Toggle Removed */}
-
           {error && (
-            <div className="mb-6 flex items-start gap-3" style={{ background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', padding: '14px 16px' }}>
-              <div className="rounded-full p-1 mt-0.5" style={{ background: '#fee2e2' }}>
-                <ArrowRight className="w-3 h-3 text-red-600 rotate-45" />
+            <div className="mb-6 flex items-start gap-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl p-4">
+              <div className="rounded-full p-1 mt-0.5 bg-red-100 dark:bg-red-900/50 shrink-0">
+                <ArrowRight className="w-3 h-3 text-red-600 dark:text-red-400 rotate-45" />
               </div>
-              <p className="text-sm font-medium" style={{ color: '#b91c1c' }}>{error}</p>
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400 leading-snug">{error}</p>
             </div>
           )}
 
           {magicLinkSent ? (
             <div className="text-center py-6">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
-                <BrainCircuit className="w-8 h-8" style={{ color: '#16a34a' }} />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/30">
+                <BrainCircuit className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#0f1f12', marginBottom: '8px' }}>Check your email</h3>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>We've sent a magic link to <span style={{ fontWeight: 600, color: '#111827' }}>{email}</span></p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 font-syne uppercase">Check your email</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 font-medium">We've sent a magic link to <span className="font-bold text-slate-950 dark:text-slate-100">{email}</span></p>
               <button
+                type="button"
                 onClick={() => setMagicLinkSent(false)}
-                className="hover:underline transition-all"
-                style={{ color: '#16a34a', fontWeight: 700, fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
+                className="text-xs font-black text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider cursor-pointer bg-transparent border-none"
               >
                 Try another email
               </button>
             </div>
           ) : (
             <form onSubmit={currentSubmitHandler} className="space-y-5">
-              {/* Email Field */}
               <div>
-                <label
-                  className="block mb-2"
-                  style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase' }}
-                >
+                <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-2">
                   Email Address
                 </label>
                 <input
                   type="email"
                   placeholder="Enter your system email"
-                  style={{
-                    width: '100%',
-                    background: '#f9fafb',
-                    border: '1.5px solid #e5e7eb',
-                    borderRadius: '12px',
-                    padding: '13px 16px',
-                    fontSize: '15px',
-                    color: '#111827',
-                    outline: 'none',
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
-                  }}
-                  onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 0 3px rgba(34,160,69,0.1)'; }}
-                  onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 px-4 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:focus:ring-emerald-500/5 transition-all duration-200"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
-              {/* Password Field */}
               {!isMagicLink && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                  <div className="flex justify-between items-center mb-2">
-                    <label
-                      className="block"
-                      style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase' }}
-                    >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-widest uppercase">
                       Password
                     </label>
                     <Link
                       to="/forgot-password"
-                      title="Reset your password"
-                      className="transition-all"
-                      style={{ fontSize: '12px', fontWeight: 600, color: '#16a34a' }}
+                      className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
                     >
                       Forgot password?
                     </Link>
@@ -294,92 +212,47 @@ function Login() {
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      style={{
-                        width: '100%',
-                        background: '#f9fafb',
-                        border: '1.5px solid #e5e7eb',
-                        borderRadius: '12px',
-                        padding: '13px 16px',
-                        paddingRight: '44px',
-                        fontSize: '15px',
-                        color: '#111827',
-                        outline: 'none',
-                        transition: 'border-color 0.2s, box-shadow 0.2s',
-                      }}
-                      onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 0 3px rgba(34,160,69,0.1)'; }}
-                      onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 px-4 pr-11 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 dark:focus:ring-emerald-500/5 transition-all duration-200"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                      style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 cursor-pointer bg-transparent border-none"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                </motion.div>
+                </div>
               )}
 
-              {/* Sign In Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
-                style={{
-                  background: 'linear-gradient(135deg, #16a34a, #22c55e)',
-                  color: '#ffffff',
-                  borderRadius: '12px',
-                  padding: '14px',
-                  fontWeight: 600,
-                  fontSize: '15px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 20px rgba(34,160,69,0.3)',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(34,160,69,0.35)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(34,160,69,0.3)'; }}
+                className="w-full flex items-center justify-center gap-2 bg-emerald-900 dark:bg-white text-white dark:text-slate-950 rounded-xl p-3.5 text-xs font-black uppercase tracking-widest hover:bg-emerald-800 dark:hover:bg-emerald-50 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer border-none shadow-xl shadow-emerald-950/10 dark:shadow-none"
               >
                 {loading && <Loader2 className="w-5 h-5 animate-spin" />}
                 {!loading && (isMagicLink ? "Send Magic Link" : "Sign In")}
               </button>
 
-              {/* Divider */}
               <div className="relative flex items-center py-2">
-                <div className="flex-grow" style={{ borderTop: '1px solid #e5e7eb' }}></div>
-                <span className="flex-shrink-0 mx-4" style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 500 }}>Or</span>
-                <div className="flex-grow" style={{ borderTop: '1px solid #e5e7eb' }}></div>
+                <div className="flex-grow border-t border-slate-100 dark:border-slate-800/60"></div>
+                <span className="flex-shrink-0 mx-4 text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest">Or</span>
+                <div className="flex-grow border-t border-slate-100 dark:border-slate-800/60"></div>
               </div>
 
-              {/* Magic Link Toggle */}
               <button
                 type="button"
                 onClick={() => { setIsMagicLink(!isMagicLink); setError(""); }}
-                className="w-full flex items-center justify-center gap-2 transition-all"
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #d1fae5',
-                  color: '#15803d',
-                  borderRadius: '12px',
-                  padding: '13px',
-                  fontWeight: 500,
-                  fontSize: '15px',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                className="w-full flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl p-3 text-xs font-black uppercase tracking-widest transition-colors duration-200 cursor-pointer"
               >
                 {isMagicLink ? "Sign in with Password" : "Sign in with Magic Link"}
               </button>
 
-              {/* Create Account */}
-              <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '32px' }}>
+              <p className="text-center text-sm text-slate-400 dark:text-slate-500 mt-8 font-medium">
                 Don't have an account?{" "}
-                <Link to="/signup" className="hover:underline transition-all" style={{ color: '#16a34a', fontWeight: 600 }}>
+                <Link to="/signup" className="text-emerald-600 dark:text-emerald-400 font-black hover:underline transition-all">
                   Create Account
                 </Link>
               </p>
