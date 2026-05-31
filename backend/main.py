@@ -29,7 +29,8 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest, CollectorRegistry, REGISTRY
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
@@ -858,6 +859,24 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 app.include_router(auth_cookie_router)
+
+# ---------------------------------------------------------------------------
+# Prometheus HTTP request instrumentation
+# ---------------------------------------------------------------------------
+# Exposes http_request_duration_seconds, http_requests_total, http_requests_in_progress
+METRICS_TOKEN = os.environ.get("METRICS_TOKEN", "")
+METRICS_ALLOWED_IPS = {
+    ip.strip()
+    for ip in os.environ.get("METRICS_ALLOWED_IPS", "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16").split(",")
+    if ip.strip()
+}
+
+instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_group_untemplated=True,
+    excluded_handlers=["/metrics", "/health"],
+)
+instrumentator.instrument(app)
 
 # Translation service routes
 from backend.routes.translation import router as translation_router
@@ -2612,6 +2631,30 @@ async def sla_ticket_detail(ticket_id: str, current_user: dict = Depends(get_cur
 
 
 @app.get("/metrics")
-async def metrics():
-    """Prometheus scrape endpoint — exposes AI inference latency, request counts, and tokens."""
+async def metrics(request: Request):
+    """Prometheus scrape endpoint — exposes HTTP request, AI inference, and system metrics.
+
+    Secured via optional ``METRICS_TOKEN`` bearer token and IP allowlist
+    (``METRICS_ALLOWED_IPS`` env var, defaults to private ranges).
+    """
+    # --- IP allowlist check ---
+    client_ip = request.client.host if request.client else ""
+    if METRICS_ALLOWED_IPS:
+        import ipaddress
+        try:
+            client_addr = ipaddress.ip_address(client_ip)
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        allowed = any(
+            client_addr in ipaddress.ip_network(cidr, strict=False)
+            for cidr in METRICS_ALLOWED_IPS
+        )
+        if not allowed:
+            # Fall back to token check if IP not in allowlist
+            auth = request.headers.get("authorization", "")
+            if METRICS_TOKEN and auth == f"Bearer {METRICS_TOKEN}":
+                pass  # Token grants access
+            else:
+                raise HTTPException(status_code=403, detail="Forbidden")
+
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
