@@ -2028,13 +2028,30 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket/legacy")
+@app.post("/ai/analyze_ticket/legacy", deprecated=True)
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
-    BACKWARD COMPATIBILITY: Strictly performs analysis only. 
+    BACKWARD COMPATIBILITY: Strictly performs analysis only.
     Does NOT persist to DB to avoid foreign key violations.
+
+    DEPRECATED: This endpoint is redundant with /ai/analyze and exists only
+    for backward compatibility. New clients should use /ai/analyze instead.
+
+    The duplicate endpoints /ai/analyze_ticket/legacy and /ai/analyze both
+    delegate to analyze_only(), making /ai/analyze_ticket/legacy unnecessary.
+    See: https://github.com/ritesh-1918/HELPDESK.AI/issues/751
     """
-    return await analyze_only(request_body)
+    result = await analyze_only(request_body)
+    # Wrap with deprecation warning
+    return JSONResponse(
+        content=result.model_dump(mode="json"),
+        headers={
+            "Deprecation": "true",
+            "Sunset": "2026-12-31",
+            "Warning": '10 Deprecation: "/ai/analyze_ticket/legacy is deprecated. Use /ai/analyze instead."',
+            "Link": '</ai/analyze>; rel="alternate"',
+        },
+    )
 
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
