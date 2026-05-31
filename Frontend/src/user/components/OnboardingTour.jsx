@@ -7,10 +7,9 @@ const OnboardingTour = () => {
     useEffect(() => {
         const isComplete = localStorage.getItem('emerald_onboarding_complete');
         if (!isComplete) {
-            // Small delay to ensure DOM is ready
             const timer = setTimeout(() => {
                 setRun(true);
-            }, 1000);
+            }, 1500); // Slightly longer delay for high-fidelity assets to settle
             return () => clearTimeout(timer);
         }
     }, []);
@@ -18,23 +17,23 @@ const OnboardingTour = () => {
     const steps = [
         {
             target: '#tour-welcome',
-            content: 'Welcome to Emerald Prime. Our AI resolves most issues instantly.',
+            content: 'Welcome to the HelpDesk.ai ecosystem. Our autonomous heuristics resolve most tickets instantly.',
             placement: 'bottom',
             disableBeacon: true,
         },
         {
             target: '#tour-create-ticket',
-            content: 'Click here to report a new issue. The AI will analyze it immediately.',
+            content: 'Initiate a new diagnostic session. The neural engine will map and route your issue immediately.',
             placement: 'bottom',
         },
         {
             target: '#tour-quick-actions',
-            content: 'Use these shortcuts for common problems like network or software issues.',
+            content: 'Use these telemetry shortcuts for recurring infrastructure or software exceptions.',
             placement: 'top',
         },
         {
             target: '#tour-recent-tickets',
-            content: 'This is where you track the progress of your support requests.',
+            content: 'Monitor real-time status updates and communication nodes for your active requests.',
             placement: 'top',
         },
     ];
@@ -57,37 +56,58 @@ const OnboardingTour = () => {
             showSkipButton={true}
             disableScrolling={false}
             callback={handleJoyrideCallback}
+            // Customizing the overlay and beacon to match dark mode
             styles={{
                 options: {
-                    primaryColor: '#13ec92',
-                    textColor: '#1e293b',
+                    arrowColor: '#111927', // Deep slate card color
+                    backgroundColor: '#111927', 
+                    overlayColor: 'rgba(5, 5, 8, 0.8)', // Main background blur color
+                    primaryColor: '#10b981', // Emerald-500
+                    textColor: '#f8fafc', // Slate-50
                     zIndex: 1000,
+                    beaconSize: 36,
+                },
+                tooltip: {
+                    borderRadius: '2rem',
+                    padding: '1.5rem',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
                 },
                 tooltipContainer: {
                     textAlign: 'left',
-                    borderRadius: '1.5rem',
-                    padding: '0.5rem',
+                    fontFamily: 'Syne, sans-serif',
+                },
+                tooltipContent: {
+                    padding: '1rem 0',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    lineHeight: 1.6,
+                    color: '#94a3b8', // Slate-400
                 },
                 buttonNext: {
                     borderRadius: '0.75rem',
-                    fontWeight: 800,
+                    fontWeight: 900,
                     textTransform: 'uppercase',
-                    fontSize: '11px',
-                    letterSpacing: '0.05em',
+                    fontSize: '10px',
+                    letterSpacing: '0.2em',
+                    backgroundColor: '#10b981',
+                    padding: '12px 24px',
+                    marginLeft: '10px',
                 },
                 buttonBack: {
-                    fontWeight: 700,
-                    fontSize: '11px',
+                    fontWeight: 800,
+                    fontSize: '10px',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: '#94a3b8',
+                    letterSpacing: '0.2em',
+                    color: '#64748b', // Slate-500
+                    marginRight: '10px',
                 },
                 buttonSkip: {
-                    fontWeight: 700,
-                    fontSize: '11px',
+                    fontWeight: 800,
+                    fontSize: '10px',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: '#94a3b8',
+                    letterSpacing: '0.2em',
+                    color: '#475569', // Slate-600
                 }
             }}
         />

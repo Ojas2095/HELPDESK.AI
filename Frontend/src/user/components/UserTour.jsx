@@ -34,7 +34,6 @@ const steps = [
     },
 ];
 
-// ─── Custom Tooltip ────────────────────────────────────────────────────────────
 function EmeraldTooltip({
     continuous,
     index,
@@ -49,16 +48,16 @@ function EmeraldTooltip({
     return (
         <div
             {...tooltipProps}
-            className="bg-white rounded-2xl shadow-2xl shadow-emerald-900/10 border border-gray-100 p-6 max-w-xs w-72 font-sans"
+            className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-200 dark:border-white/[0.08] p-6 max-w-xs w-72 text-left relative z-50 font-sans"
         >
             {/* Step counter pill */}
             <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-500/20">
                     Step {index + 1} of {size}
                 </span>
                 <button
                     {...skipProps}
-                    className="text-[11px] font-bold text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors bg-transparent border-none cursor-pointer"
                     title="Skip tour"
                 >
                     Skip
@@ -66,12 +65,12 @@ function EmeraldTooltip({
             </div>
 
             {/* Title */}
-            <h3 className="text-base font-black text-gray-900 mb-2 leading-tight">
+            <h3 className="text-base font-black text-slate-900 dark:text-white mb-2 leading-tight font-syne uppercase tracking-tight">
                 {step.title}
             </h3>
 
             {/* Body */}
-            <p className="text-sm text-gray-500 font-medium leading-relaxed mb-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-5 m-0">
                 {step.content}
             </p>
 
@@ -80,22 +79,23 @@ function EmeraldTooltip({
                 {Array.from({ length: size }).map((_, i) => (
                     <div
                         key={i}
-                        className={`h-1.5 rounded-full transition-all duration-300 ${i === index
-                                ? 'w-5 bg-emerald-600'
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                            i === index
+                                ? 'w-5 bg-emerald-600 dark:bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]'
                                 : i < index
-                                    ? 'w-1.5 bg-emerald-300'
-                                    : 'w-1.5 bg-gray-200'
-                            }`}
+                                ? 'w-1.5 bg-emerald-300 dark:bg-emerald-500/40'
+                                : 'w-1.5 bg-slate-200 dark:bg-slate-800'
+                        }`}
                     />
                 ))}
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
                 {index > 0 && (
                     <button
                         {...backProps}
-                        className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50 transition-all active:scale-95"
+                        className="flex-1 h-10 rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 text-xs font-black uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-white/5 transition-all active:scale-95 cursor-pointer bg-transparent"
                     >
                         Back
                     </button>
@@ -103,14 +103,14 @@ function EmeraldTooltip({
                 {continuous ? (
                     <button
                         {...primaryProps}
-                        className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black transition-all active:scale-95 shadow-sm shadow-emerald-600/20"
+                        className="flex-1 h-10 rounded-xl bg-emerald-600 dark:bg-emerald-400 hover:bg-emerald-500 dark:hover:bg-emerald-300 text-white dark:text-slate-900 text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-xl shadow-emerald-600/10 dark:shadow-none border-none cursor-pointer"
                     >
                         {index === size - 1 ? "Got it 🎉" : "Next →"}
                     </button>
                 ) : (
                     <button
                         {...closeProps}
-                        className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black transition-all active:scale-95"
+                        className="flex-1 h-10 rounded-xl bg-emerald-600 dark:bg-emerald-400 hover:bg-emerald-500 dark:hover:bg-emerald-300 text-white dark:text-slate-900 text-xs font-black uppercase tracking-wider transition-all active:scale-95 border-none cursor-pointer"
                     >
                         Close
                     </button>
@@ -120,7 +120,6 @@ function EmeraldTooltip({
     );
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────────
 const UserTour = () => {
     const [run, setRun] = useState(() => {
         return localStorage.getItem(TOUR_KEY) !== 'true';
@@ -139,6 +138,9 @@ const UserTour = () => {
         }
     }, []);
 
+    // Get the current document theme fallback configuration values
+    const isDark = document.documentElement.classList.contains('dark');
+
     return (
         <Joyride
             steps={steps}
@@ -152,12 +154,12 @@ const UserTour = () => {
             floaterProps={{ disableAnimation: false }}
             styles={{
                 options: {
-                    arrowColor: '#ffffff',
-                    overlayColor: 'rgba(15, 23, 42, 0.45)',
+                    arrowColor: isDark ? '#111927' : '#ffffff',
+                    overlayColor: isDark ? 'rgba(5, 5, 8, 0.6)' : 'rgba(15, 23, 42, 0.45)',
                     zIndex: 9999,
                 },
                 spotlight: {
-                    borderRadius: '16px',
+                    borderRadius: '24px',
                 },
             }}
         />

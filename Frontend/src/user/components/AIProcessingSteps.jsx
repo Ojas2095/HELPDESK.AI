@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Loader2, Circle } from 'lucide-react';
 
 const AIProcessingSteps = ({ steps = [], onComplete, delay = 1200, activeStep = null }) => {
     const [internalStep, setInternalStep] = useState(0);
-
     const currentStep = activeStep !== null ? activeStep : internalStep;
 
     useEffect(() => {
-        if (activeStep !== null) return; // Disable internal timer if controlled externally
+        if (activeStep !== null) return;
 
         if (internalStep < steps.length) {
             const timer = setTimeout(() => {
@@ -22,46 +22,81 @@ const AIProcessingSteps = ({ steps = [], onComplete, delay = 1200, activeStep = 
                 return () => clearTimeout(timer);
             }
         }
- 
-    }, [currentStep, steps.length, delay, onComplete]);
+    }, [internalStep, steps.length, delay, onComplete, activeStep]);
 
     const progressPercentage = Math.min((currentStep / steps.length) * 100, 100);
 
     return (
-        <>
-            <div className="w-full space-y-5 px-2">
+        <div className="relative w-full h-full flex flex-col justify-between overflow-hidden">
+            {/* Step Matrix Container */}
+            <div className="w-full space-y-6 px-4 py-2">
                 {steps.map((step, index) => {
                     const isCompleted = currentStep > index;
                     const isActive = currentStep === index;
                     const isPending = currentStep < index;
 
                     return (
-                        <div key={index} className={`flex items-center gap-4 transition-all duration-500 ${isPending ? 'opacity-40' : 'opacity-100'}`}>
+                        <motion.div 
+                            key={index}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ 
+                                opacity: isPending ? 0.3 : 1, 
+                                x: 0,
+                                scale: isActive ? 1.02 : 1 
+                            }}
+                            transition={{ duration: 0.4 }}
+                            className="flex items-center gap-4 text-left"
+                        >
                             <div className="flex-shrink-0 relative flex items-center justify-center w-6 h-6">
-                                {isCompleted ? (
-                                    <CheckCircle2 className="w-5 h-5 text-emerald-500 transition-all duration-500 scale-100" />
-                                ) : isActive ? (
-                                    <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
-                                ) : (
-                                    <Circle className="w-5 h-5 text-gray-300" />
-                                )}
+                                <AnimatePresence mode="wait">
+                                    {isCompleted ? (
+                                        <motion.div
+                                            key="completed"
+                                            initial={{ scale: 0.5, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            exit={{ scale: 0.5, opacity: 0 }}
+                                        >
+                                            <CheckCircle2 className="w-5 h-5 text-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.2)]" />
+                                        </motion.div>
+                                    ) : isActive ? (
+                                        <motion.div
+                                            key="active"
+                                            initial={{ rotate: 0 }}
+                                            animate={{ rotate: 360 }}
+                                            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                                        >
+                                            <Loader2 className="w-5 h-5 text-emerald-400" />
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div key="pending">
+                                            <Circle className="w-5 h-5 text-slate-700" />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
-                            <span className={`text-sm font-semibold transition-colors duration-300 ${isCompleted ? 'text-gray-900' : isActive ? 'text-emerald-700' : 'text-gray-500'}`}>
+
+                            <span className={`text-sm font-bold uppercase tracking-widest transition-colors duration-300 ${
+                                isCompleted ? 'text-slate-400' : 
+                                isActive ? 'text-emerald-400 font-black' : 
+                                'text-slate-600'
+                            }`}>
                                 {step}
                             </span>
-                        </div>
+                        </motion.div>
                     );
                 })}
             </div>
 
-            {/* Progress Bar */}
-            <div className="w-full h-1.5 bg-gray-50 absolute bottom-0 left-0">
-                <div
-                    className="h-full bg-emerald-500 transition-all duration-700 ease-out"
-                    style={{ width: `${progressPercentage}%` }}
-                ></div>
+            {/* High-Precision Progress Pipeline */}
+            <div className="w-full h-1 bg-white/5 absolute bottom-0 left-0 overflow-hidden">
+                <motion.div
+                    className="h-full bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercentage}%` }}
+                    transition={{ duration: 0.6, ease: "circOut" }}
+                />
             </div>
-        </>
+        </div>
     );
 };
 
