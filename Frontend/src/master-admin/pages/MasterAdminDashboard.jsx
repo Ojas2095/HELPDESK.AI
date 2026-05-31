@@ -102,7 +102,7 @@ function MasterAdminDashboard() {
                             <div className={`w-12 h-12 rounded-xl bg-${card.color}-500/10 border border-${card.color}-500/20 flex items-center justify-center text-${card.color}-400 group-hover:scale-110 transition-transform`}>
                                 {React.cloneElement(card.icon, { className: "w-6 h-6" })}
                             </div>
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${card.pulse ? "text-amber-500 flex items-center gap-1.5" : "text-slate-500"}`}>
+                            <span className={`text-xs font-black uppercase tracking-widest ${card.pulse ? "text-amber-500 flex items-center gap-1.5" : "text-slate-500"}`}>
                                 {card.growth}
                             </span>
                         </div>
@@ -137,12 +137,12 @@ function MasterAdminDashboard() {
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                                     <div>
                                         <p className="text-sm font-bold text-white">{server.name}</p>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{server.region}</p>
+                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{server.region}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-xs font-black uppercase tracking-widest text-emerald-400 mb-1">{server.status}</p>
-                                    <p className="text-[10px] text-slate-500 font-bold">{server.info}</p>
+                                    <p className="text-xs text-slate-500 font-bold">{server.info}</p>
                                 </div>
                             </div>
                         ))}
@@ -163,7 +163,7 @@ function MasterAdminDashboard() {
                     >
                         Access Engine Settings
                     </button>
-                    <p className="mt-4 text-[10px] text-slate-500 uppercase font-black tracking-widest">Master Admin Restricted</p>
+                    <p className="mt-4 text-xs text-slate-500 uppercase font-black tracking-widest">Master Admin Restricted</p>
                 </div>
             </div>
         </div>

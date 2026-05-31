@@ -105,14 +105,14 @@ function AllAdmins() {
                                     <div className="grid grid-cols-2 gap-2">
                                         <div className="bg-white/5 rounded-lg p-2 border border-white/5">
                                             <p className="text-[8px] text-slate-500 uppercase tracking-widest font-bold mb-0.5">Industry</p>
-                                            <p className="text-[10px] text-slate-300 font-bold truncate">{admin.industry || "General"}</p>
+                                            <p className="text-xs text-slate-300 font-bold truncate">{admin.industry || "General"}</p>
                                         </div>
                                         <div className="bg-white/5 rounded-lg p-2 border border-white/5">
                                             <p className="text-[8px] text-slate-500 uppercase tracking-widest font-bold mb-0.5">Scale</p>
-                                            <p className="text-[10px] text-slate-300 font-bold truncate">{admin.company_size || "N/A"}</p>
+                                            <p className="text-xs text-slate-300 font-bold truncate">{admin.company_size || "N/A"}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-slate-500 text-[10px] font-bold uppercase tracking-widest pt-1">
+                                    <div className="flex items-center gap-2 text-slate-500 text-xs font-bold uppercase tracking-widest pt-1">
                                         <Shield className="w-3 h-3" />
                                         Platform Administrator
                                     </div>

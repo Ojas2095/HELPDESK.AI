@@ -139,7 +139,7 @@ const MasterBugReports = () => {
                 <div>
                     <div className="flex items-center gap-3 mb-1">
                         <Terminal className="w-5 h-5 text-indigo-400" />
-                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Platform Integrity</span>
+                        <span className="text-xs font-black text-indigo-400 uppercase tracking-[0.3em]">Platform Integrity</span>
                     </div>
                     <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase flex items-center gap-4">
                         <Bug className="text-indigo-500 w-10 h-10" />
@@ -164,7 +164,7 @@ const MasterBugReports = () => {
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Status Protocol</label>
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Status Protocol</label>
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
@@ -178,7 +178,7 @@ const MasterBugReports = () => {
                     </select>
                 </div>
                 <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Threat Level</label>
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Threat Level</label>
                     <select
                         value={severityFilter}
                         onChange={(e) => setSeverityFilter(e.target.value)}
@@ -204,19 +204,19 @@ const MasterBugReports = () => {
                         <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mb-4">
                             <Bug size={40} className="opacity-20" />
                         </div>
-                        <p className="font-black uppercase tracking-[0.3em] text-[10px]">Perimeter Clear: No Bugs Found</p>
+                        <p className="font-black uppercase tracking-[0.3em] text-xs">Perimeter Clear: No Bugs Found</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full border-collapse">
                             <thead>
                                 <tr className="bg-white/5 border-b border-white/5">
-                                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Priority</th>
-                                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Description</th>
-                                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Module</th>
-                                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
-                                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Log Date</th>
-                                    <th className="px-8 py-6 text-center text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Terminal</th>
+                                    <th className="px-8 py-6 text-left text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Priority</th>
+                                    <th className="px-8 py-6 text-left text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Description</th>
+                                    <th className="px-8 py-6 text-left text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Module</th>
+                                    <th className="px-8 py-6 text-left text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
+                                    <th className="px-8 py-6 text-left text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Log Date</th>
+                                    <th className="px-8 py-6 text-center text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Terminal</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
@@ -230,11 +230,11 @@ const MasterBugReports = () => {
                                         <td className="px-8 py-6">
                                             <div className="flex flex-col">
                                                 <span className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors uppercase tracking-tight">{bug.bug_title}</span>
-                                                <span className="text-[10px] text-slate-500 truncate max-w-[250px] font-medium leading-relaxed italic">"{bug.description}"</span>
+                                                <span className="text-xs text-slate-500 truncate max-w-[250px] font-medium leading-relaxed italic">"{bug.description}"</span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <span className="text-[10px] font-black text-indigo-400/60 uppercase tracking-widest">{bug.category}</span>
+                                            <span className="text-xs font-black text-indigo-400/60 uppercase tracking-widest">{bug.category}</span>
                                         </td>
                                         <td className="px-8 py-6">
                                             <select
@@ -249,7 +249,7 @@ const MasterBugReports = () => {
                                             </select>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <span className="text-[10px] font-bold text-slate-600 font-mono tracking-tighter">
+                                            <span className="text-xs font-bold text-slate-600 font-mono tracking-tighter">
                                                 {new Date(bug.created_at).toLocaleString()}
                                             </span>
                                         </td>
@@ -292,7 +292,7 @@ const MasterBugReports = () => {
                             initial={{ opacity: 0, scale: 0.9, y: 30 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                            className="bg-[#0a0a0f] rounded-[3rem] shadow-[0_0_100px_rgba(79,70,229,0.15)] w-full max-w-5xl relative z-[101] my-auto border border-white/5 flex flex-col max-h-[92vh] overflow-hidden"
+                            className="bg-slate-950 rounded-[3rem] shadow-[0_0_100px_rgba(79,70,229,0.15)] w-full max-w-5xl relative z-[101] my-auto border border-white/5 flex flex-col max-h-[92vh] overflow-hidden"
                         >
                             {/* Modal Header */}
                             <div className="p-10 border-b border-white/5 flex items-center justify-between shrink-0 bg-white/[0.02]">
@@ -302,10 +302,10 @@ const MasterBugReports = () => {
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-3 mb-2">
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${getSeverityStyle(selectedBug.severity)}`}>
+                                            <span className={`px-2 py-0.5 rounded text-xs font-black uppercase border ${getSeverityStyle(selectedBug.severity)}`}>
                                                 {selectedBug.severity} Threat
                                             </span>
-                                            <span className="text-[10px] font-black text-indigo-500/60 font-mono tracking-widest">TRACE_ID: {selectedBug.id.slice(0, 12)}</span>
+                                            <span className="text-xs font-black text-indigo-500/60 font-mono tracking-widest">TRACE_ID: {selectedBug.id.slice(0, 12)}</span>
                                         </div>
                                         <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic italic">{selectedBug.bug_title}</h2>
                                     </div>
@@ -316,23 +316,23 @@ const MasterBugReports = () => {
                             </div>
 
                             {/* Modal Content */}
-                            <div className="p-10 overflow-y-auto customize-scrollbar space-y-10 bg-[#0a0a0f]">
+                            <div className="p-10 overflow-y-auto customize-scrollbar space-y-10 bg-slate-950">
                                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
                                     {/* Primary Info */}
                                     <div className="lg:col-span-3 space-y-10">
                                         <section className="space-y-4">
-                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                                            <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div>
                                                 Vulnerability Intel
                                             </h3>
                                             <div className="bg-white/5 border border-white/5 p-8 rounded-[2rem] space-y-6">
                                                 <div>
-                                                    <p className="text-[10px] font-black text-indigo-400/50 uppercase mb-2">Observation</p>
+                                                    <p className="text-xs font-black text-indigo-400/50 uppercase mb-2">Observation</p>
                                                     <p className="text-lg text-slate-200 leading-relaxed font-semibold">{selectedBug.description}</p>
                                                 </div>
                                                 {selectedBug.steps_to_reproduce && (
                                                     <div className="pt-4 border-t border-white/5">
-                                                        <p className="text-[10px] font-black text-indigo-400/50 uppercase mb-3">Replication Path</p>
+                                                        <p className="text-xs font-black text-indigo-400/50 uppercase mb-3">Replication Path</p>
                                                         <div className="bg-black/40 p-5 rounded-2xl border border-white/5 font-mono text-xs text-slate-400 whitespace-pre-line leading-relaxed">
                                                             {selectedBug.steps_to_reproduce}
                                                         </div>
@@ -340,11 +340,11 @@ const MasterBugReports = () => {
                                                 )}
                                                 <div className="grid grid-cols-2 gap-6 pt-4">
                                                     <div className="bg-emerald-500/5 border border-emerald-500/10 p-5 rounded-2xl">
-                                                        <p className="text-[10px] font-black text-emerald-500/60 uppercase mb-1">Expected Matrix</p>
+                                                        <p className="text-xs font-black text-emerald-500/60 uppercase mb-1">Expected Matrix</p>
                                                         <p className="text-sm text-emerald-100 font-bold">{selectedBug.expected_result || 'NO_DATA'}</p>
                                                     </div>
                                                     <div className="bg-red-500/5 border border-red-500/10 p-5 rounded-2xl">
-                                                        <p className="text-[10px] font-black text-red-500/60 uppercase mb-1">Observed Output</p>
+                                                        <p className="text-xs font-black text-red-500/60 uppercase mb-1">Observed Output</p>
                                                         <p className="text-sm text-red-100 font-bold">{selectedBug.actual_result || 'SYSTEM_FAILURE'}</p>
                                                     </div>
                                                 </div>
@@ -361,7 +361,7 @@ const MasterBugReports = () => {
                                                 </h3>
                                                 <div className="space-y-6">
                                                     <div className="bg-black/20 backdrop-blur-md p-6 rounded-3xl border border-white/20">
-                                                        <p className="text-[10px] font-black text-indigo-200 uppercase mb-3">Root Cause Synthesis</p>
+                                                        <p className="text-xs font-black text-indigo-200 uppercase mb-3">Root Cause Synthesis</p>
                                                         <p className="text-lg font-bold text-white leading-relaxed italic">
                                                             "{selectedBug.diagnostic_data?.ai_probable_cause || 'AI Engine re-scanning metadata...'}"
                                                         </p>
@@ -384,7 +384,7 @@ const MasterBugReports = () => {
                                     {/* Secondary Info */}
                                     <div className="lg:col-span-2 space-y-10">
                                         <section className="space-y-4">
-                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                                            <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
                                                 <Camera className="w-5 h-5 text-indigo-400" />
                                                 Visual Capture
                                             </h3>
@@ -398,7 +398,7 @@ const MasterBugReports = () => {
                                                     <div className="absolute inset-0 bg-indigo-900/0 group-hover:bg-indigo-900/60 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 backdrop-blur-sm">
                                                         <button
                                                             onClick={() => window.open(selectedBug.diagnostic_data.screenshot_base64, '_blank')}
-                                                            className="px-8 py-3 bg-white text-slate-900 text-[10px] font-black uppercase tracking-[0.2em] rounded-full shadow-2xl hover:scale-105 transition-transform"
+                                                            className="px-8 py-3 bg-white text-slate-900 text-xs font-black uppercase tracking-[0.2em] rounded-full shadow-2xl hover:scale-105 transition-transform"
                                                         >
                                                             Inspect Raw Frame
                                                         </button>
@@ -407,13 +407,13 @@ const MasterBugReports = () => {
                                             ) : (
                                                 <div className="bg-white/[0.02] rounded-[2rem] border-2 border-dashed border-white/10 h-64 flex flex-col items-center justify-center text-slate-600">
                                                     <Camera size={48} className="mb-4 opacity-10" />
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">No Visual Data</p>
+                                                    <p className="text-xs font-black uppercase tracking-widest text-slate-500">No Visual Data</p>
                                                 </div>
                                             )}
                                         </section>
 
                                         <section className="space-y-4">
-                                            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                                            <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
                                                 <Clock className="w-5 h-5 text-indigo-400" />
                                                 Telemetry Dump
                                             </h3>
@@ -429,7 +429,7 @@ const MasterBugReports = () => {
                                                 {selectedBug.contact_permission && (
                                                     <div className="mt-6 flex items-center gap-3 bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20">
                                                         <CheckCircle2 size={20} className="text-emerald-400 shrink-0" />
-                                                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter leading-tight">Follow-up Contact Authorized by User</span>
+                                                        <span className="text-xs font-black text-emerald-400 uppercase tracking-tighter leading-tight">Follow-up Contact Authorized by User</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -454,3 +454,4 @@ const MasterBugReports = () => {
 };
 
 export default MasterBugReports;
+

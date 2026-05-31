@@ -214,7 +214,7 @@ function PendingAdminRequests() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] uppercase font-bold tracking-wider">
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs uppercase font-bold tracking-wider">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                                 Pending Review
                                             </span>
@@ -242,7 +242,7 @@ function PendingAdminRequests() {
                                                 {request.admin.company || "Unnamed Company"}
                                             </div>
                                             <div className="flex flex-col gap-1">
-                                                <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold flex items-center gap-2">
+                                                <div className="text-xs text-slate-500 uppercase tracking-widest font-bold flex items-center gap-2">
                                                     <Users className="w-3 h-3" />
                                                     {request.admin.company_size || "Unknown Size"} • {request.admin.industry || "General Industry"}
                                                 </div>
@@ -251,7 +251,7 @@ function PendingAdminRequests() {
                                                         href={request.admin.website}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-2 underline underline-offset-2 decoration-indigo-500/30"
+                                                        className="text-xs text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-2 underline underline-offset-2 decoration-indigo-500/30"
                                                     >
                                                         <Globe className="w-3 h-3" />
                                                         {request.admin.website.replace(/^https?:\/\//, '')}
