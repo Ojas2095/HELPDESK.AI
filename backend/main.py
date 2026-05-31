@@ -877,73 +877,8 @@ body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', sy
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-# ---------------------------------------------------------------------------
-# Security Headers Middleware — defense-in-depth against XSS (#739)
-# ---------------------------------------------------------------------------
-@app.middleware("http")
-async def add_security_headers(request, call_next):
-    response = await call_next(request)
-    for key, value in get_security_headers().items():
-        response.headers[key] = value
-    return response
-
-# CORS — locked to production + local dev only
-# CORS configuracion restrictiva para produccion
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "https://helpdesk.ai,https://staging.helpdesk.ai,http://localhost:5173,http://localhost:3000").split(","),
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
-
-# Security Headers Middleware
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
-    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
-    return response
-    allow_origins=[
-        "https://helpdeskaiv1.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:3000",
-    ]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Helmet Integration — custom middleware enforcing HTTP security headers
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss: http://localhost:7860 ws://localhost:7860 http://127.0.0.1:7860 ws://127.0.0.1:7860;"
-    )
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    return response
+from backend.security_config import setup_security
+setup_security(app)
 
 app.include_router(auth_cookie_router)
 
