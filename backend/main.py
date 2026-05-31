@@ -808,11 +808,34 @@ app.add_middleware(
         "https://helpdeskaiv1.vercel.app",
         "http://localhost:5173",
         "http://localhost:3000",
-    ],
+    ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Helmet Integration — custom middleware enforcing HTTP security headers
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https: wss: http://localhost:7860 ws://localhost:7860 http://127.0.0.1:7860 ws://127.0.0.1:7860;"
+    )
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 app.include_router(auth_cookie_router)
 
