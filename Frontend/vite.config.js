@@ -77,7 +77,5 @@ export default defineConfig({
       "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
       "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     },
-  },
-    sourcemap: 'hidden'
   }
 })
