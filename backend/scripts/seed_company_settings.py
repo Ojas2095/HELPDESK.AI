@@ -9,11 +9,14 @@ Run this script after applying the 20260531_add_company_settings.sql migration.
 
 Usage:
     cd backend
-    python scripts/seed_company_settings.py
+    python scripts/seed_company_settings.py [--dry-run]
+
+Flags:
+    --dry-run   Show what would be inserted without writing to the database.
 
 This script:
 - Queries unique companies from tickets table
-- Creates default system_settings record for each
+- Creates default system_settings record for each (batch insert)
 - Sets default values:
     - auto_close_enabled: true
     - auto_close_days: 7
@@ -25,9 +28,10 @@ This script:
 import os
 import sys
 import logging
+import argparse
 from datetime import datetime, timezone
 
-from supabase import create_client
+from supabase import create_client, Client
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -40,148 +44,204 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Supabase default page size — requests beyond this need explicit pagination.
+_SUPABASE_PAGE_SIZE = 1000
 
-def seed_company_settings():
-    """Main function to seed company settings for all companies."""
-    
-    # Initialize Supabase client
-    supabase = create_client(
-        os.getenv("SUPABASE_URL"),
-        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+# Default values written into every new system_settings row.
+_DEFAULT_SETTINGS = {
+    "auto_close_enabled": True,
+    "auto_close_days": 7,
+    "email_notifications": True,
+    "admin_alerts": True,
+    "digest_frequency": "daily",
+}
+
+
+# ─── Supabase helpers ─────────────────────────────────────────────────────────
+
+def _build_client() -> Client:
+    """Create and return a Supabase client, with a clear error if env vars are missing."""
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    if not url or not key:
+        raise EnvironmentError(
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must both be set."
+        )
+    return create_client(url, key)
+
+
+def _fetch_all_pages(client: Client, table: str, select: str) -> list[dict]:
+    """
+    Fetch every row from *table* using range-based pagination.
+
+    Supabase returns at most 1 000 rows per request by default. Without
+    pagination, large installations are silently truncated — the original
+    script did not paginate, so any database with > 1 000 tickets or
+    system_settings rows would produce incomplete results with no error.
+    """
+    rows: list[dict] = []
+    offset = 0
+    while True:
+        page = (
+            client.table(table)
+            .select(select)
+            .range(offset, offset + _SUPABASE_PAGE_SIZE - 1)
+            .execute()
+        ).data or []
+        rows.extend(page)
+        if len(page) < _SUPABASE_PAGE_SIZE:
+            break
+        offset += _SUPABASE_PAGE_SIZE
+    return rows
+
+
+def _get_unique_company_ids(client: Client) -> set[str]:
+    """Return distinct company_ids present in the tickets table."""
+    tickets = _fetch_all_pages(client, "tickets", "company_id")
+    return {row["company_id"] for row in tickets if row.get("company_id")}
+
+
+def _get_existing_company_ids(client: Client) -> set[str]:
+    """Return company_ids that already have a system_settings row."""
+    settings = _fetch_all_pages(client, "system_settings", "company_id")
+    return {row["company_id"] for row in settings if row.get("company_id")}
+
+
+def _build_records(company_ids: list[str]) -> list[dict]:
+    """Build insert payload for each company, including an explicit created_at."""
+    now = datetime.now(timezone.utc).isoformat()
+    return [
+        {"company_id": cid, "created_at": now, **_DEFAULT_SETTINGS}
+        for cid in company_ids
+    ]
+
+
+# ─── Core logic ───────────────────────────────────────────────────────────────
+
+def seed_company_settings(client: Client, *, dry_run: bool = False) -> dict:
+    """Seed default system_settings for every company that does not have one."""
+
+    logger.info(
+        "Starting system_settings seed script%s...",
+        " (DRY RUN)" if dry_run else "",
     )
-    
-    logger.info("Starting company settings seed script...")
-    
+
     try:
-        # Step 1: Get all unique companies from tickets table
-        logger.info("Fetching all unique companies from tickets table...")
-        
-        companies_response = supabase.table("tickets").select(
-            "company_id", count="exact"
-        ).execute()
-        
-        if not companies_response.data:
+        # Step 1: Unique companies from tickets
+        logger.info("Fetching unique company IDs from tickets table...")
+        all_company_ids = _get_unique_company_ids(client)
+
+        if not all_company_ids:
             logger.warning("No tickets found. Database may be empty.")
             return {"status": "no_tickets", "created_count": 0}
-        
-        # Extract unique company IDs
-        companies = {}
-        for ticket in companies_response.data:
-            company_id = ticket.get("company_id")
-            if company_id and company_id not in companies:
-                companies[company_id] = True
-        
-        unique_companies = list(companies.keys())
-        logger.info(f"Found {len(unique_companies)} unique companies")
-        
-        # Step 2: Get existing system_settings to avoid duplicates
+
+        logger.info("Found %d unique companies", len(all_company_ids))
+
+        # Step 2: Companies that already have settings
         logger.info("Fetching existing system_settings...")
-        
-        existing_response = supabase.table("system_settings").select(
-            "company_id"
-        ).execute()
-        
-        existing_companies = set()
-        if existing_response.data:
-            for setting in existing_response.data:
-                existing_companies.add(setting.get("company_id"))
-        
-        logger.info(f"Found {len(existing_companies)} existing system_settings")
-        
-        # Step 3: Determine which companies need settings created
-        companies_to_create = [c for c in unique_companies if c not in existing_companies]
-        logger.info(f"Need to create settings for {len(companies_to_create)} companies")
-        
-        if not companies_to_create:
+        existing_ids = _get_existing_company_ids(client)
+        logger.info("Found %d existing system_settings rows", len(existing_ids))
+
+        # Step 3: Delta — only companies without settings
+        to_create = sorted(all_company_ids - existing_ids)
+        logger.info("Need to create settings for %d companies", len(to_create))
+
+        if not to_create:
             logger.info("All companies already have settings. Nothing to do.")
             return {"status": "complete", "created_count": 0}
-        
-        # Step 4: Create default settings for each company
-        created_count = 0
-        error_count = 0
-        
-        for company_id in companies_to_create:
-            try:
-                # Create default settings record
-                supabase.table("system_settings").insert({
-                    "company_id": company_id,
-                    "auto_close_enabled": True,
-                    "auto_close_days": 7,
-                    "email_notifications": True,
-                    "admin_alerts": True,
-                    "digest_frequency": "daily"
-                }).execute()
-                
-                created_count += 1
-                logger.debug(f"Created settings for company {company_id}")
-                
-            except Exception as e:
-                error_count += 1
-                logger.error(f"Failed to create settings for company {company_id}: {str(e)}")
-        
-        # Step 5: Verify results
-        logger.info(f"Seed complete: {created_count} created, {error_count} errors")
-        
-        if error_count == 0:
-            logger.info("All company settings successfully created!")
-            return {"status": "success", "created_count": created_count}
-        else:
-            logger.warning(f"Seed completed with {error_count} errors")
-            return {"status": "partial", "created_count": created_count, "error_count": error_count}
-    
+
+        # Step 4: Batch insert (single round-trip) instead of per-row loop
+        records = _build_records(to_create)
+
+        if dry_run:
+            logger.info("[DRY RUN] Would insert %d records:", len(records))
+            for rec in records:
+                logger.info("  %s", rec)
+            return {"status": "dry_run", "created_count": len(records)}
+
+        client.table("system_settings").insert(records).execute()
+        logger.info("Batch insert complete: %d records written", len(records))
+
+        return {"status": "success", "created_count": len(records)}
+
     except Exception as e:
-        logger.error(f"Fatal error during seed: {str(e)}")
+        logger.error("Fatal error during seed: %s", e)
         return {"status": "error", "message": str(e)}
 
 
-def verify_seed():
-    """Verify that seed was successful."""
-    
+# ─── Verification ─────────────────────────────────────────────────────────────
+
+def verify_seed(client: Client) -> bool:
+    """Verify every company in tickets has a system_settings row."""
+
     logger.info("Verifying seed results...")
-    
-    supabase = create_client(
-        os.getenv("SUPABASE_URL"),
-        os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-    )
-    
+
     try:
-        # Get counts
-        companies_response = supabase.table("tickets").select(
-            "company_id", count="exact"
-        ).execute()
-        
-        settings_response = supabase.table("system_settings").select(
-            "company_id", count="exact"
-        ).execute()
-        
-        companies_count = len(set(t["company_id"] for t in companies_response.data if t.get("company_id")))
-        settings_count = len(set(s["company_id"] for s in settings_response.data if s.get("company_id")))
-        
-        logger.info(f"Verification: {companies_count} unique companies, {settings_count} system_settings")
-        
+        company_ids = _get_unique_company_ids(client)
+        settings_ids = _get_existing_company_ids(client)
+
+        companies_count = len(company_ids)
+        settings_count = len(settings_ids & company_ids)
+
+        logger.info(
+            "Verification: %d unique companies, %d with system_settings",
+            companies_count, settings_count,
+        )
+
         if companies_count == settings_count:
             logger.info("✓ Verification passed: All companies have settings!")
             return True
-        else:
-            logger.warning(f"✗ Verification failed: {companies_count - settings_count} companies missing settings")
-            return False
-    
+
+        logger.warning(
+            "✗ Verification failed: %d companies missing settings",
+            companies_count - settings_count,
+        )
+        return False
+
     except Exception as e:
-        logger.error(f"Verification failed: {str(e)}")
+        logger.error("Verification failed: %s", e)
         return False
 
 
+# ─── CLI ──────────────────────────────────────────────────────────────────────
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Seed default system_settings for all companies."
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview inserts without writing to the database.",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    # Run seed
-    result = seed_company_settings()
-    
-    # Verify
-    verified = verify_seed()
-    
-    # Exit with appropriate code
-    if verified and result.get("status") in ["success", "complete"]:
+    args = _parse_args()
+
+    try:
+        supabase = _build_client()
+    except EnvironmentError as e:
+        logger.error(str(e))
+        sys.exit(1)
+
+    result = seed_company_settings(supabase, dry_run=args.dry_run)
+
+    if args.dry_run:
+        logger.info("Dry-run complete — no data was written.")
+        sys.exit(0)
+
+    verified = verify_seed(supabase)
+
+    if verified and result.get("status") in {"success", "complete"}:
         logger.info("Seed script completed successfully!")
         sys.exit(0)
+    elif result.get("status") == "no_tickets":
+        logger.warning("Nothing seeded — no tickets in database.")
+        sys.exit(0)
     else:
-        logger.error("Seed script completed with issues")
+        logger.error(
+            "Seed script completed with issues (status=%s)", result.get("status")
+        )
         sys.exit(1)
