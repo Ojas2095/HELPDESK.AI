@@ -1864,7 +1864,7 @@ async def analyze_only(request_body: TicketRequest, request: Request):
 
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
-        summary=summary,
+        summary=sanitize_text(summary),
         category=classification["category"],
         subcategory=classification["subcategory"],
         priority=classification["priority"],
