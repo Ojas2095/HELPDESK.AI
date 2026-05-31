@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Table, Card, Button, Tag, Space, Input } from "antd";
 import { DeleteOutlined, SearchOutlined } from "@ant-design/icons";
 
@@ -6,22 +6,16 @@ function History() {
   const [tickets, setTickets] = useState([]);
   const [searchText, setSearchText] = useState("");
 
-  // Load tickets from localStorage
   useEffect(() => {
-    const storedTickets =
-      JSON.parse(localStorage.getItem("tickets")) || [];
- 
-     
+    const storedTickets = JSON.parse(localStorage.getItem("tickets")) || [];
     setTickets(storedTickets);
   }, []);
 
-  // Clear all tickets
   const clearAllTickets = () => {
     localStorage.removeItem("tickets");
     setTickets([]);
   };
 
-  // Priority badge colors
   const getPriorityColor = (priority) => {
     switch (priority) {
       case "Low":
@@ -29,7 +23,6 @@ function History() {
       case "Medium":
         return "orange";
       case "High":
-        return "red";
       case "Critical":
         return "red";
       default:
@@ -37,7 +30,6 @@ function History() {
     }
   };
 
-  // Status badge colors
   const getStatusColor = (status) => {
     switch (status) {
       case "Resolved":
@@ -50,7 +42,6 @@ function History() {
     }
   };
 
-  // Table columns configuration
   const columns = [
     {
       title: "Ticket ID",
@@ -58,7 +49,7 @@ function History() {
       key: "Ticket_ID",
       fixed: "left",
       width: 150,
-      render: (text) => <span className="font-mono font-semibold">{text}</span>,
+      render: (text) => <span className="font-mono font-semibold text-slate-900 dark:text-white transition-colors duration-300">{text}</span>,
       filteredValue: searchText ? [searchText] : null,
       onFilter: (value, record) =>
         record.Ticket_ID.toLowerCase().includes(value.toLowerCase()) ||
@@ -82,7 +73,7 @@ function History() {
       dataIndex: "Sub_Category",
       key: "Sub_Category",
       width: 150,
-      render: (text) => text && text !== "N/A" ? <Tag color="cyan">{text}</Tag> : <span className="text-gray-400">-</span>,
+      render: (text) => text && text !== "N/A" ? <Tag color="cyan">{text}</Tag> : <span className="text-slate-400 dark:text-slate-500 transition-colors duration-300">-</span>,
     },
     {
       title: "Priority",
@@ -129,13 +120,14 @@ function History() {
         value: team,
       })),
       onFilter: (value, record) => record.Assigned_Team === value,
-      render: (text) => text || <span className="text-gray-400">-</span>,
+      render: (text) => text || <span className="text-slate-400 dark:text-slate-500 transition-colors duration-300">-</span>,
     },
     {
       title: "Channel",
       dataIndex: "Channel",
       key: "Channel",
       width: 120,
+      render: (text) => <span className="text-slate-700 dark:text-slate-300 transition-colors duration-300">{text}</span>,
     },
     {
       title: "Routing Confidence",
@@ -144,7 +136,7 @@ function History() {
       width: 160,
       sorter: (a, b) => (a.Routing_Confidence || 0) - (b.Routing_Confidence || 0),
       render: (value) => {
-        if (!value) return <span className="text-gray-400">-</span>;
+        if (!value) return <span className="text-slate-400 dark:text-slate-500 transition-colors duration-300">-</span>;
         const percentage = Math.round(value * 100);
         const color = percentage > 80 ? "green" : percentage > 50 ? "orange" : "red";
         return <Tag color={color}>{percentage}%</Tag>;
@@ -158,32 +150,37 @@ function History() {
       sorter: (a, b) => new Date(a.Timestamp || 0) - new Date(b.Timestamp || 0),
       defaultSortOrder: "descend",
       render: (text) => {
-        if (!text) return <span className="text-gray-400">-</span>;
-        return new Date(text).toLocaleString();
+        if (!text) return <span className="text-slate-400 dark:text-slate-500 transition-colors duration-300">-</span>;
+        return <span className="text-slate-700 dark:text-slate-300 transition-colors duration-300">{new Date(text).toLocaleString()}</span>;
       },
     },
   ];
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 md:p-8 bg-white dark:bg-slate-900 min-h-screen transition-colors duration-300">
       <Card
+        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 shadow-sm rounded-2xl transition-colors duration-300"
         title={
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold m-0">Ticket History</h2>
-            <Space>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-2">
+            <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white m-0 font-syne transition-colors duration-300">
+              Ticket History
+            </h2>
+            <Space className="w-full sm:w-auto justify-end flex-wrap gap-2">
               <Input
                 placeholder="Search tickets..."
-                prefix={<SearchOutlined />}
+                prefix={<SearchOutlined className="text-slate-400 dark:text-slate-500" />}
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                style={{ width: 250 }}
+                className="w-full sm:w-[250px] bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-xl placeholder-slate-400 dark:placeholder-slate-500 transition-all duration-200"
                 allowClear
               />
               {tickets.length > 0 && (
                 <Button
                   danger
+                  type="primary"
                   icon={<DeleteOutlined />}
                   onClick={clearAllTickets}
+                  className="rounded-xl font-semibold px-4 cursor-pointer"
                 >
                   Clear All
                 </Button>
@@ -193,20 +190,27 @@ function History() {
         }
         bordered={false}
       >
-        <Table
-          columns={columns}
-          dataSource={tickets}
-          rowKey="Ticket_ID"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Total ${total} tickets`,
-          }}
-          scroll={{ x: 1400 }}
-          locale={{
-            emptyText: "No tickets submitted yet. Submit your first ticket to see it here.",
-          }}
-        />
+        <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-700/40">
+          <Table
+            columns={columns}
+            dataSource={tickets}
+            rowKey="Ticket_ID"
+            className="dark-table-override"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => <span className="text-slate-500 dark:text-slate-400 font-medium text-xs">Total {total} tickets</span>,
+            }}
+            scroll={{ x: 1400 }}
+            locale={{
+              emptyText: (
+                <div className="py-12 text-slate-400 dark:text-slate-500 font-medium">
+                  No tickets submitted yet. Submit your first ticket to see it here.
+                </div>
+              ),
+            }}
+          />
+        </div>
       </Card>
     </div>
   );

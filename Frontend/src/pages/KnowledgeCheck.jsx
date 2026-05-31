@@ -78,7 +78,7 @@ function KnowledgeCheck() {
                     {/* Live badge */}
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-full mb-5">
                         <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.18em]">Analyzing History</span>
+                        <span className="text-xs font-black text-emerald-400 uppercase tracking-[0.18em]">Analyzing History</span>
                     </div>
 
                     <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-1">
@@ -115,7 +115,7 @@ function KnowledgeCheck() {
                                             ${active ? 'text-white' : done ? 'text-slate-300' : 'text-slate-600'}`}>
                                             {step.label}
                                         </p>
-                                        <p className={`text-[10px] font-medium hidden sm:block transition-colors duration-500
+                                        <p className={`text-xs font-medium hidden sm:block transition-colors duration-500
                                             ${active ? 'text-emerald-400' : 'text-slate-500'}`}>
                                             {step.desc}
                                         </p>
@@ -160,7 +160,7 @@ function KnowledgeCheck() {
                                 <TicketCheck size={14} className="text-emerald-500" />
                                 Matched Ticket
                             </div>
-                            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-widest">
+                            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-black rounded-full uppercase tracking-widest">
                                 Resolved
                             </span>
                         </div>
@@ -170,7 +170,7 @@ function KnowledgeCheck() {
                         {similarityPct && (
                             <div className="space-y-1.5">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Similarity</span>
+                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Similarity</span>
                                     <span className="text-xs font-black text-emerald-600">{similarityPct}%</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">

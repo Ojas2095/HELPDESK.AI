@@ -25,7 +25,7 @@ const AdminProtectedRoute = () => {
     // If we have a user but no profile yet, wait for the database fetch
     if (!profile) {
         return (
-            <div className="flex h-screen w-screen items-center justify-center bg-[#050508]">
+            <div className="flex h-screen w-screen items-center justify-center bg-slate-950">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
             </div>
         );
@@ -50,3 +50,4 @@ const AdminProtectedRoute = () => {
 };
 
 export default AdminProtectedRoute;
+

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle2 } from 'lucide-react';
 
 const sections = [
     {
@@ -59,51 +59,60 @@ const sections = [
 
 export default function TermsOfService() {
     const navigate = useNavigate();
+
     return (
-        <div className="min-h-screen bg-gray-50 font-sans">
-            <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-emerald-700 transition-colors">
-                    <ArrowLeft className="w-4 h-4" /> Go Back
-                </button>
-                <button onClick={() => navigate('/')} className="font-black text-emerald-900 italic uppercase text-lg hover:text-emerald-700 transition-colors">
-                    HelpDesk.ai
-                </button>
-                <div className="w-24" />
-            </nav>
+        <div className="min-h-screen bg-white dark:bg-slate-900 flex flex-col transition-colors duration-300 w-full overflow-x-hidden">
+            <main className="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-12 relative z-10">
+                {/* Back Navigation */}
+                <div className="flex justify-center sm:justify-start">
+                    <button 
+                        onClick={() => navigate(-1)}
+                        className="flex items-center gap-2 font-bold text-xs text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors bg-transparent border-none cursor-pointer group"
+                    >
+                        <div className="p-1.5 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 group-hover:border-emerald-500/30">
+                            <ArrowLeft size={14} />
+                        </div>
+                        <span>GO BACK</span>
+                    </button>
+                </div>
 
-            <div className="max-w-4xl mx-auto px-6 py-16">
-                <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                        <FileText className="w-6 h-6 text-emerald-700" />
+                {/* Main Header */}
+                <div className="flex items-center text-left gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                    <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <div>
-                        <h1 className="text-4xl font-extrabold text-gray-900">Terms of Service</h1>
-                        <p className="text-gray-500 text-sm mt-1">Last updated: March 10, 2026</p>
+                    <div className="space-y-0.5">
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight font-syne">
+                            Terms of Service
+                        </h1>
+                        <p className="text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+                            Last updated: March 10, 2026
+                        </p>
                     </div>
                 </div>
 
-                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 mb-12 text-sm text-emerald-800">
-                    Please read these Terms of Service carefully before using HelpDesk.ai. By registering or using our platform, you confirm that you have read, understood, and agree to be bound by these terms.
+                {/* Policy Notice */}
+                <div className="bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 dark:border-emerald-500/20 rounded-xl p-4 flex items-start gap-3 text-slate-600 dark:text-slate-400 text-xs leading-relaxed text-left">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <p className="m-0 font-medium">
+                        By using our platform, you confirm that you have read, understood, and agree to be bound by these terms. We operate under the legal jurisdiction of Bengaluru, India.
+                    </p>
                 </div>
 
-                <div className="space-y-10">
+                {/* Content Grid */}
+                <div className="space-y-8 text-left">
                     {sections.map(({ title, content }) => (
-                        <div key={title}>
-                            <h2 className="text-lg font-bold text-gray-900 mb-3">{title}</h2>
-                            <p className="text-gray-600 leading-relaxed">{content}</p>
+                        <div key={title} className="space-y-2 group">
+                            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight font-syne group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors duration-200">
+                                {title}
+                            </h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-medium">
+                                {content}
+                            </p>
                         </div>
                     ))}
                 </div>
-
-                <div className="mt-16 pt-8 border-t border-gray-200 text-center">
-                    <p className="text-sm text-gray-400">© 2026 HelpDesk.ai. All rights reserved.</p>
-                    <div className="flex items-center justify-center gap-4 mt-4">
-                        <button onClick={() => navigate('/privacy')} className="text-sm text-emerald-700 hover:underline">Privacy Policy</button>
-                        <span className="text-gray-300">|</span>
-                        <button onClick={() => navigate('/security')} className="text-sm text-emerald-700 hover:underline">Security</button>
-                    </div>
-                </div>
-            </div>
+            </main>
         </div>
     );
 }
