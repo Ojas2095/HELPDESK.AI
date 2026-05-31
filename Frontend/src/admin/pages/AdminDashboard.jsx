@@ -8,6 +8,7 @@ import useWebSocket from "../../hooks/useWebSocket";
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
+import AgentLeaderboard from "../../components/AgentLeaderboard";
 
 // Inline SVG icon components
 const TicketIcon = () => (
@@ -247,6 +248,12 @@ const AdminDashboard = () => {
                 <button onClick={() => navigate('/admin/tickets?filter=human')} aria-label="View escalated tickets" className="text-left group focus:outline-none">
                     <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
                 </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-12">
+                    <AgentLeaderboard companyId={profile?.company_id} />
+                </div>
             </div>
 
             <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #fee2e2', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '24px' }}>

@@ -13,6 +13,7 @@ import StatCard from '../components/StatCard';
 import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from "../../store/authStore";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import AgentLeaderboard from "../../components/AgentLeaderboard";
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#ec4899'];
 
@@ -223,6 +224,12 @@ const AdminAnalytics = () => {
                     icon={AlertCircle}
                     color="red"
                 />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-12">
+                    <AgentLeaderboard companyId={profile?.company_id} />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">

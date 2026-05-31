@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Users, RefreshCw, TrendingUp, ChevronLeft, Activity, Trophy } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { API_CONFIG } from '../../config';
-import AgentLeaderboard from '../components/AgentLeaderboard';
-import AgentScorecard from '../components/AgentScorecard';
+import AgentLeaderboard from '../../components/AgentLeaderboard';
+import AgentScorecard from '../../components/AgentScorecard';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const BACKEND = API_CONFIG.BACKEND_URL;
@@ -136,12 +136,9 @@ const AdminScorecard = () => {
       {selectedAgent ? (
         <div style={{ maxWidth: 640 }}>
           <AgentScorecard
-            agentName={selectedAgent.agent_name}
-            score={selectedAgent.score}
-            metrics={selectedAgent.metrics || {}}
-            coachingTip={selectedAgent.coaching_tip}
-            sparklineData={selectedAgent.sparkline_data || []}
-            insufficientData={selectedAgent.insufficient_data}
+            agentId={selectedAgent.agent_id}
+            companyId={profile?.company_id}
+            agentName={selectedAgent.profiles?.full_name || selectedAgent.profiles?.email || 'Agent'}
           />
         </div>
       ) : (
@@ -162,7 +159,7 @@ const AdminScorecard = () => {
                 {
                   id: 'stat-top-agent',
                   label: 'Top Agent',
-                  value: agents[0]?.agent_name?.split(' ')[0] || '—',
+                  value: agents[0]?.profiles?.full_name?.split(' ')[0] || agents[0]?.agent_name?.split(' ')[0] || '—',
                   icon: Trophy,
                   color: '#f59e0b',
                   bg: '#fefce8'
@@ -171,7 +168,7 @@ const AdminScorecard = () => {
                   id: 'stat-team-score',
                   label: 'Team Score',
                   value: agents.length
-                    ? `${(agents.reduce((s, a) => s + a.score, 0) / agents.length).toFixed(1)}/100`
+                    ? `${(agents.reduce((s, a) => s + (a.performance_score ?? a.score ?? 0), 0) / agents.length).toFixed(1)}/100`
                     : '—',
                   icon: TrendingUp,
                   color: '#16a34a',
