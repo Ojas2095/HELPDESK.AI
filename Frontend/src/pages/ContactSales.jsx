@@ -14,12 +14,15 @@ export default function ContactSales() {
         email: '',
         company: '',
         phone: '',
-        company_size: '50-200',
+        company_size: localStorage.getItem('contact_company_size') || '50-200',
         message: ''
     });
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+        if (e.target.name === 'company_size') {
+            localStorage.setItem('contact_company_size', e.target.value);
+        }
     };
 
     const handleSubmit = async (e) => {
