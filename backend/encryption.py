@@ -90,6 +90,10 @@ def decrypt_pii(encrypted_data: str | None) -> str | None:
         # Decode base64
         encrypted_bytes = base64.b64decode(encrypted_data)
         
+        # Validate minimum length: nonce (12) + tag (16) + at least 1 byte ciphertext
+        if len(encrypted_bytes) < 29:
+            raise ValueError("Encrypted data too short")
+        
         # Extract nonce (12 bytes), ciphertext, and tag (16 bytes)
         nonce = encrypted_bytes[:12]
         tag = encrypted_bytes[-16:]
@@ -104,7 +108,7 @@ def decrypt_pii(encrypted_data: str | None) -> str | None:
         return plaintext.decode('utf-8')
         
     except Exception as e:
-        raise ValueError(f"Failed to decrypt data: {str(e)}")
+        raise ValueError(f"Failed to decrypt data: {e!s}") from e
 
 def is_encrypted(data: str | None) -> bool:
     """
