@@ -61,15 +61,19 @@ class AutoCloseService:
             if response.data:
                 return {
                     "auto_close_days": response.data.get("auto_close_days", self.default_auto_close_days),
-                    "auto_close_enabled": response.data.get("auto_close_enabled", True)
+                    # Fixes #913: respect the DB value explicitly; default to False (safe/disabled)
+                    # so that a missing or unreadable setting never silently auto-closes tickets.
+                    "auto_close_enabled": bool(response.data.get("auto_close_enabled", False))
                 }
         except Exception as e:
             logger.warning(f"Could not fetch settings for company {company_id}: {str(e)}. Using defaults.")
         
-        # Fall back to defaults
+        # Fall back to safe default: disabled.
+        # Fixes #913: previously defaulted to True, which meant a DB failure would
+        # silently enable auto-close for all companies regardless of their setting.
         return {
             "auto_close_days": self.default_auto_close_days,
-            "auto_close_enabled": True
+            "auto_close_enabled": False
         }
 
 # NOTE: Method renamed to `get_system_settings` to match schema; underlying DB table is `system_settings`.

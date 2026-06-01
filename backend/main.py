@@ -2154,8 +2154,12 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     try:
         rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
         if rag_match:
-            classification["auto_resolve"] = True
-            classification["assigned_team"] = "Auto-Resolve AI"
+            # Only allow RAG to enable auto-resolve if the company toggle permits it.
+            # Fixes #913: the toggle in Admin Settings had no effect because RAG
+            # unconditionally overwrote classification["auto_resolve"] = True.
+            if enable_auto_resolve:
+                classification["auto_resolve"] = True
+                classification["assigned_team"] = "Auto-Resolve AI"
             classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
             print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
     except Exception as e:
@@ -2337,8 +2341,12 @@ async def analyze_stream(request_body: TicketRequest):
         try:
             rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
             if rag_match:
-                classification["auto_resolve"] = True
-                classification["assigned_team"] = "Auto-Resolve AI"
+                # Only allow RAG to enable auto-resolve if the company toggle permits it.
+                # Fixes #913: the toggle in Admin Settings had no effect because RAG
+                # unconditionally overwrote classification["auto_resolve"] = True.
+                if enable_auto_resolve:
+                    classification["auto_resolve"] = True
+                    classification["assigned_team"] = "Auto-Resolve AI"
                 classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
         except Exception as e:
             pass
