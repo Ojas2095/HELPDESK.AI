@@ -1,0 +1,64 @@
+# Multi-stage Dockerfile for HelpDesk.ai Backend
+# Stage 1: Build stage - install dependencies
+FROM python:3.10-slim as builder
+
+WORKDIR /app
+
+# Install system dependencies required for building Python packages
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements file
+COPY backend/requirements.txt .
+
+# Create virtual environment and install dependencies
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Production stage - minimal runtime image
+FROM python:3.10-slim as production
+
+LABEL version="2.0.0" rebuild_trigger="2026-05-31" maintainer="HelpDesk.ai"
+
+# Install only runtime system dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd -r helpdesk && useradd -r -g helpdesk -d /app -s /sbin/nologin helpdesk
+
+WORKDIR /app
+
+# Copy virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy application code
+COPY backend /app/backend
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Create directory for logs and temporary files
+RUN mkdir -p /app/logs /app/tmp && \
+    chown -R helpdesk:helpdesk /app
+
+# Switch to non-root user
+USER helpdesk
+
+# Expose port 7860 (Hugging Face Spaces default)
+EXPOSE 7860
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD ["python", "backend/healthcheck.py"]
+
+# Run the FastAPI server via Uvicorn
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860"]
