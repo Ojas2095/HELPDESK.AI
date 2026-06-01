@@ -109,7 +109,6 @@ function Login() {
   };
 
   const [googleLoading, setGoogleLoading] = useState(false);
-  const isDark = document.documentElement.classList.contains('dark');
 
   const handleGoogleLogin = async () => {
     setError("");
