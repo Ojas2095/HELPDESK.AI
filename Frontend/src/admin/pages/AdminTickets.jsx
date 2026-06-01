@@ -91,6 +91,13 @@ const AdminTickets = () => {
     const [agents, setAgents] = useState([]); // All staff/admins in the company
     const [tagFilters, setTagFilters] = useState([]);
 
+    // Pagination State
+    const PAGE_SIZE = 25;
+    const [page, setPage] = useState(0);
+    const [totalCount, setTotalCount] = useState(null);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const hasMore = totalCount === null ? false : (page + 1) * PAGE_SIZE < totalCount;
+
     const ticketMatchesFilters = useCallback((ticket) => {
         if (statusFilter !== 'All' && String(ticket.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
         if (categoryFilter !== 'All' && ticket.category !== categoryFilter) return false;
@@ -154,7 +161,7 @@ const AdminTickets = () => {
                     *,
                     creator:profiles!tickets_user_id_fkey(full_name, email, profile_picture),
                     assignee:profiles!tickets_assigned_agent_id_fkey(full_name, email, profile_picture)
-                `);
+                `, { count: 'exact' });
 
       if (profile?.role === 'admin' && profile?.company) {
         query = query.eq('company', profile.company);
@@ -439,7 +446,7 @@ const AdminTickets = () => {
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">Ticket Management</h1>
                     <p className="text-sm font-bold text-slate-400 mt-1 flex items-center gap-2">
-                        <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} tickets matching current filters.
+                        <Activity size={14} className="text-indigo-500" /> {totalCount !== null ? totalCount : filteredTickets.length} tickets{totalCount !== null ? ' in total' : ' matching current filters'}.
                     </p>
                 </div>
 
