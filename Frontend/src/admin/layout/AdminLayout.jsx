@@ -1,22 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import KeyboardShortcutsModal from '../components/KeyboardShortcutsModal';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 /**
  * AdminLayout Component
  * Master framework for the administrative zone.
  * Enforces a fixed-sidebar architecture with a centered, high-density content terminal.
+ * Integrates global keyboard shortcuts (Issue #911).
  */
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isShortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+    const searchInputRef = useRef(null);
+
+    const handleFocusSearch = useCallback(() => {
+        const searchEl =
+            searchInputRef.current ||
+            document.querySelector('input[placeholder*="earch"], input[type="search"]');
+        searchEl?.focus();
+    }, []);
+
+    const handleCloseModal = useCallback(() => {
+        setShortcutsModalOpen(false);
+        setIsMobileNavOpen(false);
+    }, []);
+
+    useKeyboardShortcuts({
+        onOpenHelp: () => setShortcutsModalOpen((prev) => !prev),
+        onCloseModal: handleCloseModal,
+        onFocusSearch: handleFocusSearch,
+    });
 
     return (
         <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
             {/* Master Navigation Column (Responsive) */}
-            <div 
+            <div
                 className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
                 style={{ width: isSidebarCollapsed ? '80px' : '260px' }}
             >
@@ -26,10 +49,11 @@ const AdminLayout = () => {
             {/* Viewport Execution Layer */}
             <div className="flex-1 flex flex-col min-w-0 relative h-full">
                 {/* Global Command Header */}
-                <AdminHeader 
-                    onMobileNavToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} 
+                <AdminHeader
+                    onMobileNavToggle={() => setIsMobileNavOpen(!isMobileNavOpen)}
                     isSidebarCollapsed={isSidebarCollapsed}
                     onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    searchInputRef={searchInputRef}
                 />
 
                 {/* Operational Workspace */}
@@ -43,6 +67,12 @@ const AdminLayout = () => {
 
             {/* Real-time System Notifications */}
             <NotificationToast />
+
+            {/* Keyboard Shortcuts Help Modal */}
+            <KeyboardShortcutsModal
+                isOpen={isShortcutsModalOpen}
+                onClose={() => setShortcutsModalOpen(false)}
+            />
 
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
