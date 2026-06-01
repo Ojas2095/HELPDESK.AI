@@ -55,13 +55,13 @@ class AutoCloseService:
         """
         try:
             response = self.supabase.table("system_settings").select(
-                "auto_close_days, auto_close_enabled"
+                "auto_close_days, enable_auto_resolve"
             ).eq("company_id", company_id).single().execute()
             
             if response.data:
                 return {
                     "auto_close_days": response.data.get("auto_close_days", self.default_auto_close_days),
-                    "auto_close_enabled": response.data.get("auto_close_enabled", True)
+                    "auto_close_enabled": response.data.get("enable_auto_resolve", False)
                 }
         except Exception as e:
             logger.warning(f"Could not fetch settings for company {company_id}: {str(e)}. Using defaults.")
@@ -69,7 +69,7 @@ class AutoCloseService:
         # Fall back to defaults
         return {
             "auto_close_days": self.default_auto_close_days,
-            "auto_close_enabled": True
+            "auto_close_enabled": self.enabled
         }
 
 # NOTE: Method renamed to `get_system_settings` to match schema; underlying DB table is `system_settings`.
