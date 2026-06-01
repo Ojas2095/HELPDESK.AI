@@ -20,6 +20,7 @@ import tempfile
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
+from encryption import encrypt_pii, decrypt_pii, is_encrypted
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
