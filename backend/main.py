@@ -1204,12 +1204,15 @@ async def auth_signup(body: SignupBody, response: Response):
 @app.post("/auth/logout")
 async def auth_logout(response: Response, request: Request):
     # Invalidate the Supabase session server-side before clearing cookies
+    _logout_logger = logging.getLogger(__name__)
     token = extract_token(request)
     if token and supabase:
         try:
-            supabase.auth.sign_out()
-        except Exception:
-            pass  # Best-effort: still clear cookies even if sign_out fails
+            # Use admin API to revoke refresh tokens server-side
+            supabase.auth.admin.sign_out(jwt=token)
+        except Exception as exc:
+            _logout_logger.warning("Server-side session revocation failed: %s", exc)
+            # Best-effort: still clear cookies even if admin sign_out fails
     _clear_session_cookies(response)
     return {"ok": True}
 
