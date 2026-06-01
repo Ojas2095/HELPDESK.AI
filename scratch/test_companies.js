@@ -1,14 +1,22 @@
 const https = require('https');
 
-const SUPABASE_URL = "https://aejuenhqciagpntcqoir.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlanVlbmhxY2lhZ3BudGNxb2lyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjM4NDA3OCwiZXhwIjoyMDg3OTYwMDc4fQ.b3tZ_yad4WPQi4oSqGp1ksr_zw-ldByLqZWvT7HX5aQ";
+// Load credentials from environment variables
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://aejuenhqciagpntcqoir.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+
+if (!SUPABASE_KEY) {
+  console.error('[ERROR] SUPABASE_SERVICE_KEY not set. Export it or add to .env');
+  process.exit(1);
+}
+
+const hostname = new URL(SUPABASE_URL).hostname;
 
 const getRequest = (path) => {
   return new Promise((resolve, reject) => {
     const options = {
-      hostname: 'aejuenhqciagpntcqoir.supabase.co',
+      hostname,
       port: 443,
-      path: path,
+      path,
       method: 'GET',
       headers: {
         'apikey': SUPABASE_KEY,

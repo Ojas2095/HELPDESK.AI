@@ -16,6 +16,12 @@ backend/venv/
 data/low_confidence_log.json
 user_feedback_rows.csv
 
+# Mobile App
+MobileApp/.env
+
+# Scratch files
+scratch/.env
+
 # Git
 .git/
 

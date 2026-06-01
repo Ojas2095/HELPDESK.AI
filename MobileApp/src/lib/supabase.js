@@ -1,11 +1,16 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config';
 
-const supabaseUrl = 'https://aejuenhqciagpntcqoir.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFlanVlbmhxY2lhZ3BudGNxb2lyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODQwNzgsImV4cCI6MjA4Nzk2MDA3OH0.-OxgEW5t4alPGlzV_JZDRZcLsQbbMap6jiWjfAVkMMY';
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn(
+    '[Supabase] Missing SUPABASE_URL or SUPABASE_ANON_KEY. ' +
+    'Create a .env file in MobileApp/ with these values. See .env.example.'
+  );
+}
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
