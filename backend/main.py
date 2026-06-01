@@ -476,6 +476,37 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 # ---------------------------------------------------------------------------
 # Admin Correction Logging endpoint
 # ---------------------------------------------------------------------------
+def extract_token(request: Request) -> str | None:
+    cookie_token = request.cookies.get("access_token")
+    if cookie_token:
+        return cookie_token
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip() or None
+    return None
+
+async def get_current_user(request: Request) -> dict:
+    token = extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid session: {exc}",
+        ) from exc
+    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    if hasattr(user, "model_dump"):
+        return user.model_dump()
+    if hasattr(user, "dict"):
+        return user.dict()
+    return dict(user)
+
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
@@ -1142,15 +1173,6 @@ def _cookie_kwargs() -> dict:
         "path": "/",
     }
 
-def extract_token(request: Request) -> str | None:
-    cookie_token = request.cookies.get(ACCESS_COOKIE)
-    if cookie_token:
-        return cookie_token
-    auth = request.headers.get("authorization") or request.headers.get("Authorization")
-    if auth and auth.lower().startswith("bearer "):
-        return auth.split(" ", 1)[1].strip() or None
-    return None
-
 def _set_session_cookies(response: Response, session) -> None:
     if not session or not getattr(session, "access_token", None):
         return
@@ -1173,28 +1195,6 @@ def _clear_session_cookies(response: Response) -> None:
     kwargs = _cookie_kwargs()
     response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
     response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
-
-async def get_current_user(request: Request) -> dict:
-    token = extract_token(request)
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not supabase:
-        raise HTTPException(status_code=503, detail="Database connection offline")
-    try:
-        result = supabase.auth.get_user(token)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=401,
-            detail=f"Invalid session: {exc}",
-        ) from exc
-    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    if hasattr(user, "model_dump"):
-        return user.model_dump()
-    if hasattr(user, "dict"):
-        return user.dict()
-    return dict(user)
 
 class LoginBody(BaseModel):
     email: str

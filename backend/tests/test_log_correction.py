@@ -9,11 +9,15 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
-# Mock supabase before importing main
-with patch("main.supabase"):
-    from main import app, get_current_user
+# Mock supabase before importing main (stays active for module lifetime)
+_patcher = patch("main.supabase")
+_patcher.start()
+from main import app, get_current_user  # noqa: E402
 
 client = TestClient(app)
+
+import atexit
+atexit.register(_patcher.stop)
 
 # Mock user data
 MOCK_USER = {
