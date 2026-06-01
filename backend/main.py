@@ -2618,6 +2618,20 @@ async def reindex_embeddings(current_user: dict = Depends(get_current_user)):
     return result
 
 
+@app.get("/admin/knowledge-gaps", tags=["Admin"])
+async def get_knowledge_gaps(current_user: dict = Depends(get_current_user)):
+    """
+    Identify gaps in the knowledge base by analyzing low-confidence predictions.
+    Requires admin role.
+    """
+    profile = _get_authenticated_profile(current_user)
+    role = str(profile.get("role") or "").lower()
+    if role not in ("admin", "company_admin"):
+        raise HTTPException(status_code=403, detail="Only admins can access knowledge gaps")
+
+    from backend.services.knowledge_gap_service import knowledge_gap_service
+    return knowledge_gap_service.get_summary()
+
 @app.get("/system/settings")
 async def get_system_settings_endpoint(current_user: dict = Depends(get_current_user)):
     """Fetch all system settings."""
