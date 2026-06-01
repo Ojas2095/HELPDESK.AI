@@ -277,7 +277,7 @@ export default function LandingPage() {
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
-            <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+            <nav className="sticky top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
@@ -348,7 +348,7 @@ export default function LandingPage() {
             </nav>
 
             {/* ==================== HERO ==================== */}
-            <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden">
+            <section className="relative pt-12 md:pt-20 pb-20 md:pb-32">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10" />
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
