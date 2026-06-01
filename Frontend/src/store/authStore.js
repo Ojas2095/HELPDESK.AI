@@ -88,6 +88,11 @@ const useAuthStore = create(
                 // user_metadata are client-controlled surfaces and must not grant roles.
                 const dbProfile = await get()._syncProfile(user.id);
                 if (dbProfile) {
+                    if (user.email_confirmed_at && dbProfile.status === 'pending_email_verification') {
+                        console.log("Email confirmed! Upgrading status in database to pending_approval.");
+                        const updated = await get().updateProfile({ status: 'pending_approval' });
+                        if (updated) return updated;
+                    }
                     return dbProfile;
                 }
 

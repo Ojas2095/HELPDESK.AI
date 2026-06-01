@@ -32,6 +32,23 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
         ? adminProfile.full_name.split(' ').map(n => n[0]).join('').toUpperCase() 
         : 'AD';
 
+    const [isDark, setIsDark] = useState(false);
+    useEffect(() => {
+        setIsDark(document.documentElement.classList.contains('dark'));
+    }, []);
+
+    const toggleTheme = () => {
+        const nextDark = !isDark;
+        setIsDark(nextDark);
+        if (nextDark) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    };
+
     const handleSearchKeyDown = (e) => {
         if (e.key === 'Enter' && searchQuery.trim()) {
             navigate(`/admin/tickets?q=${encodeURIComponent(searchQuery.trim())}`);

@@ -129,6 +129,16 @@ function Login() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      setError("");
+      await loginWithGoogle();
+    } catch (err) {
+      console.error("Google login error:", err);
+      setError(err.message || "Google Sign-In failed.");
+    }
+  };
+
   const currentSubmitHandler = isMagicLink ? handleMagicLink : handleLogin;
 
   return (

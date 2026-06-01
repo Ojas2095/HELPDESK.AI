@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Button } from '../../components/ui/button';
@@ -19,6 +19,23 @@ const TopNav = () => {
  
     const { profile, logout } = useAuthStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isDark, setIsDark] = useState(false);
+
+    useEffect(() => {
+        setIsDark(document.documentElement.classList.contains('dark'));
+    }, []);
+
+    const toggleTheme = () => {
+        const nextDark = !isDark;
+        setIsDark(nextDark);
+        if (nextDark) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    };
 
   const { profile, logout } = useAuthStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
