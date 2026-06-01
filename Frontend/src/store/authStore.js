@@ -21,13 +21,19 @@ const useAuthStore = create(
                 const currentProfile = get().profile;
 
                 // 1. Resolve FROM METADATA or PERSISTED state
-                // Priority 1: If we have a persisted session for THIS user and it's active, keep it 
-                // to prevent temporary lobbies during refresh/tab switching.
+                // SECURITY FIX: Never trust persisted role without server verification.
+                // Instead, use persisted profile ONLY for UI (name, email) while
+                // forcing a blocking server-side role resolution before granting access.
                 if (currentProfile && currentProfile.id === user.id && currentProfile.status === 'active') {
-                    console.log("Active profile retained from state.");
-                    // Background fetch to ensure session is still valid/synced
-                    get()._syncProfile(user.id);
-                    return currentProfile;
+                    console.log("Profile found in cache. Verifying role with server...");
+                    // BLOCKING server-side role check — must complete before returning
+                    const serverProfile = await get()._syncProfile(user.id);
+                    if (serverProfile) {
+                        console.log("Server-verified profile loaded.");
+                        return serverProfile;
+                    }
+                    // If server check fails, fall through to metadata resolution
+                    console.warn("Server profile check failed. Falling back to metadata.");
                 }
 
                 // Priority 2: Use Auth Metadata (Instant fallback)
