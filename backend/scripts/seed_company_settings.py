@@ -27,6 +27,7 @@ import os
 import sys
 import argparse
 import logging
+import argparse
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
@@ -178,7 +179,7 @@ def seed_company_settings(dry_run: bool = False) -> dict:
         return {"status": "success", "created_count": len(records)}
 
     except Exception as e:
-        logger.error(f"Fatal error during seed: {str(e)}")
+        logger.error("Fatal error during seed: %s", e)
         return {"status": "error", "message": str(e)}
 
 
@@ -220,8 +221,22 @@ def verify_seed(supabase=None) -> bool:
             return False
 
     except Exception as e:
-        logger.error(f"Verification failed: {str(e)}")
+        logger.error("Verification failed: %s", e)
         return False
+
+
+# ─── CLI ──────────────────────────────────────────────────────────────────────
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Seed default system_settings for all companies."
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview inserts without writing to the database.",
+    )
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
@@ -246,6 +261,9 @@ if __name__ == "__main__":
     # Exit with appropriate code
     if verified and result.get("status") in ["success", "complete"]:
         logger.info("Seed script completed successfully!")
+        sys.exit(0)
+    elif result.get("status") == "no_tickets":
+        logger.warning("Nothing seeded — no tickets in database.")
         sys.exit(0)
     else:
         logger.error("Seed script completed with issues")
