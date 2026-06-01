@@ -63,6 +63,7 @@ import AdminUsers from "./admin/pages/AdminUsers";
 import AdminAnalytics from "./admin/pages/AdminAnalytics";
 import AdminProfile from "./admin/pages/AdminProfile";
 import AdminSettings from "./admin/pages/AdminSettings";
+import CSATDashboard from "./components/shared/CSATDashboard";
 import MasterBugReports from "./master-admin/pages/MasterBugReports";
 
 // Feature Pages
@@ -204,6 +205,7 @@ function AppLayout() {
             <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
+            <Route path="/admin/csat" element={<CSATDashboard />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
