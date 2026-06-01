@@ -112,6 +112,15 @@ if (!hasValidConfig) {
 	)
 }
 
+// Issue #898: Configure Supabase client to NOT persist sessions in localStorage.
+// Session tokens are managed as httpOnly cookies by the backend (/auth/login, /auth/logout).
+// The Supabase JS client is used ONLY for profile fetching and DB queries — not for auth state.
 export const supabase = hasValidConfig
-	? createClient(supabaseUrl, supabaseKey)
+	? createClient(supabaseUrl, supabaseKey, {
+		auth: {
+			persistSession: false,
+			autoRefreshToken: false,
+			detectSessionInUrl: false,
+		},
+	})
 	: createDisabledSupabaseClient()

@@ -3,6 +3,9 @@ import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
 import useTicketStore from './ticketStore';
 
+// Backend API base URL — defaults to relative path (same origin in production)
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+
 const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -102,32 +105,36 @@ const useAuthStore = create(
 
             login: async (email, password) => {
                 set({ loading: true });
-                console.log("Attempting login for:", email);
                 try {
-                    const { data, error } = await supabase.auth.signInWithPassword({
-                        email,
-                        password,
+                    // Issue #898: Call backend login endpoint so tokens are set as httpOnly cookies.
+                    // This prevents tokens from landing in localStorage.
+                    const resp = await fetch(`${BACKEND_URL}/auth/login`, {
+                        method: 'POST',
+                        credentials: 'include',  // send/receive cookies
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password }),
                     });
 
-                    if (error) throw error;
+                    if (!resp.ok) {
+                        const err = await resp.json().catch(() => ({ detail: 'Login failed' }));
+                        throw new Error(err.detail || 'Login failed');
+                    }
 
+                    const data = await resp.json();
                     const user = data.user;
                     set({ user });
 
-                    console.log("Login successful, resolving profile...");
-                    // This will resolve instantly from metadata AND try to update from DB
+                    // Fetch profile from DB (Supabase client used only for data queries, not auth)
                     const profile = await get().getProfile(user);
 
-                    // Block login entirely if email is unverified (for both users and admins)
                     if (profile?.status === 'pending_email_verification') {
-                        await supabase.auth.signOut();
+                        await get().logout();
                         set({ user: null, profile: null });
                         throw new Error("Please verify your email address before continuing. Check your inbox.");
                     }
 
                     return { user, profile };
                 } catch (error) {
-                    console.error("Login operation failed:", error.message);
                     throw error;
                 } finally {
                     set({ loading: false });
@@ -232,14 +239,36 @@ const useAuthStore = create(
             logout: async () => {
                 set({ loading: true });
                 try {
-                    const { error } = await supabase.auth.signOut();
-                    if (error) throw error;
+                    // Issue #898: Call backend logout to clear httpOnly cookies
+                    await fetch(`${BACKEND_URL}/auth/logout`, {
+                        method: 'POST',
+                        credentials: 'include',
+                    }).catch(() => null); // Fail silently — always clear local state
+
                     set({ user: null, profile: null });
-                    // clear persisted ticket state to prevent cross-user data leakage
-                    useTicketStore.getState().clearTicket();
+                    // Clear persisted ticket state to prevent cross-user data leakage
+                    useTicketStore.getState().clearTicket?.();
                     useTicketStore.setState({ notifications: [], tickets: [] });
                 } finally {
                     set({ loading: false });
+                }
+            },
+
+            /**
+             * verifySession — Calls GET /auth/me with credentials to verify the
+             * httpOnly cookie session is still valid.
+             * Returns the user object if valid, null otherwise.
+             */
+            verifySession: async () => {
+                try {
+                    const resp = await fetch(`${BACKEND_URL}/auth/me`, {
+                        credentials: 'include',
+                    });
+                    if (!resp.ok) return null;
+                    const data = await resp.json();
+                    return data.user || null;
+                } catch (_) {
+                    return null;
                 }
             },
 
