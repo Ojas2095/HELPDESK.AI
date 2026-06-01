@@ -200,3 +200,22 @@ export const getRelativeTime = (dateStr) => {
 export const safeParseDateForSort = (dateStr) => {
     return parseDate(dateStr) ?? new Date(0);
 };
+
+export const getTimeZoneAbbr = () => {
+    try {
+        return new Intl.DateTimeFormat('en-US', {
+            timeZoneName: 'short'
+        })
+        .formatToParts(new Date())
+        .find(part => part.type === 'timeZoneName')?.value || 'IST';
+    } catch (_e) {
+        return 'IST';
+    }
+};
+
+export const formatFullTimestamp = (dateStr) => {
+    const date = parseDate(dateStr);
+    if (!date) return 'Processing...';
+    const formatted = formatTimelineDate(dateStr);
+    return `${formatted} (${getTimeZoneAbbr()})`;
+};
