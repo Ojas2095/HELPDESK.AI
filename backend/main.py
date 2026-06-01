@@ -676,19 +676,23 @@ async def create_ticket(ticket: TicketRecord):
     return ticket
 
 
-@app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
-    """Partially update a ticket's fields (e.g., status, viewed_at)."""
-    for i, ticket in enumerate(TICKETS_DB):
-        if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
-            ticket_dict = ticket.dict()
-            ticket_dict.update(updates)
-            updated_ticket = TicketRecord(**ticket_dict)
-            TICKETS_DB[i] = updated_ticket
-            return updated_ticket
-    
-    raise HTTPException(status_code=404, detail="Ticket not found")
+@app.patch("/tickets/{ticket_id}")
+async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
+    """Partially update a ticket's fields (e.g., status, priority, assigned_team)."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    # Remove fields that shouldn't be updated directly
+    protected_fields = {"id", "ticket_id", "created_at", "company_id"}
+    sanitized = {k: v for k, v in updates.items() if k not in protected_fields}
+
+    if not sanitized:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+
+    res = supabase.table("tickets").update(sanitized).eq("id", ticket_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return res.data[0]
 
 
 # ---------------------------------------------------------------------------
