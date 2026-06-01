@@ -135,6 +135,10 @@ class ClassifierService:
             )
             input_ids = encoding["input_ids"].to(DEVICE)
             attention_mask = encoding["attention_mask"].to(DEVICE)
+        except Exception:
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
+            raise
 
         _t0 = time.perf_counter()
         try:
