@@ -617,9 +617,12 @@ SWAGGER_UI_CUSTOM_JS = """
         toggleBtn.textContent = '🌙 Dark';
         toggleBtn.style.cssText = 'margin-left: auto; padding: 4px 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: transparent; color: rgba(255,255,255,0.8); cursor: pointer; font-size: 12px;';
 
+        // Read dark CSS from the hidden data element
+        var darkDataEl = document.getElementById('swagger-dark-data');
+        var darkCSS = darkDataEl ? darkDataEl.textContent.replace(/^"/, '').replace(/"$/, '') : '';
+
         // Check if dark theme is already set via query param
         var isDark = window.location.search.includes('theme=dark');
-
         function applyTheme(dark) {
             var cssLink = document.getElementById('swagger-theme-css');
             if (!cssLink) {
@@ -627,25 +630,15 @@ SWAGGER_UI_CUSTOM_JS = """
                 cssLink.id = 'swagger-theme-css';
                 document.head.appendChild(cssLink);
             }
-            if (dark) {
-                cssLink.textContent = SWAGGER_DARK_CSS || '';
-                toggleBtn.textContent = '☀️ Light';
-            } else {
-                cssLink.textContent = '';
-                toggleBtn.textContent = '🌙 Dark';
-            }
+            cssLink.textContent = dark ? darkCSS : '';
+            toggleBtn.textContent = dark ? '☀️ Light' : '🌙 Dark';
         }
 
-        // Expose dark CSS for the toggle
-        window.SWAGGER_DARK_CSS = document.getElementById('swagger-dark-css')?.textContent || '';
-
-        // Apply initial state
         applyTheme(isDark);
 
         toggleBtn.addEventListener('click', function() {
             var currentlyDark = toggleBtn.textContent.includes('☀️');
             applyTheme(!currentlyDark);
-            // Update URL without page reload
             var url = new URL(window.location);
             if (!currentlyDark) {
                 url.searchParams.set('theme', 'dark');
