@@ -10,14 +10,20 @@ import ShortcutsHelpModal from '../../admin/components/ShortcutsHelpModal';
  * AdminLayout Component
  * Master framework for the administrative zone.
  * Enforces a fixed-sidebar architecture with a centered, high-density content terminal.
+ *
+ * Fix for Issue #1172:
+ * Previously the hook was called twice — once with `{ isAdmin: true }` expecting
+ * `{ showHelp, setShowHelp }` (which the hook did not return), and once without
+ * arguments for navigation shortcuts.  The hook now returns `showHelp` /
+ * `setShowHelp` and handles both concerns in a single call.
  */
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const { showHelp, setShowHelp } = useKeyboardShortcuts({ isAdmin: true });
 
-    // Rapid keyboard navigation (G+D, G+T, …) and Ctrl+F search focus.
-    useKeyboardShortcuts();
+    // Single hook call — handles G+key navigation, Ctrl+K search, Ctrl+/ and ?
+    // shortcuts-help toggle, and Escape to close the help modal.
+    const { showHelp, setShowHelp } = useKeyboardShortcuts({}, { isAdmin: true });
 
     return (
         <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
