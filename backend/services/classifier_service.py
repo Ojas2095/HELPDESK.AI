@@ -2,8 +2,12 @@
 Classifier Service — Loads the trained DistilBert sequence classifier and predicts.
 The model outputs combined "Category | SubCategory" labels.
 Priority and other fields are derived from the category mapping.
+
+Redis integration: prediction results are cached by input text so repeated
+submissions of the same ticket text skip the full model forward-pass.
 """
 
+import logging
 import os
 import time
 import json
@@ -19,6 +23,10 @@ except Exception:  # pragma: no cover - optional CI/runtime dependency
     DistilBertTokenizerFast = None
     DistilBertForSequenceClassification = None
     _HAS_TORCH = False
+
+from backend.services.cache_service import cache_service
+
+logger = logging.getLogger(__name__)
 
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "classifier")
 DEVICE = torch.device("cuda" if torch and torch.cuda.is_available() else "cpu") if _HAS_TORCH else None
@@ -105,6 +113,9 @@ class ClassifierService:
     def predict(self, text: str) -> dict:
         """
         Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
+
+        Results are cached in Redis by input text so repeated identical tickets
+        skip the full transformer forward-pass entirely.
         """
         start_time = time.perf_counter()
         try:

@@ -93,6 +93,7 @@ from backend.services.duplicate_service import DuplicateService
 from backend.services.incident_service import IncidentService
 from backend.services.semantic_duplicate_service import SemanticDuplicateService
 from backend.services.rag_service import RagService
+from backend.services.cache_service import cache_service
 from backend.services.spam_service import SpamService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
@@ -729,6 +730,13 @@ async def detect_and_translate_ticket_text(text: str) -> dict:
 async def lifespan(app: FastAPI):
     """Load all models at startup."""
     print("[Startup] Loading AI models ...")
+
+    # Connect to Redis cache (non-fatal — graceful degradation on failure)
+    cache_service.connect()
+    print(
+        f"[Startup] Redis Cache: {'Connected' if cache_service.is_available else 'Unavailable (running without cache)'}"
+    )
+
     try:
         redis_cache.connect()
     except Exception as e:
@@ -799,6 +807,8 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     print("[Shutdown] Cleaning up ...")
+    cache_service.close()
+    print("[Shutdown] Redis cache connection closed.")
     if hasattr(app.state, "scheduler"):
         app.state.scheduler.shutdown()
 
@@ -1174,6 +1184,19 @@ async def health_check():
     )
 
 
+@app.get("/cache/health")
+async def cache_health():
+    """Report Redis connectivity and configuration."""
+    return {
+        "redis_available": cache_service.is_available,
+        "redis_ping": cache_service.ping(),
+        "redis_url": (
+            os.getenv("REDIS_URL", "redis://localhost:6379/0").split("@")[-1]
+        ),
+    }
+
+
+@app.get("/ready", response_model=ReadinessResponse)
 @app.get("/ready", response_model=ReadinessResponse, tags=["System"], summary="Readiness probe")
 async def readiness_check():
     """Return ``ready`` only when all required subsystems (classifier, NER,
