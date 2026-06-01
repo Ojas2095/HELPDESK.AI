@@ -108,7 +108,11 @@
 }
 
 html {
-  overflow-y: scroll;
+  /* scrollbar-gutter reserves space for the scrollbar without creating a
+     scroll container — unlike overflow-y:scroll which breaks position:sticky
+     on every descendant (CSS spec: sticky is disabled when any ancestor has
+     overflow:scroll|hidden|auto). */
+  scrollbar-gutter: stable;
 }
 
 body{
