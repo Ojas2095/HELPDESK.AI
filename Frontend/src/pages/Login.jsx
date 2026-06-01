@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
- 
+import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import useAuthStore from "../store/authStore";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 
 function Login() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -106,6 +109,7 @@ function Login() {
   };
 
   const [googleLoading, setGoogleLoading] = useState(false);
+  const isDark = document.documentElement.classList.contains('dark');
 
   const handleGoogleLogin = async () => {
     setError("");
@@ -123,30 +127,6 @@ function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    try {
-      setError("");
-      await loginWithGoogle();
-    } catch (err) {
-      console.error("Google login error:", err);
-      setError(err.message || "Google Sign-In failed.");
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError("");
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      console.error("Google login error:", err);
-      let errMsg = err.message || "Failed to sign in with Google.";
-      if (errMsg.toLowerCase().includes("failed to fetch")) {
-        errMsg = "Network Error: Failed to fetch. Please try disabling your ad-blocker for this site and refresh!";
-      }
-      setError(errMsg);
-    }
-  };
-
   const currentSubmitHandler = isMagicLink ? handleMagicLink : handleLogin;
 
   return (
@@ -159,7 +139,9 @@ function Login() {
         <div
           className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none opacity-100 dark:opacity-20"
           style={{
-            background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)',
+            background: isDark
+              ? 'radial-gradient(circle, rgba(34,160,69,0.08) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)',
           }}
         />
 
@@ -209,7 +191,7 @@ function Login() {
           className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-2 transition-all group"
           style={{ color: '#374151', fontWeight: 500, fontSize: '14px' }}
           onMouseEnter={(e) => e.currentTarget.style.color = '#16a34a'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#374151'}
+          onMouseLeave={(e) => e.currentTarget.style.color = isDark ? '#a7d5c4' : '#374151'}
         >
           <div className="p-2 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 group-hover:border-green-200 dark:group-hover:border-emerald-500/30 transition-all">
             <ArrowLeft className="w-4 h-4" />
@@ -226,22 +208,6 @@ function Login() {
                 <span style={{ fontWeight: 800, fontSize: '16px', color: '#0f1f12' }}>HelpDesk.ai</span>
               </Link>
             </div>
-            <h2
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: '28px',
-                fontWeight: 800,
-                color: isDark ? '#ffffff' : '#0f1f12',
-                letterSpacing: '-0.02em',
-                marginBottom: '8px',
-              }}
-            >
-              <div className="p-2 rounded-full bg-slate-50 dark:bg-[#1a2e24] border border-slate-200 dark:border-[#2a4034] group-hover:border-emerald-500 transition-colors">
-                <ArrowLeft className="w-4 h-4" />
-              </div>
-              <span className="text-sm font-semibold">Back to Home</span>
-            </Link>
-
             {/* Header */}
             <div className="text-center mb-8">
               <h2 className="text-3xl font-black text-[#0f1f12] dark:text-emerald-400 tracking-tight mb-2 font-syne">

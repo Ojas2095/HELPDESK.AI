@@ -27,7 +27,7 @@ function Signup() {
 
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { signup, user, profile } = useAuthStore();
+  const { signup, loginWithGoogle, loading, user, profile } = useAuthStore();
   const passwordRules = { minLength: 6 };
   const passwordChecks = getPasswordValidation(password, passwordRules);
   const passwordWarning = getPasswordValidationMessage(passwordChecks, passwordRules);
@@ -107,16 +107,6 @@ function Signup() {
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
-
-    // Password complexity validator — mirrors Supabase's policy
-    const validatePassword = (pw) => {
-      if (pw.length < 8) return 'Password must be at least 8 characters long.';
-      if (!/[a-z]/.test(pw)) return 'Password must contain at least one lowercase letter (a-z).';
-      if (!/[A-Z]/.test(pw)) return 'Password must contain at least one uppercase letter (A-Z).';
-      if (!/[0-9]/.test(pw)) return 'Password must contain at least one number (0-9).';
-      if (!/[^A-Za-z0-9]/.test(pw)) return 'Password must contain at least one special character.';
-      return null;
-    };
 
     if (!email || !password || !confirmPassword || !fullName) {
       setError("All fields are required.");

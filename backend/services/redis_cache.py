@@ -18,7 +18,9 @@ def _truthy(value: str | None) -> bool:
     return (value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _text_key(prefix: str, text: str) -> str:
+def _text_key(prefix: str, text: str) -> str | None:
+    if not text or not text.strip():
+        return None
     digest = hashlib.md5(text.strip().lower().encode("utf-8")).hexdigest()
     return f"{prefix}{digest}"
 
@@ -60,8 +62,11 @@ class RedisInferenceCache:
     def get_classification(self, text: str) -> dict | None:
         if not self.available:
             return None
+        cache_key = _text_key(CLASSIFICATION_PREFIX, text)
+        if not cache_key:
+            return None
         try:
-            raw = self._client.get(_text_key(CLASSIFICATION_PREFIX, text))
+            raw = self._client.get(cache_key)
             return json.loads(raw) if raw else None
         except Exception as error:
             logger.warning("[RedisCache] classification get failed: %s", error)
@@ -70,9 +75,12 @@ class RedisInferenceCache:
     def set_classification(self, text: str, payload: dict) -> None:
         if not self.available:
             return
+        cache_key = _text_key(CLASSIFICATION_PREFIX, text)
+        if not cache_key:
+            return
         try:
             self._client.setex(
-                _text_key(CLASSIFICATION_PREFIX, text),
+                cache_key,
                 self.ttl_seconds,
                 json.dumps(payload),
             )
@@ -82,8 +90,11 @@ class RedisInferenceCache:
     def get_embedding(self, text: str) -> list[float] | None:
         if not self.available:
             return None
+        cache_key = _text_key(EMBEDDING_PREFIX, text)
+        if not cache_key:
+            return None
         try:
-            raw = self._client.get(_text_key(EMBEDDING_PREFIX, text))
+            raw = self._client.get(cache_key)
             if not raw:
                 return None
             values = json.loads(raw)
@@ -95,9 +106,12 @@ class RedisInferenceCache:
     def set_embedding(self, text: str, embedding: list[float]) -> None:
         if not self.available:
             return
+        cache_key = _text_key(EMBEDDING_PREFIX, text)
+        if not cache_key:
+            return
         try:
             self._client.setex(
-                _text_key(EMBEDDING_PREFIX, text),
+                cache_key,
                 self.ttl_seconds,
                 json.dumps(embedding),
             )

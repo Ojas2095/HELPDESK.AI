@@ -1,5 +1,13 @@
+const validatePassword = (password) => {
+  if (!password || password.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[A-Z]/.test(password)) return 'Password must contain one uppercase letter.';
+  if (!/[a-z]/.test(password)) return 'Password must contain one lowercase letter.';
+  if (!/[0-9]/.test(password)) return 'Password must contain one number.';
+  return null;
+};
+
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createPersistedStore } from './persistenceMiddleware';
 import { supabase } from '../lib/supabaseClient';
 import { API_CONFIG } from '../config';
 import useTicketStore from './ticketStore';
@@ -59,7 +67,7 @@ const getProfileCache = (profile) => {
 };
 
 const useAuthStore = create(
-    persist(
+    createPersistedStore('auth',
         (set, get) => ({
             // --- AUTH STATE ---
             user: null,
@@ -293,6 +301,9 @@ const useAuthStore = create(
                 set({ loading: true });
                 console.log("Starting signup for:", email);
 
+        const passwordError = validatePassword(password);
+        if (passwordError) throw new Error(passwordError);
+
                 try {
                     await mirrorBackendAuth('/auth/signup', {
                         email,
@@ -415,7 +426,6 @@ const useAuthStore = create(
             }
         }),
         {
-            name: 'auth-storage',
             partialize: (state) => ({
                 // Cache display-only profile fields. Role/status must come from the DB.
                 profile: getProfileCache(state.profile)

@@ -24,6 +24,30 @@ try:
 except ImportError:
     logger.warning("The 'cryptography' library is not available. Running with database encryption disabled.")
 
+# ---------------------------------------------------------------------------
+# Runtime toggle: controlled by system_settings.enable_encryption
+# ---------------------------------------------------------------------------
+
+_encryption_setting_enabled = True  # default: allow encryption when key is present
+
+
+def set_encryption_setting_enabled(enabled: bool) -> None:
+    """Set whether encryption is allowed by the admin toggle.
+
+    Even with a valid DB_ENCRYPTION_SECRET_KEY, encryption will be
+    skipped when this is set to False. Called by the application after
+    reading system_settings.enable_encryption.
+    """
+    global _encryption_setting_enabled
+    _encryption_setting_enabled = bool(enabled)
+    logger.info(f"Encryption admin toggle set to {_encryption_setting_enabled}")
+
+
+def is_encryption_setting_enabled() -> bool:
+    """Return whether the admin toggle permits encryption."""
+    return _encryption_setting_enabled
+
+
 # Key Parsing logic: supporting urlsafe-b64, hex, and SHA-256 stretching
 def derive_cryptographic_key(raw_key: str | None) -> bytes | None:
     if not raw_key:
@@ -53,7 +77,7 @@ def derive_cryptographic_key(raw_key: str | None) -> bytes | None:
 
 # Initialize Key and AESGCM instance
 if CRYPTOGRAPHY_AVAILABLE:
-    SECRET_KEY_ENV_VAR = "DB_ENCRYPTION_SECRET_KEY"
+    SECRET_KEY_ENV_VAR="DB_ENC..._KEY"
     raw_secret_key = os.environ.get(SECRET_KEY_ENV_VAR)
     
     if raw_secret_key:
@@ -73,9 +97,15 @@ if CRYPTOGRAPHY_AVAILABLE:
 # Tag prefix for identifying encrypted data
 PREFIX = "enc:v1:"
 
+
+def _encryption_active() -> bool:
+    """Return True only when both the key is available AND the admin toggle allows it."""
+    return ENCRYPTION_ENABLED and _aesgcm is not None and is_encryption_setting_enabled()
+
+
 def encrypt_value(value: str) -> str:
     """Encrypt a string value using AES-256-GCM. Returns 'enc:v1:<base64>'."""
-    if not ENCRYPTION_ENABLED or _aesgcm is None:
+    if not _encryption_active():
         return value
     if not isinstance(value, str):
         return value
@@ -126,6 +156,8 @@ TARGET_FIELDS = {"contact_email", "description", "raw_text"}
 def encrypt_row(row: dict) -> dict:
     if not isinstance(row, dict):
         return row
+    if not _encryption_active():
+        return row
     new_row = dict(row)
     for field in TARGET_FIELDS:
         if field in new_row and new_row[field] is not None:
@@ -134,6 +166,8 @@ def encrypt_row(row: dict) -> dict:
 
 def decrypt_row(row: dict) -> dict:
     if not isinstance(row, dict):
+        return row
+    if not ENCRYPTION_ENABLED or _aesgcm is None:
         return row
     new_row = dict(row)
     for field in TARGET_FIELDS:

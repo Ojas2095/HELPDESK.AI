@@ -26,6 +26,7 @@ class FakeTable:
         self.filters = {}
         self.payload = None
         self.limit_count = None
+        self.offset_count = None
         self.is_single = False
         self.order_field = None
         self.order_desc = False
@@ -57,6 +58,10 @@ class FakeTable:
 
     def limit(self, value):
         self.limit_count = value
+        return self
+
+    def offset(self, value):
+        self.offset_count = value
         return self
 
     def single(self):
@@ -104,6 +109,9 @@ class FakeTable:
 
         if self.order_field:
             rows.sort(key=lambda x: x.get(self.order_field, ""), reverse=self.order_desc)
+
+        if self.offset_count is not None:
+            rows = rows[self.offset_count:]
 
         if self.limit_count is not None:
             rows = rows[:self.limit_count]
@@ -293,6 +301,9 @@ def mock_ai_services(request):
         "test_sla_service.py",
         "test_language_pipeline.py",
         "test_sla_predictor.py",
+        "test_webhook_service.py",
+        "test_metrics_service.py",
+        "test_audit_service.py",
     }:
         yield
         return

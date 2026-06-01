@@ -7,6 +7,8 @@ import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import useTicketsRealtime from "../../hooks/useTicketsRealtime";
+import TagFilter from "../../components/TagFilter";
+import TagChip from "../../components/TagChip";
 import {
     Search,
     Filter,
@@ -42,6 +44,7 @@ const AdminTickets = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null); // ID of ticket being updated
+    const [newlyBreachedTicketIds, setNewlyBreachedTicketIds] = useState([]);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
@@ -51,19 +54,23 @@ const AdminTickets = () => {
     const [languageFilter, setLanguageFilter] = useState('All');
     const [slaAtRisk, setSlaAtRisk] = useState(false);
     const [agents, setAgents] = useState([]); // All staff/admins in the company
+    const [tagFilters, setTagFilters] = useState([]);
 
     const ticketMatchesFilters = useCallback((ticket) => {
         if (statusFilter !== 'All' && String(ticket.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
         if (categoryFilter !== 'All' && ticket.category !== categoryFilter) return false;
         if (priorityFilter !== 'All' && String(ticket.priority || '').toLowerCase() !== priorityFilter.toLowerCase()) return false;
         if (teamFilter !== 'All' && ticket.assigned_team !== teamFilter) return false;
+        if (tagFilters.length > 0 && !(ticket.tags || []).length) return false;
+        if (tagFilters.length > 0 && !tagFilters.every(tag => (ticket.tags || []).includes(tag))) return false;
         if (languageFilter !== 'All') {
             const translated = ticket?.metadata?.translation?.translated;
             if (languageFilter === 'Translated' && !translated) return false;
             if (languageFilter === 'English' && translated) return false;
         }
         return true;
-    }, [categoryFilter, priorityFilter, statusFilter, teamFilter, languageFilter]);
+    }, [categoryFilter, priorityFilter, statusFilter, teamFilter, languageFilter, tagFilters]);
+
 
     const handleRealtimeInsert = useCallback((ticket) => {
         showToast(`New Incident Reported: #${formatTicketId(ticket.id)}`, "success");
@@ -147,6 +154,52 @@ const AdminTickets = () => {
         fetchInitialData();
     }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
 
+    useEffect(() => {
+        const channelSla = supabase
+            .channel('sla-alerts')
+            .on(
+                'broadcast',
+                { event: 'breach' },
+                (payload) => {
+                    const { ticketId, subject, originalTeam, escalatedTeam, companyId } = payload.payload;
+                    console.log("Realtime SLA breach event:", payload);
+                    
+                    const { profile } = useAuthStore.getState();
+                    if (profile?.company_id && companyId && profile.company_id !== companyId) {
+                        return;
+                    }
+
+                    // Show custom toast
+                    const formattedId = String(ticketId).slice(0, 8).toUpperCase();
+                    showToast(`⚠️ SLA BREACH: Ticket #${formattedId} ("${subject}") escalated from '${originalTeam}' to '${escalatedTeam}'!`, "error");
+
+                    // Highlight the row
+                    setNewlyBreachedTicketIds(prev => [...prev, ticketId]);
+                    setTimeout(() => {
+                        setNewlyBreachedTicketIds(prev => prev.filter(id => id !== ticketId));
+                    }, 12000);
+
+                    // Update ticket in state
+                    setTickets(prev => prev.map(t => 
+                        t.id === ticketId 
+                            ? { 
+                                ...t, 
+                                sla_status: 'BREACHED', 
+                                assigned_team: escalatedTeam, 
+                                escalation_level: (t.escalation_level || 0) + 1,
+                                updated_at: new Date().toISOString()
+                              }
+                            : t
+                    ));
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channelSla);
+        };
+    }, []);
+
     // Seed search from URL
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -216,7 +269,7 @@ const AdminTickets = () => {
 
     const categories = ['All', 'Network', 'Hardware', 'Software', 'Access', 'Account'];
     const priorities = ['All', 'Low', 'Medium', 'High'];
-    const statuses = ['All', 'Open', 'In Progress', 'Resolved', 'Closed'];
+    const statuses = ['All', 'Open', 'In Progress', 'Resolved', 'Closed', 'Spam'];
     const teams = ['All', 'Software Team', 'Hardware Support', 'Network Ops', 'Security Unit', 'General Support'];
 
     const filteredTickets = useMemo(() => {
@@ -243,8 +296,11 @@ const AdminTickets = () => {
                 return s === 'BREACHED' || s === 'WARNING';
             });
         }
+        if (tagFilters.length > 0) {
+            result = result.filter(t => (t.tags || []).length > 0 && tagFilters.every(tag => (t.tags || []).includes(tag)));
+        }
         return result;
-    }, [tickets, searchQuery, languageFilter, slaAtRisk]);
+    }, [tickets, searchQuery, languageFilter, slaAtRisk, tagFilters]);
 
     const getPriorityStyle = (priority) => {
         const p = String(priority || '').toLowerCase();
@@ -368,6 +424,11 @@ const AdminTickets = () => {
                         )}
                     </button>
                 </div>
+
+                {/* Tag Filter (autocomplete + multi-select) */}
+                <div>
+                    <TagFilter companyId={profile?.company_id} onFilterChange={setTagFilters} />
+                </div>
             </div>
 
             {/* 3. High-Density Data Terminal */}
@@ -449,9 +510,21 @@ const AdminTickets = () => {
                                     {/* Subject */}
                                     <td className="px-6 py-6">
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-slate-700 truncate max-w-[200px]" title={ticket.summary || ticket.subject}>
-                                                {ticket.summary || ticket.subject}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-slate-700 truncate max-w-[200px]" title={ticket.summary || ticket.subject}>
+                                                    {ticket.summary || ticket.subject}
+                                                </span>
+                                                {ticket.metadata?.spam_analysis?.is_spam && (
+                                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider flex items-center gap-1 ${
+                                                        ticket.metadata.spam_analysis.risk_level === 'high' 
+                                                            ? 'bg-red-100 text-red-700 border border-red-200' 
+                                                            : 'bg-amber-100 text-amber-700 border border-amber-200'
+                                                    }`}>
+                                                        <ShieldAlert size={10} />
+                                                        {ticket.metadata.spam_analysis.risk_level} Risk
+                                                    </span>
+                                                )}
+                                            </div>
                                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                                 {ticket.category} 
                                                 <span className="text-[9px] font-medium text-slate-300">• {formatTimelineDate(ticket.created_at)}</span>
@@ -532,7 +605,13 @@ const AdminTickets = () => {
                                     {/* Status (Editable) */}
                                     <td className="px-6 py-6">
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${ticket.status?.toLowerCase() === 'resolved' || ticket.status?.toLowerCase() === 'closed' ? 'bg-emerald-400' : 'bg-amber-500 animate-pulse'}`}></div>
+                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                ticket.status?.toLowerCase() === 'resolved' || ticket.status?.toLowerCase() === 'closed' 
+                                                    ? 'bg-emerald-400' 
+                                                    : ticket.status?.toLowerCase() === 'spam'
+                                                        ? 'bg-slate-400 border border-slate-500'
+                                                        : 'bg-amber-500 animate-pulse'
+                                            }`}></div>
                                             <Select
                                                 value={String(ticket.status || 'open').toLowerCase()}
                                                 onChange={(e) => handleUpdateTicket(ticket.id, { status: e.target.value })}

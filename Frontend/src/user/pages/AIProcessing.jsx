@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -24,7 +24,7 @@ const steps = [
 const AIProcessing = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { text, image_text, image_base64, template_id, template_used, user_modified, ticket_title, original_text, original_language, source } = location.state || {};
+    const { text, image_text, image_base64, template_id, template_used, user_modified, ticket_title, original_text, original_language } = location.state || {};
     const setAITicket = useTicketStore((state) => state.setAITicket);
     const { settings } = useAdminStore();
     const { user, profile } = useAuthStore();
@@ -32,18 +32,10 @@ const AIProcessing = () => {
     const hasCalledAPI = useRef(false);
     const [activeStep, setActiveStep] = useState(0);
 
-    useEffect(() => {
-        if (!text) {
-            console.warn("[AIProcessing] No ticket text found. Redirecting to /create-ticket");
-            navigate('/create-ticket');
-            return;
-        }
+    const analyzeTicket = useCallback(async () => {
+        console.log("[AIProcessing] Starting analysis for:", text);
 
-        if (hasCalledAPI.current) return;
-        hasCalledAPI.current = true;
-
-        const analyzeTicket = async () => {
-            console.log("[AIProcessing] Starting analysis for:", text);
+            let uploadedImageUrl = null;
 
             try {
 
@@ -52,8 +44,6 @@ const AIProcessing = () => {
 
 
                 // ── Upload Image if present ──
-                let uploadedImageUrl = null;
-
                 if (image_base64) {
 
                     try {
@@ -377,12 +367,20 @@ const AIProcessing = () => {
                     navigate('/create-ticket');
                 }
             }
-        };
+    }, [text, image_text, image_base64, navigate, setAITicket, settings, user, profile, showToast, template_id, template_used, user_modified, ticket_title]);
+
+    useEffect(() => {
+        if (!text) {
+            console.warn("[AIProcessing] No ticket text found. Redirecting to /create-ticket");
+            navigate('/create-ticket');
+            return;
+        }
+
+        if (hasCalledAPI.current) return;
+        hasCalledAPI.current = true;
 
         analyzeTicket();
-
-     
-    }, [text, image_text, image_base64, navigate, setAITicket, settings, user, profile]);
+    }, [text, navigate, analyzeTicket]);
 
 
   

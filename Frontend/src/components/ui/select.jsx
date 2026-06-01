@@ -3,7 +3,7 @@ import { ChevronDown, Check } from 'lucide-react';
  
 import { motion, AnimatePresence } from 'framer-motion';
 
-export const Select = ({ value, onChange, options, placeholder = "Select an option", className = "", buttonClassName = "", disabled = false, ...props }) => {
+export const Select = ({ value, onChange, options, placeholder = "Select an option", className = "", buttonClassName = "", disabled = false, 'aria-label': ariaLabel, ...props }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef(null);
 
@@ -45,7 +45,7 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
                         transition={{ duration: 0.15, ease: "easeOut" }}
                         className="absolute z-[100] w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-xl overflow-hidden py-1 min-w-[140px]"
                     >
-                        <div className="max-h-60 overflow-y-auto">
+                        <div className="max-h-60 overflow-y-auto" role="listbox" aria-label={ariaLabel || "Options"}>
                             {options.map((option) => (
                                 <button
                                     key={option.value}

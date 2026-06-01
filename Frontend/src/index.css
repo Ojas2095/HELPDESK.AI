@@ -75,6 +75,20 @@
     --chart-5: 340 75% 55%;
   }
 
+  /* Global dark-mode utility overrides for existing Tailwind utility usage */
+  .dark body {
+    background-color: #0B1120;
+    color: #F9FAFB;
+  }
+
+  .dark .bg-white { background-color: #111827 !important; }
+  .dark .bg-white\/90 { background-color: rgba(17,24,39,0.9) !important; }
+  .dark .text-slate-900, .dark .text-gray-900 { color: #F9FAFB !important; }
+  .dark .text-gray-700, .dark .text-gray-600, .dark .text-gray-500 { color: #9CA3AF !important; }
+  .dark .border-gray-100, .dark .border-gray-50 { border-color: #374151 !important; }
+  .dark .hover\:bg-gray-50:hover { background-color: rgba(255,255,255,0.02) !important; }
+
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
   }

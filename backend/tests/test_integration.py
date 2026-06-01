@@ -34,6 +34,7 @@ def test_multi_tenant_isolation_mismatch(test_client, fake_db):
     Verifies that a user profile assigned to company_id_A cannot access or save tickets for company_id_B,
     raising an HTTP 403 Forbidden.
     """
+    authenticate_as(test_client, "user_A")
     payload = {
         "user_id": "user_A",  # belongs to company_A in fake profiles
         "subject": "Intrusion Attempt",
@@ -54,6 +55,7 @@ def test_multi_tenant_isolation_mismatch(test_client, fake_db):
     }
     
     response = test_client.post("/tickets/save", json=payload)
+    clear_authentication(test_client)
     assert response.status_code == 403
     assert "User not authorized for this tenant" in response.json()["detail"]
 
@@ -63,6 +65,7 @@ def test_multi_tenant_isolation_success(test_client, fake_db):
     Test 3: Multi-tenant Isolation (Success).
     Verifies that a request with consistent tenant mappings resolves and inserts cleanly.
     """
+    authenticate_as(test_client, "user_A")
     payload = {
         "user_id": "user_A",
         "subject": "Valid Ticket",
@@ -83,6 +86,7 @@ def test_multi_tenant_isolation_success(test_client, fake_db):
     }
     
     response = test_client.post("/tickets/save", json=payload)
+    clear_authentication(test_client)
     assert response.status_code == 200
     assert response.json()["status"] == "success"
     
@@ -179,6 +183,7 @@ def test_ticket_save_sla_breach_calculation(test_client, fake_db):
     Test 6: Ticket save payload verification and SLA deadline auto-computation.
     Verifies that a ticket saved without pre-calculated SLA deadlines automatically generates them based on priority.
     """
+    authenticate_as(test_client, "user_B")
     payload = {
         "user_id": "user_B",
         "subject": "Missing SLA timestamps",
@@ -199,6 +204,7 @@ def test_ticket_save_sla_breach_calculation(test_client, fake_db):
     }
     
     response = test_client.post("/tickets/save", json=payload)
+    clear_authentication(test_client)
     assert response.status_code == 200
     assert response.json()["status"] == "success"
     

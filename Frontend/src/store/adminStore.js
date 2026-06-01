@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createPersistedStore } from './persistenceMiddleware';
 
 const useAdminStore = create(
-    persist(
+    createPersistedStore('admin',
         (set) => ({
             adminProfile: {
                 name: "Admin",
@@ -16,10 +16,7 @@ const useAdminStore = create(
             updateProfile: (updates) => set((state) => ({
                 adminProfile: { ...state.adminProfile, ...updates }
             })),
-        }),
-        {
-            name: 'admin-storage',
-        }
+        })
     )
 );
 

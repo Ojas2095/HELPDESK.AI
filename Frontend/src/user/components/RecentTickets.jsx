@@ -5,7 +5,9 @@ import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { formatTimelineDate } from '../../utils/dateUtils';
 import LanguageBadge from '../../components/shared/LanguageBadge';
+import TagChip from '../../components/TagChip';
 import SLABadge from '../../admin/components/SLABadge';
+import { safeDisplayText } from '../../utils/sanitizeText';
 
 const RecentTickets = () => {
     const navigate = useNavigate();
@@ -133,10 +135,20 @@ const RecentTickets = () => {
                                         </td>
                                         <td className="px-7 py-4">
                                             <p className="text-sm font-semibold text-slate-900 dark:text-white truncate max-w-[320px]">
-                                                {ticket.summary || ticket.subject || ticket.description || "No description provided"}
+                                                {safeDisplayText(ticket.summary || ticket.subject || ticket.description, "No description provided")}
                                             </p>
                                             <div className="mt-1">
                                                 <LanguageBadge detectedLanguage={ticket?.detected_language} compact />
+                                                {ticket.tags?.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                        {ticket.tags.slice(0,3).map((tag) => (
+                                                            <TagChip key={tag} tag={tag} variant="admin" />
+                                                        ))}
+                                                        {ticket.tags.length > 3 && (
+                                                            <span className="text-xs text-gray-400">+{ticket.tags.length - 3}</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-7 py-4">

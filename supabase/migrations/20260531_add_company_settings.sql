@@ -19,8 +19,8 @@ CREATE TABLE system_settings (
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 -- Create system_settings table for storing per-company system configuration
 
--- NOTE: migration filename contains 'add_company_settings'. The migration now creates
--- `system_settings` per the unified schema; filename unchanged for migration ordering.
+-- Drop old table if it exists (fresh create with correct schema)
+DROP TABLE IF EXISTS system_settings CASCADE;
 
 CREATE TABLE IF NOT EXISTS system_settings (
     company_id            UUID PRIMARY KEY,

@@ -152,6 +152,12 @@ async def voice_health():
             "model_loaded": False,
             "message": "Whisper package not installed.",
         }
+    except AttributeError:
+        return {
+            "status": "unavailable",
+            "model_loaded": False,
+            "message": "Whisper model not available.",
+        }
 
 
 def _extract_title(text: str, max_length: int = 80) -> str:

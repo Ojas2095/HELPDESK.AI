@@ -8,7 +8,7 @@ import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";
 import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
-import axios from 'axios';
+import apiClient from '../../services/apiClient';
 import { API_CONFIG } from '../../config';
 import { supabase } from '../../lib/supabaseClient';
 

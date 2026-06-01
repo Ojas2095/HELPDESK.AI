@@ -455,8 +455,6 @@ function AdminSignup() {
                                                         <span>Strength: {getStrengthText()}</span>
                                                         <span>{passwordStrength}%</span>
                                                     </div>
-                                                )}
-                                                {formData.password && (
                                                     <div className="h-1 w-full bg-gray-100 dark:bg-emerald-950/40 rounded-full overflow-hidden">
                                                         <motion.div
                                                             className={`h-full ${getStrengthColor()}`}
@@ -471,7 +469,7 @@ function AdminSignup() {
                                                         {passwordWarning || "Password requirements met."}
                                                     </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">

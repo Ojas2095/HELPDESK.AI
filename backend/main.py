@@ -24,11 +24,14 @@ warnings.filterwarnings("ignore", message="'pin_memory'")
 # HF Rebuild Trigger: 2026-03-08-2030
 from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from slowapi import Limiter, _rate_limit_exceeded_handler
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest, CollectorRegistry, REGISTRY
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
@@ -36,6 +39,9 @@ from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+
+# Import Swagger UI custom styling
+from backend.swagger_config import SWAGGER_UI_CUSTOM_CSS, SWAGGER_UI_CUSTOM_JS
 
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent / '.env'
@@ -77,6 +83,7 @@ from backend.services.audit_service import AuditLogService, AuditLogAccessError
 from backend.services.onnx_service import onnx_classifier
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
+from backend.services.incident_service import IncidentService
 from backend.services.semantic_duplicate_service import SemanticDuplicateService
 from backend.services.rag_service import RagService
 from backend.services.spam_service import SpamService
@@ -269,16 +276,31 @@ def get_system_settings(company_id: str) -> dict:
     defaults = {
         "ai_confidence_threshold": 0.80,
         "duplicate_sensitivity": 0.85,
-        "enable_auto_resolve": False
+        "enable_auto_resolve": False,
+        "enable_encryption": False,
+        "enable_pii_redaction": False,
     }
     if not supabase or not company_id:
         return defaults
     try:
         res = supabase.table("system_settings").select(
-            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
+            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, "
+            "enable_encryption, enable_pii_redaction"
         ).eq("company_id", company_id).single().execute()
         if res.data:
-            return {**defaults, **res.data}
+            settings = {**defaults, **res.data}
+            # Wire the toggles into the runtime modules
+            try:
+                from backend.auth.crypto import set_encryption_setting_enabled
+                set_encryption_setting_enabled(bool(settings.get("enable_encryption", False)))
+            except Exception:
+                pass
+            try:
+                from backend.services.pii_redaction import set_pii_redaction_enabled
+                set_pii_redaction_enabled(bool(settings.get("enable_pii_redaction", False)))
+            except Exception:
+                pass
+            return settings
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
@@ -368,6 +390,13 @@ class TicketRequest(BaseModel):
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
+
+    @field_validator("confidence_threshold", "duplicate_sensitivity")
+    @classmethod
+    def validate_threshold_range(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(f"Value must be between 0.0 and 1.0, got {v}")
+        return v
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -744,24 +773,146 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+API_DESCRIPTION = """
+# HELPDESK.AI Backend API
+
+A FastAPI service powering AI-driven IT support ticket triage, classification, and
+auto-resolution.
+
+## Capabilities
+- **AI Analysis** — multi-stage NLP cascade (NER, classification, duplicate detection,
+  RAG knowledge base lookup, optional Gemini vision/summary).
+- **Ticket Lifecycle** — create, fetch, patch, and persist tickets via Supabase.
+- **Diagnostics** — health/readiness probes and admin correction logging for
+  continuous improvement.
+
+## Authentication
+Supabase service-role authentication is performed server-side. Frontend clients
+should call these endpoints over HTTPS from the configured CORS origins.
+
+## Rate Limits
+The `/ai/analyze_ticket` endpoint is capped at **10 requests / minute / IP**.
+"""
+
+TAGS_METADATA = [
+    {
+        "name": "System",
+        "description": "Service health, readiness, and landing page.",
+    },
+    {
+        "name": "AI Analysis",
+        "description": "Core NLP endpoints: classification, troubleshooting, bug analysis, and streaming analysis.",
+    },
+    {
+        "name": "Tickets",
+        "description": "CRUD operations over support tickets (Supabase + in-memory).",
+    },
+    {
+        "name": "Admin",
+        "description": "Internal endpoints for correction logging and model feedback loops.",
+    },
+    {
+        "name": "Docs",
+        "description": "Themed API documentation (Swagger UI and ReDoc).",
+    },
+]
+
 app = FastAPI(
-    title="AI Helpdesk Backend",
-    description="Ticket classification, entity extraction, and duplicate detection",
+    title="HELPDESK.AI Backend",
+    description=API_DESCRIPTION,
     version="1.0.0",
     lifespan=lifespan,
+    swagger_ui_parameters={
+        "defaultModelsExpandDepth": -1,
+        "docExpansion": "none",
+        "filter": True,
+        "syntaxHighlight.theme": "monokai",
+    },
+    swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
+    swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
 )
+
+# Corporate-clean Swagger theme overrides (HELPDESK.AI palette: emerald + slate).
+SWAGGER_CUSTOM_CSS = """
+:root {
+  --hd-bg: #0f172a;
+  --hd-panel: #1e293b;
+  --hd-border: #334155;
+  --hd-text: #f8fafc;
+  --hd-muted: #94a3b8;
+  --hd-accent: #10b981;
+  --hd-accent-2: #3b82f6;
+}
+body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+.swagger-ui, .swagger-ui .info .title, .swagger-ui .opblock-tag, .swagger-ui .opblock .opblock-summary-operation-id,
+.swagger-ui .opblock .opblock-summary-path, .swagger-ui .opblock .opblock-summary-description,
+.swagger-ui table thead tr th, .swagger-ui .parameter__name, .swagger-ui .parameter__type,
+.swagger-ui .response-col_status, .swagger-ui .model-title, .swagger-ui .markdown p,
+.swagger-ui .info p, .swagger-ui label, .swagger-ui .tab li, .swagger-ui section.models h4 { color: var(--hd-text); }
+.swagger-ui .topbar { background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom: 1px solid var(--hd-border); padding: 12px 24px; }
+.swagger-ui .topbar .download-url-wrapper { display: none; }
+.swagger-ui .info { margin: 32px 0; }
+.swagger-ui .info .title { font-weight: 700; letter-spacing: -0.02em; }
+.swagger-ui .info .title small.version-stamp { background: var(--hd-accent); color: #052e1c; }
+.swagger-ui .scheme-container { background: var(--hd-panel); border: 1px solid var(--hd-border); box-shadow: none; padding: 16px 20px; }
+.swagger-ui .opblock-tag { border-bottom: 1px solid var(--hd-border); font-weight: 600; }
+.swagger-ui .opblock { background: var(--hd-panel); border: 1px solid var(--hd-border); border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); margin: 0 0 16px; }
+.swagger-ui .opblock .opblock-summary { border-bottom: 1px solid var(--hd-border); }
+.swagger-ui .opblock.opblock-get .opblock-summary-method { background: var(--hd-accent-2); }
+.swagger-ui .opblock.opblock-post .opblock-summary-method { background: var(--hd-accent); }
+.swagger-ui .opblock.opblock-patch .opblock-summary-method { background: #f59e0b; }
+.swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #ef4444; }
+.swagger-ui .btn { border-radius: 8px; border-color: var(--hd-border); color: var(--hd-text); }
+.swagger-ui .btn.execute { background: var(--hd-accent); border-color: var(--hd-accent); color: #052e1c; }
+.swagger-ui .btn.execute:hover { background: #0ea271; }
+.swagger-ui .btn.authorize { background: var(--hd-accent-2); border-color: var(--hd-accent-2); color: #ffffff; }
+.swagger-ui input[type=text], .swagger-ui textarea, .swagger-ui select { background: #0b1220; color: var(--hd-text); border: 1px solid var(--hd-border); }
+.swagger-ui .markdown code, .swagger-ui .renderedMarkdown code { background: #0b1220; color: #5eead4; padding: 2px 6px; border-radius: 4px; }
+.swagger-ui section.models { background: var(--hd-panel); border: 1px solid var(--hd-border); border-radius: 10px; }
+.swagger-ui .model-box { background: #0b1220; }
+.swagger-ui .responses-inner h4, .swagger-ui .responses-inner h5 { color: var(--hd-muted); }
+.swagger-ui .response-col_description__inner div.markdown, .swagger-ui .response-col_description__inner div.renderedMarkdown { background: #0b1220; color: var(--hd-text); }
+"""
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS — strictly loaded from environment variable ALLOWED_ORIGINS
-allowed_origins_env = os.environ.get("ALLOWED_ORIGINS")
-if allowed_origins_env:
-    origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
-else:
-    origins = [
+# ---------------------------------------------------------------------------
+# Security Headers Middleware — defense-in-depth against XSS (#739)
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    for key, value in get_security_headers().items():
+        response.headers[key] = value
+    return response
+
+# CORS — locked to production + local dev only
+# CORS configuracion restrictiva para produccion
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "https://helpdesk.ai,https://staging.helpdesk.ai,http://localhost:5173,http://localhost:3000").split(","),
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    return response
+    allow_origins=[
         "https://helpdeskaiv1.vercel.app",
         "http://localhost:5173",
         "http://localhost:3000",
@@ -796,6 +947,24 @@ async def add_security_headers(request: Request, call_next):
 
 app.include_router(auth_cookie_router)
 
+# ---------------------------------------------------------------------------
+# Prometheus HTTP request instrumentation
+# ---------------------------------------------------------------------------
+# Exposes http_request_duration_seconds, http_requests_total, http_requests_in_progress
+METRICS_TOKEN = os.environ.get("METRICS_TOKEN", "")
+METRICS_ALLOWED_IPS = {
+    ip.strip()
+    for ip in os.environ.get("METRICS_ALLOWED_IPS", "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16").split(",")
+    if ip.strip()
+}
+
+instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_group_untemplated=True,
+    excluded_handlers=["/metrics", "/health"],
+)
+instrumentator.instrument(app)
+
 # Translation service routes
 from backend.routes.translation import router as translation_router
 app.include_router(translation_router)
@@ -804,11 +973,80 @@ app.include_router(translation_router)
 from backend.routes.estimator import router as estimator_router
 app.include_router(estimator_router)
 
+# Tagging router (Issue #404)
+from tag_router import router as tag_router
+app.include_router(tag_router)
+
 
 # ---------------------------------------------------------------------------
+# Custom Swagger UI with branding
+# ---------------------------------------------------------------------------
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    """Serve custom Swagger UI with AI Helpdesk branding."""
+    return HTMLResponse(
+        content=f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>AI Helpdesk API Documentation</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+        <style>{SWAGGER_UI_CUSTOM_CSS}</style>
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <script>
+            const ui = SwaggerUIBundle({{
+                url: '/openapi.json',
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIBundle.SwaggerUIStandalonePreset
+                ],
+                layout: "BaseLayout",
+                defaultModelsExpandDepth: -1,
+                docExpansion: "none",
+                filter: true,
+                syntaxHighlight: {{ theme: "monokai" }}
+            }});
+            window._swaggerUi = ui;
+        </script>
+        <script>{SWAGGER_UI_CUSTOM_JS}</script>
+    </body>
+    </html>
+    """,
+        media_type="text/html",
+    )
+
+
+# ---------------------------------------------------------------------------
+
+# Prometheus Metrics
+from prometheus_fastapi_instrumentator import Instrumentator, metrics
+from prometheus_client import CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST
+
+# Initialize Prometheus instrumentator
+instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=["/health", "/ready", "/metrics"],
+    inprogress_name="helpdesk_requests_in_progress",
+    inprogress_labels=True,
+)
+
+# Add custom metrics
+instrumentator.add(metrics.latency(buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)))
+instrumentator.add(metrics.request_size(buckets=(100, 1000, 10000, 100000, 1000000)))
+instrumentator.add(metrics.response_size(buckets=(100, 1000, 10000, 100000, 1000000)))
+
+# Instrument the app
+instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
 # Root & Health check
 # ---------------------------------------------------------------------------
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, tags=["System"], summary="API landing page")
 async def root():
     return """
     <!DOCTYPE html>
@@ -890,8 +1128,20 @@ async def root():
     """
 
 
+async def verify_metrics_token(x_metrics_token: str | None = Header(default=None)):
+    expected_token = os.environ.get("METRICS_TOKEN")
+    if expected_token and x_metrics_token != expected_token:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+@app.get("/metrics", dependencies=[Depends(verify_metrics_token)])
+def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
+    """Return a lightweight status payload showing whether core models are loaded."""
     return HealthResponse(
         status="ok",
         classifier_loaded=classifier_service._loaded,
@@ -899,8 +1149,11 @@ async def health_check():
     )
 
 
-@app.get("/ready", response_model=ReadinessResponse)
+@app.get("/ready", response_model=ReadinessResponse, tags=["System"], summary="Readiness probe")
 async def readiness_check():
+    """Return ``ready`` only when all required subsystems (classifier, NER,
+    duplicate index, RAG, and optionally Supabase) report healthy. Returns
+    HTTP 503 otherwise — suitable for Kubernetes / load-balancer probes."""
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
     checks = {
         "api": True,
@@ -925,7 +1178,7 @@ async def readiness_check():
 # Weekly Digest endpoints
 # ---------------------------------------------------------------------------
 @app.post("/api/digest/send-now")
-async def send_digest_now():
+async def send_digest_now(current_user: dict = Depends(get_current_user)):
     """Manual trigger to send the weekly digest email."""
     from backend.services.digest_service import get_weekly_stats, generate_ai_summary, send_digest_email
     
@@ -975,8 +1228,12 @@ class TroubleshootResponse(BaseModel):
     is_final: bool
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
+@limiter.limit("10/minute")
 async def troubleshoot(request: TroubleshootRequest):
-    """Get dynamic troubleshooting steps from Gemini."""
+    """Get the next dynamic troubleshooting step from Gemini given the user's
+    ticket text, predicted category, and the conversation history so far.
+    Returns the next ``step_text``, suggested ``options``, and an ``is_final``
+    flag signalling when the wizard should end."""
     if not gemini_service or not gemini_service._initialized:
         return TroubleshootResponse(
             step_text="AI Troubleshooting is currently unavailable.",
@@ -1002,8 +1259,11 @@ class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
+@limiter.limit("10/minute")
 async def analyze_bug(request: BugReportAnalysisRequest):
-    """Analyze a bug report using Gemini to generate a Probable Cause."""
+    """Analyze a structured bug report (title, description, repro steps, and any
+    captured console errors) using Gemini and return a short ``probable_cause``
+    explanation that frontends can show to the reporter."""
     if not gemini_service or not gemini_service._initialized:
         return BugReportAnalysisResponse(
             probable_cause="AI Diagnostics are currently unavailable."
@@ -1173,16 +1433,23 @@ def _ticket_company_scope(profile: dict, requested_company_id: str | None = None
 @app.get("/tickets")
 async def get_tickets(
     company_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
     current_user: dict = Depends(get_current_user),
 ):
-    """Fetch persistent tickets from Supabase."""
+    """Fetch persistent tickets from Supabase with pagination."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    if limit < 1 or limit > 200:
+        raise HTTPException(status_code=400, detail="Limit must be between 1 and 200")
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="Offset must be non-negative")
 
     profile = _get_authenticated_profile(current_user)
     company_scope = _ticket_company_scope(profile, company_id)
     
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
+    query = supabase.table("tickets").select("*").order("created_at", desc=True).limit(limit).offset(offset)
     if company_scope:
         query = query.eq("company_id", company_scope)
         
@@ -1529,6 +1796,94 @@ async def websocket_endpoint(ws: WebSocket, company_id: str):
         print(f"[WS] Client disconnected — company_id={company_id}")
 
 
+# TicketUpdate restricts PATCH payloads to the fields a caller is permitted to
+# change. Ownership fields (owner_id), routing fields (assigned_team), and
+# system-set identifiers (ticket_id) are intentionally excluded.
+class TicketUpdate(BaseModel):
+    status: str | None = None
+    last_user_viewed_at: str | None = None
+
+
+@app.post("/tickets", response_model=dict)
+async def create_ticket(
+    ticket: TicketSaveRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Create a new ticket record in Supabase. Requires authentication.
+    The caller's authenticated user ID is always used as the owner; any
+    owner_id supplied in the request body is silently overridden to prevent
+    ownership spoofing.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    user_id = _get_auth_user_id(current_user)
+    data = ticket.model_dump()
+    # Always derive ownership from the authenticated session.
+    data["user_id"] = user_id
+
+    profile = _get_authenticated_profile(current_user)
+    profile_company_id = profile.get("company_id")
+    if profile_company_id:
+        if data.get("company_id") and data["company_id"] != profile_company_id:
+            raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+        data["company_id"] = profile_company_id
+    elif data.get("company_id"):
+        raise HTTPException(status_code=403, detail="User has no tenant assignment")
+
+    res = supabase.table("tickets").insert(data).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Failed to create ticket")
+    return res.data[0]
+
+
+@app.patch("/tickets/{ticket_id}", response_model=dict)
+async def update_ticket(
+    ticket_id: str,
+    updates: TicketUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Partially update a ticket. Requires authentication. Only status and
+    last_user_viewed_at may be changed via this endpoint. The caller must
+    own the ticket or have a master admin role.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    res = supabase.table("tickets").select("id, user_id, company_id").eq("id", ticket_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket_row = res.data
+    user_id = _get_auth_user_id(current_user)
+    profile = _get_authenticated_profile(current_user)
+
+    # Enforce ownership: caller must own the ticket or hold a master admin role.
+    if not _is_master_ticket_reader(profile) and str(ticket_row.get("user_id")) != user_id:
+        raise HTTPException(status_code=403, detail="User not authorized to update this ticket")
+
+    # Enforce company scope for non-master callers.
+    company_scope = _ticket_company_scope(profile)
+    if company_scope and ticket_row.get("company_id") != company_scope:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+
+    patch_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    if not patch_data:
+        raise HTTPException(status_code=400, detail="No updatable fields provided")
+
+    updated = (
+        supabase.table("tickets")
+        .update(patch_data)
+        .eq("id", ticket_id)
+        .execute()
+    )
+    if not updated.data:
+        raise HTTPException(status_code=500, detail="Failed to update ticket")
+    return updated.data[0]
+
+
 @app.get("/tickets/{ticket_id}")
 async def get_ticket_by_id(
     request: Request,
@@ -1581,7 +1936,7 @@ async def get_ticket_sla_estimate(
 
 
 @app.get("/tickets/{ticket_id}/audit_logs", response_model=list[AuditLogRecord])
-async def get_ticket_audit_logs(ticket_id: str, company_id: str):
+async def get_ticket_audit_logs(ticket_id: str, company_id: str, current_user: dict = Depends(get_current_user)):
     """Return a company-scoped chronological audit trail for a ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -1636,12 +1991,13 @@ async def search_tickets(
 # ---------------------------------------------------------------------------
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
-@app.post("/ai/analyze_ticket", response_model=TicketResponse)
+@app.post("/ai/analyze_ticket", response_model=TicketResponse, tags=["AI Analysis"], summary="Full AI ticket analysis (rate-limited)")
 @limiter.limit("10/minute")
 async def analyze_ticket(request_body: TicketRequest, request: Request):
-    """
-    Main endpoint for analyzing a new ticket using the cascade of local AI models.
-    """
+    """Main entry point for end-to-end ticket triage. Runs OCR (when an image
+    is attached), classification, NER, duplicate check, and RAG lookup, then
+    returns the consolidated ``TicketResponse``. Throttled to 10 requests per
+    minute per IP."""
     text = request_body.text
     
     # Grab client metadata
@@ -1666,15 +2022,14 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
 
     # Pass OCR-enriched text downstream so the analyze_only endpoint uses it.
     enriched = request_body.model_copy(update={"text": text, "image_text": local_ocr_text})
-    return await analyze_only(enriched)
+    return await analyze_only(enriched, request)
 
 @app.post("/ai/analyze")
 @limiter.limit("10/minute")
 async def analyze_only(request_body: TicketRequest, request: Request):
     """
-    PERFORMANCE UPGRADE: AI Analysis phase only. 
-    Does NOT persist to DB. This allows the user to review the analysis 
-    and duplicate check before committing to a ticket creation.
+    Centralized analysis logic used by `/ai/analyze`, `/ai/analyze_ticket`, and `/ai/analyze_stream`.
+    Returns a serializable dict representing the ticket analysis result.
     """
     text = request_body.text
     translation_ctx = await detect_and_translate_ticket_text(text)
@@ -1735,26 +2090,20 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     env_metadata = {
         "timestamp": get_now_ist(),
         "model_version": "3.0.0-PRO",
-        "api_endpoint": "/ai/analyze"
+        "api_endpoint": api_endpoint
     }
-    
+
     timeline = {"received": get_now_ist()}
 
-    # --- Vision Logic (OCR Awareness) ---
-    gemini_analysis = {
-        "ocr_text": request_body.image_text or "",
-        "image_description": ""
-    }
-    
-    if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+    gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
+    if request_body.image_base64 and not gemini_analysis["ocr_text"] and gemini_service:
         try:
-            print("[AI] Detecting visual context via Gemini...")
             vision_result = gemini_service.analyze_image(request_body.image_base64, text)
             gemini_analysis.update(vision_result)
         except Exception as e:
             print(f"[VISION ERROR] {e}")
 
-    summary = text[:100] + ("…" if len(text) > 100 else "") 
+    summary = text[:100] + ("…" if len(text) > 100 else "")
 
     # --- Spam / Phishing Detection (runs before classification) ---
     try:
@@ -1774,15 +2123,12 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     timeline["ai_analyzed"] = get_now_ist()
     timeline["triaged"] = get_now_ist()
 
-    # --- NER ---
     try:
         entities = ner_service.extract_entities(text)
     except Exception:
         entities = []
-    
     timeline["metadata_harvested"] = get_now_ist()
 
-    # --- Duplicate detection ---
     try:
         dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
     except Exception:
@@ -1815,7 +2161,6 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     except Exception as e:
         print(f"[RAG ERROR] {e}")
 
-    # --- Reasoning ---
     decision_factors = []
     if classification["confidence"] > request_body.confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
@@ -1852,16 +2197,18 @@ async def analyze_only(request_body: TicketRequest, request: Request):
 
     # --- Gemini Summary ---
     if gemini_service and gemini_service._initialized:
-        summary = gemini_service.get_summary(text)
-    
-    # Convert priority to SLA breached timestamp (for preview)
+        try:
+            summary = gemini_service.get_summary(text)
+        except Exception:
+            pass
+
     hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
     sla_hours = hours_map.get(classification["priority"], 72)
     sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
 
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
-        summary=summary,
+        summary=sanitize_text(summary),
         category=classification["category"],
         subcategory=classification["subcategory"],
         priority=classification["priority"],
@@ -1877,7 +2224,7 @@ async def analyze_only(request_body: TicketRequest, request: Request):
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
         image_url=request_body.image_url,
-        highlights=[e.text for e in entities] if entities else [],
+        highlights=[e.get("text") if isinstance(e, dict) else getattr(e, "text", "") for e in entities] if entities else [],
         timeline=timeline,
         env_metadata=env_metadata,
         spam_check=SpamCheck(**spam_result),
@@ -1891,6 +2238,7 @@ async def analyze_only(request_body: TicketRequest, request: Request):
     )
 
 @app.post("/ai/analyze_stream")
+@limiter.limit("10/minute")
 async def analyze_stream(request_body: TicketRequest):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
@@ -1910,7 +2258,10 @@ async def analyze_stream(request_body: TicketRequest):
 
         # 1. Reading
         yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.15)
+        yield f"data: {json.dumps({'step': 'Analyzing', 'status': 'in_progress'})}\n\n"
+        # Centralized computation
+        result = compute_analysis(request_body, api_endpoint="/ai/analyze_stream")
 
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
@@ -2053,17 +2404,35 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket/legacy")
+@app.post("/ai/analyze_ticket/legacy", deprecated=True)
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
-    BACKWARD COMPATIBILITY: Strictly performs analysis only. 
+    BACKWARD COMPATIBILITY: Strictly performs analysis only.
     Does NOT persist to DB to avoid foreign key violations.
+
+    DEPRECATED: This endpoint is redundant with /ai/analyze and exists only
+    for backward compatibility. New clients should use /ai/analyze instead.
+
+    The duplicate endpoints /ai/analyze_ticket/legacy and /ai/analyze both
+    delegate to analyze_only(), making /ai/analyze_ticket/legacy unnecessary.
+    See: https://github.com/ritesh-1918/HELPDESK.AI/issues/751
     """
-    return await analyze_only(request_body)
+    result = await analyze_only(request_body)
+    # Wrap with deprecation warning
+    return JSONResponse(
+        content=result.model_dump(mode="json"),
+        headers={
+            "Deprecation": "true",
+            "Sunset": "2026-12-31",
+            "Warning": '10 Deprecation: "/ai/analyze_ticket/legacy is deprecated. Use /ai/analyze instead."',
+            "Link": '</ai/analyze>; rel="alternate"',
+        },
+    )
 
 @app.post("/ai/analyze-v2")
+@limiter.limit("10/minute")
 async def analyze_ticket_v2(request: TicketRequest):
-    text = request.text
+    text = sanitize_text(request.text) or ""
     try:
         prediction = classifier_v2.predict(text)
         return {
@@ -2094,7 +2463,7 @@ class SLAStatsResponse(BaseModel):
 
 
 @app.get("/sla/stats", response_model=SLAStatsResponse)
-async def sla_stats():
+async def sla_stats(current_user: dict = Depends(get_current_user)):
     """Get aggregated SLA dashboard statistics across all tickets."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
@@ -2127,18 +2496,27 @@ async def sla_tickets(
     priority: str | None = None,
     limit: int = 100,
     offset: int = 0,
+    current_user: dict = Depends(get_current_user),
 ):
     """
-    List tickets with SLA status. Filter by sla_status and/or priority.
+    List tickets with SLA status. Requires authentication.
+    Results are scoped to the caller's company unless the caller has a master admin role.
+    Filter by sla_status and/or priority.
     """
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
+
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile)
 
     query = (
         supabase.table("tickets")
         .select("id, ticket_id, subject, summary, priority, status, assigned_team, sla_status, escalation_level, remaining_seconds, created_at, sla_breach_at, sla_warning_at, last_escalated_at")
         .order("created_at", desc=True)
     )
+
+    if company_scope:
+        query = query.eq("company_id", company_scope)
 
     if status and status != "all":
         query = query.eq("sla_status", status)
@@ -2166,7 +2544,7 @@ class EscalationLogEntry(BaseModel):
 
 
 @app.get("/sla/escalations")
-async def sla_escalations(limit: int = 50, offset: int = 0):
+async def sla_escalations(limit: int = 50, offset: int = 0, current_user: dict = Depends(get_current_user)):
     """Fetch escalation log history."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
@@ -2197,7 +2575,7 @@ class SLAPolicyInfo(BaseModel):
 
 
 @app.get("/sla/policies")
-async def sla_policies():
+async def sla_policies(current_user: dict = Depends(get_current_user)):
     """Get configured SLA policies."""
     if not supabase:
         # Return defaults from code
@@ -2223,7 +2601,7 @@ async def sla_policies():
 
 
 @app.post("/sla/check")
-async def trigger_sla_check():
+async def trigger_sla_check(current_user: dict = Depends(get_current_user)):
     """Manually trigger an SLA evaluation cycle (admin)."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
@@ -2243,6 +2621,7 @@ async def trigger_sla_check():
 async def check_duplicate_endpoint(
     body: TicketRequest,
     company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Check a ticket text for potential duplicates using semantic vector search.
@@ -2262,14 +2641,14 @@ async def check_duplicate_endpoint(
 
 
 @app.post("/ai/reindex_embeddings")
-async def reindex_embeddings():
+async def reindex_embeddings(current_user: dict = Depends(get_current_user)):
     """Re-generate vector embeddings for all tickets."""
     result = await semantic_dupe_service.reindex_all()
     return result
 
 
 @app.get("/system/settings")
-async def get_system_settings_endpoint():
+async def get_system_settings_endpoint(current_user: dict = Depends(get_current_user)):
     """Fetch all system settings."""
     _logger = logging.getLogger(__name__)
     if not supabase:
@@ -2286,7 +2665,7 @@ async def get_system_settings_endpoint():
 
 
 @app.patch("/system/settings")
-async def update_system_settings(body: dict):
+async def update_system_settings(body: dict, current_user: dict = Depends(get_current_user)):
     """Update a specific system setting."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
@@ -2306,7 +2685,7 @@ async def update_system_settings(body: dict):
 
 
 @app.get("/sla/tickets/{ticket_id}")
-async def sla_ticket_detail(ticket_id: str):
+async def sla_ticket_detail(ticket_id: str, current_user: dict = Depends(get_current_user)):
     """Get detailed SLA info for a specific ticket."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
@@ -2317,6 +2696,14 @@ async def sla_ticket_detail(ticket_id: str):
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     ticket = res.data
+
+    # Enforce company-level authorization so callers cannot view tickets from
+    # other tenants by guessing or iterating ticket IDs.
+    profile = _get_authenticated_profile(current_user)
+    company_scope = _ticket_company_scope(profile)
+    if company_scope and ticket.get("company_id") != company_scope:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+
     result = sla_engine.evaluate_ticket(ticket)
 
     # Fetch escalation history for this ticket
@@ -2341,6 +2728,30 @@ async def sla_ticket_detail(ticket_id: str):
 
 
 @app.get("/metrics")
-async def metrics():
-    """Prometheus scrape endpoint — exposes AI inference latency, request counts, and tokens."""
+async def metrics(request: Request):
+    """Prometheus scrape endpoint — exposes HTTP request, AI inference, and system metrics.
+
+    Secured via optional ``METRICS_TOKEN`` bearer token and IP allowlist
+    (``METRICS_ALLOWED_IPS`` env var, defaults to private ranges).
+    """
+    # --- IP allowlist check ---
+    client_ip = request.client.host if request.client else ""
+    if METRICS_ALLOWED_IPS:
+        import ipaddress
+        try:
+            client_addr = ipaddress.ip_address(client_ip)
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        allowed = any(
+            client_addr in ipaddress.ip_network(cidr, strict=False)
+            for cidr in METRICS_ALLOWED_IPS
+        )
+        if not allowed:
+            # Fall back to token check if IP not in allowlist
+            auth = request.headers.get("authorization", "")
+            if METRICS_TOKEN and auth == f"Bearer {METRICS_TOKEN}":
+                pass  # Token grants access
+            else:
+                raise HTTPException(status_code=403, detail="Forbidden")
+
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

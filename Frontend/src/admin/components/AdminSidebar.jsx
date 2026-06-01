@@ -21,6 +21,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
         { label: 'Tickets', path: '/admin/tickets', icon: Inbox },
         { label: 'Users', path: '/admin/users', icon: Users },
         { label: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
+        { label: 'Scorecard', path: '/admin/scorecard', icon: Trophy },
         { label: 'Profile', path: '/admin/profile', icon: UserCircle },
         { label: 'SLA Monitor', path: '/admin/sla', icon: Clock },
     ];

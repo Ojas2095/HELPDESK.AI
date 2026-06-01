@@ -9,6 +9,7 @@ import {
 import useTicketStore from '../store/ticketStore';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import SLACountdownTimer from "../components/shared/SLACountdownTimer";
+import TicketTagManager from '../components/TicketTagManager';
 
 function TicketDetailView() {
     const { ticket_id } = useParams();
@@ -172,7 +173,19 @@ function TicketDetailView() {
                                     </div>
                                 </div>
                             </CardContent>
-                        </Card>
+                            </Card>
+
+                            {/* Tags Manager */}
+                            <div className="mt-6 border-t border-gray-100 pt-4">
+                                <h3 className="text-sm font-semibold text-gray-700 mb-3">🏷️ Tags</h3>
+                                <TicketTagManager
+                                    ticketId={ticket.id || ticket.ticket_id}
+                                    ticketTitle={ticket.summary || ticket.subject || ''}
+                                    ticketBody={ticket.description || ''}
+                                    category={ticket.category || ''}
+                                    companyId={ticket.company_id || ''}
+                                />
+                            </div>
 
                         {/* AI Analysis Card */}
                         {(ticket.reasoning || ticket.image_description) && (
