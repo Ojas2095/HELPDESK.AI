@@ -30,6 +30,17 @@ import asyncio
 from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
+import ipaddress
+
+# Prometheus instrumentation (optional - added when package is available)
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY
+except Exception:
+    Instrumentator = None
+    generate_latest = None
+    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+    REGISTRY = None
 
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent / '.env'
@@ -53,12 +64,52 @@ except (ImportError, Exception) as e:
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from backend.services.classifier_service import ClassifierService
-from backend.services.classifier_v2 import classifier_v2
-from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
-from backend.services.ner_service import NERService
-from backend.services.duplicate_service import DuplicateService
-from backend.services.rag_service import RagService
+# AI service imports - guard heavy dependencies so the app can start in degraded/test mode
+try:
+    from backend.services.classifier_service import ClassifierService
+    from backend.services.classifier_v2 import classifier_v2
+    from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
+    from backend.services.ner_service import NERService
+    from backend.services.duplicate_service import DuplicateService
+    from backend.services.rag_service import RagService
+except Exception as e:
+    print(f"[WARN] Some AI services failed to import: {e}")
+
+    # Fallback lightweight stubs to allow the webserver and metrics to run without ML deps
+    class ClassifierService:
+        def __init__(self):
+            self._loaded = False
+        def load(self):
+            self._loaded = False
+        def predict(self, text: str):
+            return {"category": "Unavailable", "subcategory": "Unavailable", "priority": "Medium", "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0}
+
+    class _DummyV:
+        def predict(self, text: str):
+            return {"error": "model not loaded"}
+
+    classifier_v2 = _DummyV()
+    classifier_v3 = _DummyV()
+
+    class NERService:
+        def __init__(self):
+            self._loaded = False
+        def load(self):
+            self._loaded = False
+        def extract(self, text: str):
+            return []
+
+    class DuplicateService:
+        def __init__(self):
+            pass
+        def is_available(self):
+            return False
+        def add_ticket(self, ticket_id: str, text: str):
+            return False
+
+    class RagService:
+        def is_available(self):
+            return False
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +337,83 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Prometheus instrumentation and /metrics endpoint (secure)
+# ---------------------------------------------------------------------------
+if Instrumentator:
+    try:
+        instrumentator = Instrumentator()
+        instrumentator.instrument(app)
+    except Exception as e:
+        instrumentator = None
+        print(f"[METRICS] Instrumentator init failed: {e}")
+else:
+    instrumentator = None
+
+
+@app.get("/metrics")
+async def metrics_endpoint(request: Request):
+    """Expose Prometheus metrics with basic IP / token-based protections.
+
+    Controls:
+    - `METRICS_TOKEN` env var: if set, the client must provide that token either
+      via the `token` query param or `X-Metrics-Token` header.
+    - `METRICS_ALLOWED_IPS` env var: comma-separated CIDR or IP list allowed.
+    - If neither is set, only localhost (127.0.0.1 / ::1) is allowed.
+    """
+    # Token-based auth (preferred)
+    metrics_token = os.environ.get("METRICS_TOKEN")
+    allowed_ips = os.environ.get("METRICS_ALLOWED_IPS", "")
+    client_ip = None
+    try:
+        client_ip = request.client.host if request.client else None
+    except Exception:
+        client_ip = None
+
+    # Check token first (header or query param)
+    if metrics_token:
+        token = None
+        # header may be presented in different casing; prefer X-Metrics-Token
+        token = request.headers.get("X-Metrics-Token") or request.query_params.get("token")
+        if token != metrics_token:
+            raise HTTPException(status_code=403, detail="Forbidden: invalid metrics token")
+    elif allowed_ips:
+        # Validate client IP against allowed CIDRs
+        try:
+            allowed = [s.strip() for s in allowed_ips.split(",") if s.strip()]
+            ok = False
+            if client_ip:
+                for entry in allowed:
+                    try:
+                        net = ipaddress.ip_network(entry, strict=False)
+                        if ipaddress.ip_address(client_ip) in net:
+                            ok = True
+                            break
+                    except Exception:
+                        # Treat as single IP
+                        if client_ip == entry:
+                            ok = True
+                            break
+            if not ok:
+                raise HTTPException(status_code=403, detail="Forbidden: IP not allowed")
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[METRICS] allowed_ips parse error: {e}")
+            raise HTTPException(status_code=500, detail="Metrics configuration error")
+    else:
+        # Default: local-only
+        if client_ip not in ("127.0.0.1", "::1"):
+            raise HTTPException(status_code=403, detail="Forbidden: metrics restricted to localhost")
+
+    if REGISTRY is None or generate_latest is None:
+        return JSONResponse(status_code=503, content={"status": "metrics_unavailable"})
+
+    data = generate_latest(REGISTRY)
+    return StreamingResponse(content=data, media_type=CONTENT_TYPE_LATEST)
+
 
 
 # ---------------------------------------------------------------------------
