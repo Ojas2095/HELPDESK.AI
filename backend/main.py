@@ -881,7 +881,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ---------------------------------------------------------------------------
 # CORS — locked to production + local dev only
-# CORS configuracion restrictiva para produccion
+allowed_origins = os.getenv("CORS_ORIGINS", "https://helpdeskaiv1.vercel.app,http://localhost:5173,http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "https://helpdesk.ai,https://staging.helpdesk.ai,http://localhost:5173,http://localhost:3000").split(","),
