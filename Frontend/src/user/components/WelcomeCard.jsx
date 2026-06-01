@@ -1,52 +1,64 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { PlusCircle, ListTodo, Sparkles } from 'lucide-react';
 
 const WelcomeCard = ({ userName = 'Ritesh' }) => {
   const navigate = useNavigate();
 
     return (
-        <div
+        <motion.div
             id="tour-welcome"
-            className="relative overflow-hidden bg-white dark:bg-slate-900 border-l-2 border-green-600 rounded-[20px] shadow-sm dark:shadow-slate-950/50 p-10 md:p-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full relative overflow-hidden bg-white dark:bg-slate-900 border-l-4 border-emerald-500 rounded-[2rem] shadow-sm dark:shadow-none p-8 sm:p-12 text-left"
         >
-            {/* Badge */}
-            <div className="mb-4">
-                <span className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800/30 rounded-full px-3.5 py-1 text-[11px] font-semibold tracking-wider uppercase">
-                    <Sparkles size={12} className="fill-green-600 dark:fill-green-400" />
+            {/* Ambient Background Glow */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] pointer-events-none" />
+
+            {/* AI Status Badge */}
+            <div className="mb-6">
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 rounded-full text-[10px] font-black uppercase tracking-[0.15em]">
+                    <Sparkles size={12} className="fill-current" />
                     AI-Enhanced Support
                 </span>
             </div>
 
-            {/* Heading */}
-            <h2 className="font-syne text-[34px] font-extrabold text-slate-900 dark:text-white leading-tight tracking-tight mb-2">
-                Welcome back, {userName}
+            {/* Dynamic Heading */}
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mb-3 tracking-tight font-syne italic">
+                Welcome back, <span className="text-emerald-500">{userName}</span>
             </h2>
 
-            {/* Description */}
-            <p className="text-gray-500 dark:text-gray-400 text-[15px] max-w-[520px] mb-7 leading-relaxed">
-                Our AI assistant is ready to help you. Most issues are analyzed and resolved in under 5 minutes.
+            {/* Contextual Description */}
+            <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-medium leading-relaxed max-w-xl mb-10">
+                Our autonomous heuristics are primed for deployment. Most reported issues reach successful resolution nodes in under 300 seconds.
             </p>
 
-            {/* Buttons */}
-            <div className="flex flex-wrap gap-3">
-                <button
+            {/* Interactive Command Cluster */}
+            <div className="flex flex-wrap gap-4">
+                <motion.button
                     id="tour-create-ticket"
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => navigate('/create-ticket')}
-                    className="inline-flex items-center gap-2 bg-gradient-to-br from-green-600 to-green-500 text-white rounded-xl px-6 py-3 font-semibold text-sm shadow-lg shadow-green-600/20 hover:scale-[1.02] transition-transform active:scale-95"
+                    className="inline-flex items-center gap-2.5 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-sm uppercase tracking-wider transition-all shadow-xl shadow-emerald-600/20 border-none cursor-pointer"
                 >
                     <PlusCircle size={18} />
                     Report New Issue
-                </button>
-                <button
+                </motion.button>
+
+                <motion.button
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => navigate('/my-tickets')}
-                    className="inline-flex items-center gap-2 bg-white dark:bg-slate-800 text-green-700 dark:text-green-400 border-1.5 border-green-100 dark:border-green-900/50 rounded-xl px-6 py-3 font-semibold text-sm hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                    className="inline-flex items-center gap-2.5 px-8 py-4 bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all cursor-pointer shadow-sm"
                 >
                     <ListTodo size={18} />
                     View My Tickets
-                </button>
+                </motion.button>
             </div>
-        </div>
+        </motion.div>
     );
 };
 

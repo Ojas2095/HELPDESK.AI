@@ -1,7 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, ArrowLeft, ArrowRight, Star } from 'lucide-react';
+import { Briefcase, ArrowLeft, ArrowRight, MapPin, Clock, CircleDollarSign } from 'lucide-react';
 import { Card } from '../components/ui/card';
+import Header from "../components/landing/Header";
+import Footer from "../components/landing/Footer";
 
 export default function Careers() {
   const navigate = useNavigate();

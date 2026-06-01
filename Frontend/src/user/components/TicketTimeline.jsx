@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   CheckCircle2,
   Clock,
@@ -150,9 +150,6 @@ const StepNode = ({ state, Icon }) => {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-// Subscribes directly to the Zustand store so it re-renders on any status change.
-// Optional `ticketId` prop: looks up the specific ticket in `tickets[]`.
-// Falls back to `activeTicket` if no ID is provided.
 
 const TicketTimeline = ({ ticketId, ticket: passedTicket, className = '', forceStep }) => {
   // Reactive store subscription
@@ -339,7 +336,7 @@ const TicketTimeline = ({ ticketId, ticket: passedTicket, className = '', forceS
   );
 };
 
-// ─── Small helper: one summary field ─────────────────────────────────────────
+// ─── Component Field Definition Helper ─────────────────────────────────────────
 
 const SummaryField = ({ Icon, label, value, valueClass }) => (
   <div className='flex items-start gap-2.5'>

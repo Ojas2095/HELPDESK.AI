@@ -10,8 +10,6 @@ import {
   PictureOutlined,
 } from '@ant-design/icons';
 
-const { Panel } = Collapse;
-
 function Result() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -47,7 +45,6 @@ function Result() {
     }
   };
 
-  // Parse solution_steps if it's a string
   const solutionSteps = Array.isArray(data.solution_steps)
     ? data.solution_steps
     : typeof data.solution_steps === 'string'
@@ -71,7 +68,6 @@ function Result() {
               </p>
             </div>
 
-            {/* Auto-Resolve Badge */}
             {data.auto_resolve !== undefined && (
               <Badge
                 count={
@@ -90,7 +86,7 @@ function Result() {
           </div>
         </Card>
 
-        {/* Auto-Resolve Alert */}
+        {/* Status Alerts */}
         {data.auto_resolve === false && (
           <Alert
             message='Human Intervention Required'
@@ -98,6 +94,7 @@ function Result() {
             type='warning'
             icon={<WarningOutlined />}
             showIcon
+            className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 p-4 shadow-sm"
           />
         )}
 
@@ -108,6 +105,7 @@ function Result() {
             type='success'
             icon={<CheckCircleOutlined />}
             showIcon
+            className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/20 p-4 shadow-sm"
           />
         )}
 
@@ -123,7 +121,12 @@ function Result() {
                 <Tag color='cyan' className='text-sm'>
                   {data.subcategory}
                 </Tag>
-              )}
+                {data.subcategory && (
+                  <Tag color="cyan" className="text-xs font-bold px-2.5 py-0.5 rounded-md">
+                    {data.subcategory}
+                  </Tag>
+                )}
+              </div>
             </div>
 
             <div className='flex items-center gap-4'>
@@ -188,7 +191,7 @@ function Result() {
           </div>
         </Card>
 
-        {/* Visual Analysis Card (Gemini) */}
+        {/* Visual Analysis Card */}
         {(data.image_description || data.ocr_text) && (
           <Card
             title={

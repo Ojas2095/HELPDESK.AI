@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Home, ShieldCheck, Clock, Briefcase } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { CheckCircle2, Home, ShieldCheck, Clock, Briefcase, Power, Zap } from 'lucide-react';
 import useTicketStore from '../../store/ticketStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 

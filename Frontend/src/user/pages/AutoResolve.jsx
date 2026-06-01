@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, User, CheckCircle2, XCircle, Send, RefreshCcw, ShieldCheck } from 'lucide-react';
 import useTicketStore from '../../store/ticketStore';
 

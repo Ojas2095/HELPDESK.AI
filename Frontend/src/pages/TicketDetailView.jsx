@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2,
   User,
@@ -72,37 +73,37 @@ function TicketDetailView() {
   const isReopened = ticket.reopened_at && !isResolved;
   const messages = ticket.messages || [];
 
-                        {/* Ticket Info Card */}
-                        <Card className="p-0 overflow-hidden border-none shadow-xl shadow-gray-200/50">
-                            <CardHeader className="bg-gray-50 px-8 py-5 border-b border-gray-100">
-                                <CardTitle className="font-bold text-gray-800 flex items-center gap-2">
-                                    <FileText size={18} /> Ticket Information
+                        {/* Core Meta Ticket Information */}
+                        <Card className="p-0 overflow-hidden rounded-[2.5rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm dark:shadow-none">
+                            <CardHeader className="bg-slate-50 dark:bg-white/[0.01] px-6 sm:p-8 py-5 border-b border-slate-150 dark:border-slate-800/60">
+                                <CardTitle className="font-bold text-slate-900 dark:text-white text-lg tracking-tight font-syne flex items-center gap-2.5">
+                                    <FileText size={18} className="text-emerald-500" /> Ticket Information
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="p-8 space-y-6">
-                                <div>
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Ticket ID</label>
-                                    <p className="text-xl md:text-2xl font-mono font-black text-emerald-900 tracking-wider">#{ticket.ticket_id}</p>
+                            <CardContent className="p-6 sm:p-8 space-y-6">
+                                <div className="space-y-1">
+                                    <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block pl-0.5">Ticket Ident Matrix</span>
+                                    <p className="text-2xl sm:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-wider">#{ticket.ticket_id}</p>
                                 </div>
-                                <div>
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Summary</label>
-                                    <p className="text-xl font-medium text-gray-900 leading-relaxed bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                                <div className="space-y-2">
+                                    <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block pl-0.5">Problem Summary</span>
+                                    <p className="text-base sm:text-lg font-medium text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-slate-950 p-5 rounded-2xl border border-slate-150 dark:border-slate-800/40 m-0">
                                         {ticket.summary}
                                     </p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Assigned Team</label>
-                                        <div className="flex items-center gap-2 font-bold text-gray-700">
-                                            <Briefcase size={16} className="text-emerald-600" />
-                                            {ticket.assigned_team}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="p-5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-150 dark:border-slate-800/40 flex flex-col gap-1.5">
+                                        <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Assigned Support Domain</span>
+                                        <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300 text-sm">
+                                            <Briefcase size={16} className="text-emerald-500 shrink-0" />
+                                            <span>{ticket.assigned_team}</span>
                                         </div>
                                     </div>
-                                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Current Status</label>
-                                        <div className={`flex items-center gap-2 font-black uppercase text-xs tracking-tight ${isResolved ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                            <div className={`w-2 h-2 rounded-full ${isResolved ? 'bg-emerald-600' : 'bg-amber-500 animate-pulse'}`}></div>
-                                            {ticket.status}
+                                    <div className="p-5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-150 dark:border-slate-800/40 flex flex-col gap-1.5">
+                                        <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Current Node Lifecycle</span>
+                                        <div className={`flex items-center gap-2 font-black uppercase text-xs tracking-tight ${isResolved ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'}`}>
+                                            <div className={`w-2 h-2 rounded-full ${isResolved ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                                            <span>{ticket.status}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -154,6 +155,7 @@ function TicketDetailView() {
                 <SLACountdownTimer createdAt={ticket.created_at} priority={ticket.priority || "medium"} />
                         </div>
                     </div>
+
                 </div>
             </div>
             <button

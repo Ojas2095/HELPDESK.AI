@@ -38,7 +38,6 @@ const steps = [
   },
 ];
 
-// ─── Custom Tooltip ────────────────────────────────────────────────────────────
 function EmeraldTooltip({
   continuous,
   index,
@@ -121,7 +120,6 @@ function EmeraldTooltip({
   );
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────────
 const UserTour = () => {
   const [run, setRun] = useState(() => {
     return localStorage.getItem(TOUR_KEY) !== 'true';

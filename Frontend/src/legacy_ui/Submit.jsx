@@ -42,7 +42,6 @@ function Submit() {
       navigate('/login');
     }
 
-    // Set prefilled category if passed from Dashboard QuickActions
     if (locationState.prefilledCategory) {
       setCategory(locationState.prefilledCategory.toLowerCase());
     }
@@ -303,7 +302,7 @@ function Submit() {
                 className='w-full h-12 px-4 rounded-xl border border-[var(--stitch-border-light,#e2e8e5)] dark:border-[var(--stitch-border-dark,#2a4034)] bg-white dark:bg-[#15261e] text-[var(--stitch-text-main,#111814)] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 text-base focus:outline-none focus:ring-2 focus:ring-[var(--stitch-primary,#13ec80)]/50 focus:border-[var(--stitch-primary,#13ec80)] transition-all shadow-sm'
                 placeholder='Give your issue a short, descriptive title...'
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => { setTitle(e.target.value); setError(""); }}
                 disabled={loading}
               />
             </div>
@@ -322,7 +321,7 @@ function Submit() {
                   className='w-full min-h-[160px] p-4 rounded-xl border border-[var(--stitch-border-light,#e2e8e5)] dark:border-[var(--stitch-border-dark,#2a4034)] bg-white dark:bg-[#15261e] text-[var(--stitch-text-main,#111814)] dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 text-base leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[var(--stitch-primary,#13ec80)]/50 focus:border-[var(--stitch-primary,#13ec80)] transition-all shadow-sm'
                   placeholder="Please describe the problem you're facing, including any error messages..."
                   value={issue}
-                  onChange={(e) => setIssue(e.target.value)}
+                  onChange={(e) => { setIssue(e.target.value); setError(""); }}
                   disabled={loading}
                 />
                 <div className='absolute bottom-3 right-3 cursor-pointer'>

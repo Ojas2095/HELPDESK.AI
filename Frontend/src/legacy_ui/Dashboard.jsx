@@ -20,7 +20,6 @@ import useTicketsRealtime from '../hooks/useTicketsRealtime';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-// Tracks which ticket IDs were recently updated for highlight animation
 const useRecentlyUpdated = () => {
   const [recentIds, setRecentIds] = useState(new Set());
 
@@ -32,7 +31,7 @@ const useRecentlyUpdated = () => {
         next.delete(id);
         return next;
       });
-    }, 2000); // highlight lasts 2 seconds
+    }, 2000);
   };
 
   return { recentIds, markUpdated };
@@ -42,12 +41,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const { recentIds, markUpdated } = useRecentlyUpdated();
 
-  // Pull live tickets from Zustand store
   const tickets = useTicketStore((state) => state.tickets);
   const addTicket = useTicketStore((state) => state.addTicket);
   const prevTicketsRef = useRef([]);
 
-  // Activate realtime subscription
   useTicketsRealtime();
 
   const tabs = [
@@ -58,7 +55,6 @@ const Dashboard = () => {
     { title: 'Security', icon: Shield },
   ];
 
-  // Initial fetch — populate store on first load
   useEffect(() => {
     const fetchTickets = async () => {
       try {
@@ -71,19 +67,19 @@ const Dashboard = () => {
       }
     };
     fetchTickets();
+<<<<<<< HEAD
+=======
 
+>>>>>>> upstream/gssoc
   }, []);
 
-  // Detect newly inserted or updated tickets for highlight animation
   useEffect(() => {
     const prevIds = new Set(prevTicketsRef.current.map((t) => t.ticket_id));
 
     tickets.forEach((t) => {
       if (!prevIds.has(t.ticket_id)) {
-        // Brand new ticket
         markUpdated(t.ticket_id);
       } else {
-        // Check if it was updated
         const prev = prevTicketsRef.current.find((p) => p.ticket_id === t.ticket_id);
         if (prev && JSON.stringify(prev) !== JSON.stringify(t)) {
           markUpdated(t.ticket_id);
@@ -92,10 +88,12 @@ const Dashboard = () => {
     });
 
     prevTicketsRef.current = tickets;
+<<<<<<< HEAD
+=======
 
+>>>>>>> upstream/gssoc
   }, [tickets]);
 
-  // Summary Counts
   const totalTickets = tickets.length;
   const openTickets = tickets.filter(
     (t) => t.status === 'Open' || t.Resolution_Status === 'Open'
@@ -134,8 +132,8 @@ const Dashboard = () => {
       {/* Highlight animation style */}
       <style>{`
         @keyframes flash-highlight {
-          0%   { background-color: #eef2ff; }
-          50%  { background-color: #c7d2fe; }
+          0%   { background-color: rgba(16, 185, 129, 0.15); }
+          50%  { background-color: rgba(16, 185, 129, 0.25); }
           100% { background-color: transparent; }
         }
         .ticket-highlight {

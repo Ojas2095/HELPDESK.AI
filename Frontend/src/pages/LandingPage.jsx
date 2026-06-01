@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
- 
+import React, { useRef, useEffect, useState } from 'react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -134,17 +134,17 @@ function DemoModal({ onClose }) {
                 </div>
               </div>
 
-                <div className="p-6 bg-gray-900 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div>
-                        <h2 className="text-xl font-extrabold text-white italic uppercase tracking-tight">Full Platform Walkthrough</h2>
-                        <p className="text-gray-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
+                <div className="p-6 bg-gray-50 dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="text-left">
+                        <h2 className="text-xl font-extrabold text-gray-900 dark:text-white uppercase tracking-tight">Full Platform Walkthrough</h2>
+                        <p className="text-gray-500 dark:text-slate-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
-                            onClick={() => { onClose(); window.location.href = '/admin-signup'; }}
-                            className={`group flex-1 md:px-8 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black italic uppercase tracking-wider ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW} flex items-center justify-center gap-2`}
+                            onClick={() => { onClose(); navigate('/admin-signup'); }}
+                            className="flex-1 md:px-8 bg-emerald-600 hover:bg-emerald-500 text-white py-3 px-6 rounded-xl font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 border-none cursor-pointer"
                         >
-                            Start Free <ArrowRight className={`w-4 h-4 ml-1 ${CTA_ICON_SHIFT}`} />
+                            Start Free <ArrowRight className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -196,71 +196,6 @@ export default function LandingPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-    const steps = useMemo(() => [
-        {
-            num: '01',
-            title: 'Messy User Input',
-            label: 'The Problem',
-            desc: 'Users describe issues in natural language, often lacking critical details or context.',
-            color: 'blue',
-            icon: MessageSquare,
-            visual: (
-                <div className="space-y-4">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 max-w-[100%] float-left animate-in slide-in-from-left duration-500">
-                        <p className="text-sm text-blue-200 italic font-medium">"Hey support, the wifi in downstream lab 3 is acting up again. Can't connect. Need fixed ASAP!"</p>
-                    </div>
-                </div>
-            )
-        },
-        {
-            num: '02',
-            title: 'AI Analysis',
-            label: 'The Brain',
-            desc: 'AI parses intent, extracts entities (Lab 3), and detects urgency (ASAP) in milliseconds.',
-            color: 'emerald',
-            icon: Bot,
-            visual: (
-                <div className="relative flex flex-col items-center justify-center h-full gap-4">
-                    <div className="w-24 h-24 bg-emerald-500/20 rounded-full border border-emerald-500/30 flex items-center justify-center animate-pulse">
-                        <Zap className="w-10 h-10 text-emerald-400" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded text-[10px] text-emerald-300 font-bold uppercase tracking-widest text-center">Category: Network</div>
-                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded text-[10px] text-emerald-300 font-bold uppercase tracking-widest text-center">Priority: High</div>
-                    </div>
-                </div>
-            )
-        },
-        {
-            num: '03',
-            title: 'Smart Resolution',
-            label: 'The Solution',
-            desc: 'AI either resolves the ticket using history or routes it with full context to the right human team.',
-            color: 'purple',
-            icon: CheckCircle,
-            visual: (
-                <div className="space-y-4">
-                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-emerald-100">
-                        <div className="bg-emerald-500 px-4 py-2 flex justify-between items-center">
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Ticket #4029</span>
-                            <span className="text-[10px] font-bold text-white/80">RESOLVED</span>
-                        </div>
-                        <div className="p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
-                                    <Bot className="w-3.5 h-3.5 text-emerald-600" />
-                                </div>
-                                <span className="text-xs font-bold text-gray-800 italic">HelpDesk AI Assistant</span>
-                            </div>
-                            <p className="text-[11px] text-gray-600 leading-tight">"Remotely reset the Lab 3 router. Connectivity restored. Total downtime: 143ms."</p>
-                        </div>
-                    </div>
-                    <div className="text-center text-xs text-white/40 font-medium">Auto-closed in 2 seconds</div>
-                </div>
-            )
-        }
-    ], []);
-
     useEffect(() => {
         if (!loading && user && profile) {
             if (profile.role === 'master_admin') navigate('/master-admin/dashboard');
@@ -276,7 +211,7 @@ export default function LandingPage() {
             period: '/mo',
             desc: 'Perfect for small teams exploring AI helpdesk.',
             cta: 'Get Started Free',
-            ctaStyle: `border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800 group ${CTA_TRANSITION} ${CTA_SCALE}`,
+            ctaStyle: 'border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 hover:border-emerald-900 hover:text-emerald-800 dark:hover:border-emerald-400 dark:hover:text-emerald-400',
             features: ['Up to 50 tickets/mo', 'Basic AI Categorization', 'Email Support', '1 Team Member', 'Public API Access'],
             popular: false,
         },
@@ -286,7 +221,7 @@ export default function LandingPage() {
             period: '/mo',
             desc: 'For growing IT teams needing full automation.',
             cta: 'Start Free Trial',
-            ctaStyle: `bg-emerald-900 text-white hover:bg-emerald-800 group ${CTA_TRANSITION} ${CTA_SCALE} ${CTA_PRIMARY_GLOW}`,
+            ctaStyle: 'bg-emerald-900 dark:bg-emerald-600 text-white hover:bg-emerald-800 dark:hover:bg-emerald-500 shadow-lg shadow-emerald-900/20',
             features: ['Up to 500 tickets/mo', 'Advanced AI Parsing', 'Priority Detection Engine', 'Duplicate Detection', '5 Team Members', 'Priority Email Support'],
             popular: true,
         },
@@ -296,32 +231,11 @@ export default function LandingPage() {
             period: '',
             desc: 'For large organizations with complex IT landscapes.',
             cta: 'Contact Sales',
-            ctaStyle: `border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800 group ${CTA_TRANSITION} ${CTA_SCALE}`,
+            ctaStyle: 'border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 hover:border-emerald-900 hover:text-emerald-800 dark:hover:border-emerald-400 dark:hover:text-emerald-400',
             features: ['Unlimited tickets', 'Custom AI Fine-Tuning', 'SSO & Audit Logs', 'Dedicated SLA Manager', 'Unlimited Members', 'VAPT & Compliance Reports'],
             popular: false,
         },
     ];
-
-    const handlePricingClick = (planName) => {
-        if (planName === 'Growth') {
-            setIsRedirecting(true);
-            // Redirect to Stripe Payment Link
-            const stripeUrl = import.meta.env.VITE_STRIPE_GROWTH_LINK;
-            if (stripeUrl) {
-                window.location.href = stripeUrl;
-            } else {
-                console.warn("Stripe link not configured in .env");
-                setTimeout(() => {
-                    setIsRedirecting(false);
-                    navigate('/admin-signup');
-                }, 1000);
-            }
-        } else if (planName === 'Enterprise') {
-            navigate('/contact-sales');
-        } else {
-            navigate('/admin-signup');
-        }
-    };
 
     return (
         <div className="min-h-screen bg-white dark:bg-gray-900 font-sans text-slate-800 dark:text-white">
@@ -736,221 +650,33 @@ export default function LandingPage() {
 </section>
 
             {/* ==================== STATS BAR ==================== */}
-            <section className="bg-emerald-900 py-8 sm:py-12 text-white">
+            <section className="bg-emerald-900 dark:bg-slate-950 py-12 border-y border-emerald-800/20 dark:border-slate-800 text-white transition-colors duration-300">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10">
-                        <AnimatedStat prefix="+" target="80" suffix="%" label="Faster Ticket Triage" />
-                        <AnimatedStat target="99" suffix="%" label="Classification Accuracy" />
-                        <AnimatedStat target="Zero" label="Manual Routing Needed" isWord={true} />
-                        <AnimatedStat target="24" suffix="/7" label="AI Auto-Resolution" />
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10 dark:divide-slate-800">
+                        <div className="pt-0">
+                            <AnimatedStat prefix="+" target="80" suffix="%" label="Faster Ticket Triage" />
+                        </div>
+                        <div className="pt-4 sm:pt-0">
+                            <AnimatedStat target="99" suffix="%" label="Classification Accuracy" />
+                        </div>
+                        <div className="pt-4 lg:pt-0">
+                            <AnimatedStat target="Zero" label="Manual Routing Needed" isWord={true} />
+                        </div>
+                        <div className="pt-4 lg:pt-0">
+                            <AnimatedStat target="24" suffix="/7" label="AI Auto-Resolution" />
+                        </div>
                     </div>
                 </div>
             </section>
 
             {/* ==================== FEATURES GRID ==================== */}
-            <section className="py-16 sm:py-20 md:py-24 bg-white" id="features">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <span className="text-xs font-bold tracking-widest text-emerald-700 uppercase mb-3 block">Core Intelligence</span>
-                        <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight">Work Smarter, Not Harder</h2>
-                        <p className="text-gray-500 mt-4 text-lg max-w-xl mx-auto">Three AI capabilities that eliminate manual helpdesk work.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                        {/* Card 1: Auto-Categorization */}
-                        <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
-                            <div className="h-40 sm:h-44 md:h-52 bg-gradient-to-br from-blue-50 to-gray-50 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
-                                <div className="relative z-10 flex flex-col gap-3 items-center">
-                                    <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-xs font-bold text-gray-400 flex items-center gap-2 transform -translate-x-4 opacity-60">
-                                        <div className="w-2 h-2 rounded-full bg-gray-300" /> Ticket #1024
-                                    </div>
-                                    <div className="bg-white px-5 py-3 rounded-xl shadow-lg border border-blue-100 flex items-center gap-3 transform scale-110">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                            <Folder className="w-4 h-4 text-blue-600" />
-                                        </div>
-                                        <div>
-                                            <div className="h-2 w-16 bg-gray-200 rounded mb-1.5" />
-                                            <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-100">Network</span>
-                                        </div>
-                                    </div>
-                                    <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-xs font-bold text-gray-400 flex items-center gap-2 transform translate-x-6 opacity-60">
-                                        <div className="w-2 h-2 rounded-full bg-gray-300" /> Ticket #1025
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-5 sm:p-6 md:p-8">
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Auto-Categorization</h3>
-                                <p className="text-gray-500 leading-relaxed mb-6">
-                                    Instantly detects if an issue is Network, Hardware, Software, or Access-related — no manual tagging.
-                                </p>
-                                <button
-                                    onClick={() => navigate('/features/categorization')}
-                                    className="inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all"
-                                >
-                                    Explore <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Card 2: Priority Detection */}
-                        <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
-                            <div className="h-40 sm:h-44 md:h-52 bg-gradient-to-br from-red-50 to-orange-50 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
-                                <div className="relative z-10 w-full max-w-[200px] space-y-2.5">
-                                    <div className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between opacity-50 scale-95">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-green-400" />
-                                            <div className="h-1.5 w-12 bg-gray-200 rounded" />
-                                        </div>
-                                        <span className="text-[10px] font-bold text-gray-400">Low</span>
-                                    </div>
-                                    <div className="bg-white p-3 rounded-xl border border-red-100 shadow-md flex items-center justify-between ring-2 ring-red-50">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                            <div className="h-2 w-20 bg-gray-800 rounded" />
-                                        </div>
-                                        <span className="text-[10px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded border border-red-100">CRITICAL</span>
-                                    </div>
-                                    <div className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between opacity-50 scale-95">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full bg-yellow-400" />
-                                            <div className="h-1.5 w-16 bg-gray-200 rounded" />
-                                        </div>
-                                        <span className="text-[10px] font-bold text-gray-400">Medium</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-5 sm:p-6 md:p-8">
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Priority Detection</h3>
-                                <p className="text-gray-500 leading-relaxed mb-6">
-                                    Understands urgency signals in text and automatically flags issues from Low to Critical.
-                                </p>
-                                <button
-                                    onClick={() => navigate('/features/priority')}
-                                    className="inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all"
-                                >
-                                    Explore <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Card 3: Smart Resolution */}
-                        <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
-                            <div className="h-40 sm:h-44 md:h-52 bg-gradient-to-br from-emerald-50 to-teal-50 p-4 sm:p-6 flex items-center justify-center relative overflow-hidden">
-                                <div className="relative z-10 w-full max-w-[200px] flex flex-col gap-3">
-                                    <div className="self-end bg-emerald-600 text-white p-2.5 rounded-2xl rounded-tr-none shadow-sm text-[10px] max-w-[80%]">
-                                        Reset password for user@company.com?
-                                    </div>
-                                    <div className="self-start flex items-end gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-emerald-100 border border-white shadow-sm flex items-center justify-center">
-                                            <Bot className="w-3 h-3 text-emerald-600" />
-                                        </div>
-                                        <div className="bg-white p-2.5 rounded-2xl rounded-tl-none border border-gray-200 shadow-sm text-[10px] text-gray-600">
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <CheckCircle className="w-3 h-3 text-emerald-500" />
-                                                <span className="font-bold text-gray-800">Done</span>
-                                            </div>
-                                            Reset link sent successfully.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-5 sm:p-6 md:p-8">
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Resolution</h3>
-                                <p className="text-gray-500 leading-relaxed mb-6">
-                                    Checks historical data to auto-fix simple issues, or routes complex ones to the right human team.
-                                </p>
-                                <button
-                                    onClick={() => navigate('/features/resolution')}
-                                    className="inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all"
-                                >
-                                    Explore <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            <FeaturesGrid />
 
             {/* ==================== HOW IT WORKS ==================== */}
-            <section className="bg-emerald-950 py-14 sm:py-20 md:py-32 text-white relative overflow-hidden" id="how-it-works">
-                {/* Background Decorations */}
-                <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
-
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                    <div className="flex flex-col md:flex-row gap-8 md:gap-16 md:items-center">
-                        {/* Left: Content */}
-                        <div className="w-full md:w-1/2">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest border border-emerald-500/20 mb-4 md:mb-6">
-                                The Journey
-                            </div>
-                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight leading-[0.95] mb-8 md:mb-12">
-                                From Chaos <br />
-                                to <span className="text-emerald-500">Clarity.</span>
-                            </h2>
-
-                            <div className="space-y-4">
-                                {steps.map((step, idx) => (
-                                    <div
-                                        key={idx}
-                                        onMouseEnter={() => setActiveStep(idx)}
-                                        onClick={() => setActiveStep(idx)}
-                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-300 border ${activeStep === idx
-                                            ? 'bg-white/10 border-white/20 shadow-2xl shadow-black/20'
-                                            : 'bg-transparent border-transparent hover:bg-white/5 opacity-40 hover:opacity-100'
-                                            }`}
-                                    >
-                                        <div className="flex items-start gap-4 md:gap-6">
-                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-bold text-lg md:text-xl transition-all duration-300 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-105' : 'bg-white/10 text-white/40'}`}>
-                                                {step.num}
-                                            </div>
-                                            <div>
-                                                <h3 className={`text-xl font-semibold tracking-tight transition-colors duration-300 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
-                                                    {step.title}
-                                                </h3>
-                                                <p
-                                                    aria-hidden={activeStep !== idx}
-                                                    className={`text-white/60 text-sm mt-3 leading-relaxed max-w-sm overflow-hidden transition-all duration-300 ${activeStep === idx ? 'opacity-100 max-h-24' : 'opacity-0 max-h-0'}`}
-                                                >
-                                                    {step.desc}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Right: Visual Display */}
-                        <div className="w-full md:w-1/2 h-[300px] sm:h-[350px] md:h-[500px] relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-2xl sm:rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-4 sm:p-6 md:p-12 flex items-center justify-center">
-                                <AnimatePresence mode="sync">
-                                    <motion.div
-                                        key={activeStep}
-                                        initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 1.01, y: -8 }}
-                                        transition={{ duration: 0.28, ease: 'easeOut' }}
-                                        className="w-full h-full flex flex-col items-center justify-center will-change-transform"
-                                    >
-                                        <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 text-white/50 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
-                                            <div className={`w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse`} />
-                                            {steps[activeStep].label}
-                                        </div>
-                                        <div className="w-full max-w-sm">
-                                            {steps[activeStep].visual}
-                                        </div>
-                                    </motion.div>
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Decorative Floating Elements */}
-                            <div className="absolute -top-6 -right-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl animate-pulse" />
-                            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl animate-pulse delay-700" />
-                        </div>
-                    </div>
-                </div>
-            </section>
+            <HowItWorks
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+            />
 
             {/* ==================== PRICING ==================== */}
             <section className="py-16 sm:py-20 md:py-24 bg-gray-50" id="pricing">
@@ -1023,147 +749,10 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== TEAM SECTION ==================== */}
-            <div className="px-4 sm:px-6 lg:px-8">
-                <TeamSection />
-            </div>
-
+            <TeamSection />
+            <Promote />
             {/* ==================== FOOTER ==================== */}
-            <footer className="bg-emerald-950 text-white">
-                {/* CTA Block */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 md:pt-24 pb-12 md:pb-16 text-center border-b border-white/10">
-                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-4 sm:mb-6 max-w-3xl mx-auto leading-tight">
-                        The Smartest IT Helpdesk for Indian Businesses
-                    </h2>
-                    <p className="text-white/70 text-base sm:text-lg mb-6 sm:mb-10 max-w-xl mx-auto">
-                        Start automating ticket triage today. No credit card required.
-                    </p>
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button
-                            onClick={() => navigate('/admin-signup')}
-                            className={`group w-full sm:w-auto px-8 py-4 bg-white text-emerald-900 font-bold rounded-xl hover:bg-green-50 ${CTA_TRANSITION} ${CTA_SCALE} shadow-xl`}
-                        >
-                            Get Started Free
-                        </button>
-                        <button
-                            onClick={() => setShowDemo(true)}
-                            className={`group w-full sm:w-auto px-8 py-4 border border-white/30 text-white font-semibold rounded-xl hover:bg-white/10 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2`}
-                        >
-                            <Play className={`w-4 h-4 fill-white ${CTA_PLAY_SHIFT}`} /> Watch Demo
-                        </button>
-                    </div>
-                    <div className="mt-8">
-                        <button
-                            onClick={() => navigate('/login')}
-                            className="text-white/50 hover:text-white text-sm font-medium transition-colors"
-                        >
-                            Already have an account? <span className="underline underline-offset-4 decoration-white/20">Sign in</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Footer Links */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-10">
-                        {/* Brand Column */}
-                        <div className="col-span-2 md:col-span-1">
-                            <div className="flex items-center gap-2 mb-4">
-                                <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
-                                <span className="font-black text-lg text-white italic uppercase">HelpDesk.ai</span>
-                            </div>
-                            <p className="text-white/50 text-sm leading-relaxed mb-4">
-                                AI-powered IT helpdesk automation for modern Indian enterprises.
-                            </p>
-                            <p className="text-xs text-white/30 mb-5">Made with ❤️ in India 🇮🇳</p>
-                            <div className="flex gap-3">
-                                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors">
-                                    <Twitter className="w-4 h-4" />
-                                </a>
-                                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors">
-                                    <Linkedin className="w-4 h-4" />
-                                </a>
-                                <a href="https://github.com/ritesh-1918/HELPDESK.AI" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors">
-                                    <Github className="w-4 h-4" />
-                                </a>
-                            </div>
-                        </div>
-
-                        {[
-                            {
-                                heading: 'Product',
-                                links: [
-                                    { label: 'Auto-Categorization', href: '/features/categorization' },
-                                    { label: 'Priority Detection', href: '/features/priority' },
-                                    { label: 'Smart Resolution', href: '/features/resolution' },
-                                    { label: 'Analytics Dashboard', href: '/admin-signup' },
-                                ]
-                            },
-                            {
-                                heading: 'Resources',
-                                links: [
-                                    { label: 'Documentation', href: '#' },
-                                    { label: 'API Reference', href: '#' },
-                                    { label: 'Changelog', href: '/changelog' },
-                                    { label: 'Status Page', href: '#' },
-                                ]
-                            },
-                            {
-                                heading: 'Company',
-                                links: [
-                                    { label: 'About Us', href: '/about-us' },
-                                    { label: 'Careers', href: '#' },
-                                    { label: 'Privacy Policy', href: '/privacy' },
-                                    { label: 'Terms of Service', href: '/terms' },
-                                ]
-                            },
-                            {
-                                heading: 'Legal & Security',
-                                links: [
-                                    { label: 'Security Overview', href: '/security' },
-                                    { label: 'Privacy Policy', href: '/privacy' },
-                                    { label: 'Terms of Service', href: '/terms' },
-                                    { label: 'Cookie Policy', href: '/cookie-policy' },
-                                ]
-                            },
-                        ].map(({ heading, links }) => (
-                            <div key={heading}>
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-5">{heading}</h4>
-                                <ul className="space-y-3">
-                                    {links.map(({ label, href }) => (
-                                        <li key={label}>
-                                            {href.startsWith('/') ? (
-                                                <button
-                                                    onClick={() => navigate(href)}
-                                                    className="text-sm text-white/65 hover:text-white transition-colors text-left"
-                                                >
-                                                    {label}
-                                                </button>
-                                            ) : (
-                                                <a href={href} className="text-sm text-white/65 hover:text-white transition-colors">{label}</a>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Bottom bar */}
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-16 pt-8 border-t border-white/10">
-                        <p className="text-xs text-white/40 text-center md:text-left">
-                            © 2026 HelpDesk.ai. All rights reserved. · Registered in India
-                        </p>
-                        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-                            <button onClick={() => navigate('/terms')} className="text-xs text-white/40 hover:text-white transition-colors">Terms</button>
-                            <button onClick={() => navigate('/privacy')} className="text-xs text-white/40 hover:text-white transition-colors">Privacy</button>
-                            <button onClick={() => navigate('/security')} className="text-xs text-white/40 hover:text-white transition-colors">Security</button>
-                            <div className="flex items-center gap-2 text-xs text-white/40 border border-white/10 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-white/10 transition-colors">
-                                <Globe className="w-3.5 h-3.5" />
-                                <span>English (IN)</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
       ),
     },

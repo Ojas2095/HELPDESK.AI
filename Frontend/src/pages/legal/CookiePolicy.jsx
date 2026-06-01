@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, Cookie } from 'lucide-react';
 import { Card } from '../../components/ui/card';
 
 export default function CookiePolicy() {

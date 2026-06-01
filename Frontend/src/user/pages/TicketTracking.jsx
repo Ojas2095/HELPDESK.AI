@@ -36,6 +36,7 @@ const TicketTracking = () => {
         return new Date(Date.now() + slaHours * 60 * 60 * 1000).toISOString();
     };
 
+
     useEffect(() => {
         if (!aiTicket) {
             navigate('/create-ticket');
@@ -51,7 +52,6 @@ const TicketTracking = () => {
         const isAutoResolved = aiTicket.auto_resolve || false;
         const status = isAutoResolved ? 'auto_resolved' : 'pending_human';
 
-                // Map AI Analysis into the TicketSaveRequest format
                 const savePayload = {
                     user_id: user?.id,
                     subject: aiTicket.summary,
@@ -100,7 +100,6 @@ const TicketTracking = () => {
                     setCreatedTicket(newTicket);
                     setIsCreating(false);
 
-                    // Redirect to the detail page after a short confirmation pause
                     setTimeout(() => {
                         navigate(`/ticket/${res.data.ticket_id}`);
                     }, 2500);

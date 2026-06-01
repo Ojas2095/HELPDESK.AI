@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Ticket,
   Inbox,
@@ -14,8 +15,6 @@ import {
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import SLABadge from "../../admin/components/SLABadge";
@@ -98,29 +97,29 @@ function MyTickets() {
 
         setLoading(true);
         setError(null);
-        const { data, error: sbError } = await supabase
-            .from('tickets')
-            .select('*') // Select all columns
-            .eq('user_id', user.id) // Filter by the current user's ID
-            .order('created_at', { ascending: false });
+        try {
+            const { data, error: sbError } = await supabase
+                .from('tickets')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
 
-        if (sbError) {
-            console.error("Error fetching tickets:", sbError);
-            setError(sbError.message);
-            setTickets([]);
-        } else {
+            if (sbError) throw sbError;
             setTickets(data || []);
+        } catch (err) {
+            console.error("Error fetching tickets:", err);
+            setError(err.message);
+            setTickets([]);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, [user]);
 
     useEffect(() => {
-         
         fetchTickets();
 
         if (!user?.id) return;
 
-        // Real-time subscription for THIS user's tickets
         const channel = supabase
             .channel(`user_tickets_${user.id}`)
             .on(
@@ -147,43 +146,46 @@ function MyTickets() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user, fetchTickets]); // Re-subscribe when user changes
+    }, [user, fetchTickets]);
 
-    // Filtering logic
     const filteredTickets = useMemo(() => {
-        return tickets
-            .filter(ticket => {
-                const searchLower = searchQuery.toLowerCase();
-                const matchesSearch =
-                    (ticket.subject || '').toLowerCase().includes(searchLower) ||
-                    (ticket.summary || '').toLowerCase().includes(searchLower) ||
-                    safeDisplayText(ticket.description).toLowerCase().includes(searchLower) ||
-                    String(ticket.id).includes(searchLower);
+        return tickets.filter(ticket => {
+            const searchLower = searchQuery.toLowerCase();
+            const matchesSearch =
+                (ticket.subject || '').toLowerCase().includes(searchLower) ||
+                (ticket.summary || '').toLowerCase().includes(searchLower) ||
+                safeDisplayText(ticket.description).toLowerCase().includes(searchLower) ||
+                String(ticket.id).includes(searchLower);
 
-                const ticketStatus = ticket.status || 'open';
-                const matchesStatus = statusFilter === 'All' ? true : ticketStatus.toLowerCase() === statusFilter.toLowerCase();
+            const ticketStatus = ticket.status || 'open';
+            const matchesStatus = statusFilter === 'All' ? true : ticketStatus.toLowerCase() === statusFilter.toLowerCase();
 
-                const ticketPriority = ticket.priority || 'medium';
-                const matchesPriority = priorityFilter === 'All' ? true : ticketPriority.toLowerCase() === priorityFilter.toLowerCase();
+            const ticketPriority = ticket.priority || 'medium';
+            const matchesPriority = priorityFilter === 'All' ? true : ticketPriority.toLowerCase() === priorityFilter.toLowerCase();
 
-                return matchesSearch && matchesStatus && matchesPriority;
-            });
+            return matchesSearch && matchesStatus && matchesPriority;
+        });
     }, [tickets, searchQuery, statusFilter, priorityFilter]);
-
 
     const getPriorityColor = (priority) => {
         const p = (priority || '').toLowerCase();
-        if (p === 'high' || p === 'critical') return 'text-red-600 font-bold';
-        if (p === 'medium') return 'text-amber-600 font-bold';
-        if (p === 'low') return 'text-blue-600 font-bold';
-        return 'text-gray-600';
+        if (p === 'high' || p === 'critical') return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+        if (p === 'medium') return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+        if (p === 'low') return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+        return 'text-slate-400 bg-white/5 border-white/10';
     };
   }, [user, fetchTickets]); // Re-subscribe when user changes
 
 
     return (
-        <main className="flex-1 max-w-[1200px] w-full mx-auto px-6 py-10 flex flex-col gap-8">
-            {/* Live region for screen reader announcements */}
+        <div className="min-h-screen bg-slate-950 pb-20 relative overflow-hidden font-sans">
+            {/* Background Glow Context */}
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[140px] pointer-events-none" />
+            <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle,#fff 1px,transparent 1px)', backgroundSize: '24px 24px' }} />
+
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 flex flex-col gap-8 relative z-10 text-left">
+                
+                {/* Live region for screen reader announcements */}
             <div aria-live="polite" aria-atomic="true" className="sr-only">
                 {filteredTickets.length === 0
                     ? 'No tickets match your current filters'
@@ -422,9 +424,10 @@ function MyTickets() {
                     </p>
                     <button
                         onClick={() => navigate('/create-ticket')}
-                        className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                        className="px-6 h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-xl shadow-emerald-600/10 active:scale-[0.99] flex items-center justify-center gap-2 border-none cursor-pointer whitespace-nowrap self-start sm:self-auto"
                     >
-                        Create your first ticket
+                        <span>Create New Ticket</span>
+                        <ArrowRight size={14} />
                     </button>
                 </Card>
             ) : filteredTickets.length === 0 ? (
@@ -483,51 +486,61 @@ function MyTickets() {
                                                         className="bg-gray-900 text-white border-none p-4 w-[300px] shadow-xl rounded-xl"
                                                         sideOffset={10}
                                                     >
-                                                        <div className="space-y-3">
-                                                            <div>
-                                                                 <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Issue Overview</p>
-                                                                 <p className="text-sm font-medium leading-relaxed overflow-hidden text-ellipsis whitespace-nowrap">{safeDisplayText(ticket.summary || ticket.description, "No description provided")}</p>
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-3">
-                                                                <div>
-                                                                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Category</p>
-                                                                    <p className="text-sm font-medium">{ticket.category || 'General'}</p>
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Priority</p>
-                                                                    <p className="text-sm font-medium capitalize">{ticket.priority || 'medium'}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Assigned Unit</p>
-                                                                <p className="text-sm font-medium flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-400" />{ticket.assigned_team || 'General Support'}</p>
-                                                            </div>
-                                                        </div>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </td>
-                                            <td className="px-6 py-4 w-1/3 max-w-[300px]">
-                                                 <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
-                                                     {safeDisplayText(ticket.summary || ticket.subject || ticket.description, "No subject")}
-                                                 </p>
-                                                 <div className="mt-1">
+                                                        <td className="px-6 py-4">
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <span className="font-mono font-black text-emerald-400 text-xs">#{formatTicketId(ticket.id)}</span>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent
+                                                                    side="top"
+                                                                    className="bg-slate-950 text-slate-200 border border-white/10 p-5 w-[320px] shadow-2xl rounded-2xl text-left"
+                                                                    sideOffset={10}
+                                                                >
+                                                                    <div className="space-y-4">
+                                                                        <div>
+                                                                            <p className="text-[9px] uppercase font-black text-slate-500 tracking-widest mb-1.5">Issue Analytical Summary</p>
+                                                                            <p className="text-xs font-semibold leading-relaxed m-0 text-slate-200 line-clamp-3 whitespace-normal">{safeDisplayText(ticket.summary || ticket.description, "No parameter summary details mapped.")}</p>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-3">
+                                                                            <div>
+                                                                                <p className="text-[9px] uppercase font-black text-slate-500 tracking-widest mb-1">Domain</p>
+                                                                                <p className="text-xs font-bold text-slate-300 m-0">{ticket.category || 'General'}</p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="text-[9px] uppercase font-black text-slate-500 tracking-widest mb-1">Priority</p>
+                                                                                <p className="text-xs font-bold text-slate-300 m-0 capitalize">{ticket.priority || 'medium'}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="border-t border-white/5 pt-3">
+                                                                            <p className="text-[9px] uppercase font-black text-slate-500 tracking-widest mb-1">Routing Unit Group</p>
+                                                                            <p className="text-xs font-bold text-slate-300 m-0 flex items-center gap-1.5"><ShieldCheck size={13} className="text-emerald-400 shrink-0" />{ticket.assigned_team || 'General Support'}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </td>
+                                                        <td className="px-6 py-4 max-w-[280px] sm:max-w-xs md:max-w-sm truncate">
+                                                            <p className="text-sm font-semibold text-slate-200 m-0 truncate group-hover:text-emerald-400 transition-colors font-medium">
+                                                                {safeDisplayText(ticket.summary || ticket.subject || ticket.description, "No operational text defined.")}
+                                                            </p>
+                                                             <div className="mt-1">
                                                      <LanguageBadge detectedLanguage={ticket?.detected_language} compact />
                                                  </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
-                                                    {ticket.category || 'General'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <TicketStatusBadge status={ticket.status} />
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`text-sm capitalize ${getPriorityColor(ticket.priority)}`}>
-                                                    {ticket.priority || 'medium'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
+                                                        <td className="px-6 py-4">
+                                                            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 bg-white/5 px-2.5 h-6 inline-flex items-center rounded-lg border border-white/5">
+                                                                {ticket.category || 'General'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <TicketStatusBadge status={ticket.status} />
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 h-6 inline-flex items-center rounded-lg border ${getPriorityColor(ticket.priority)}`}>
+                                                                {ticket.priority || 'medium'}
+                                                            </span>
+                                                        </td>
+                                                       <td className="px-6 py-4">
                                                 <SLABadge
                                                     priority={ticket.priority}
                                                     createdAt={ticket.created_at}
@@ -538,25 +551,38 @@ function MyTickets() {
                                                 />
                                             </td>
                                              <td className="px-6 py-4">
-                                                 <div className="flex flex-col">
-                                                     <span className="text-sm font-semibold text-gray-700">
-                                                         {formatTimelineDate(ticket.created_at)}
-                                                     </span>
-                                                     <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-0.5">
-                                                         {getTimeZoneAbbr()} Node
-                                                     </span>
-                                                 </div>
-                                             </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </TooltipProvider>
-                        </table>
-                    </div>
-                </Card>
-            )}
-        </main>
+                                                            <div className="flex flex-col text-left">
+                                                                <span className="text-xs font-bold text-slate-400 font-mono">
+                                                                    {formatTimelineDate(ticket.created_at)}
+                                                                </span>
+                                                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mt-0.5">
+                                                                    {getTimeZoneAbbr()} Cluster Node
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </TooltipProvider>
+                                    </table>
+                                </div>
+                            </Card>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Local Scrollbar Style Modifiers */}
+                <style dangerouslySetInnerHTML={{
+                    __html: `
+                    .customize-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
+                    .customize-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                    .customize-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.04); border-radius: 99px; }
+                    .customize-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.08); }
+                `}} />
+            </main>
+        </div>
     );
 }
 
 export default MyTickets;
+

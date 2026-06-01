@@ -417,7 +417,7 @@ const AdminTickets = () => {
             </div>
 
             {/* 2. Advanced Filtering Station */}
-            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 space-y-6">
+            <div className="bg-white dark:bg-slate-950 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div className="relative group lg:col-span-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors w-5 h-5" />
@@ -426,7 +426,7 @@ const AdminTickets = () => {
                             placeholder="Search..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 focus:bg-white transition-all text-slate-700 placeholder:text-slate-400"
+                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 transition-all text-slate-700 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                         />
                     </div>
                     <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center" options={statuses.map(s => ({ value: s, label: s === 'All' ? 'All Statuses' : s }))} />
@@ -512,7 +512,7 @@ const AdminTickets = () => {
                     <div className="p-12 text-center text-red-500 space-y-4">
                         <AlertCircle className="mx-auto w-12 h-12" />
                         <p className="font-bold uppercase tracking-widest text-xs">{error}</p>
-                        <button onClick={fetchTickets} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Retry</button>
+                        <button onClick={fetchTickets} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest">Retry</button>
                     </div>
                 )}
 
@@ -537,17 +537,21 @@ const AdminTickets = () => {
                                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
                                     </div>
                                 </th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">User</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Score</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Agent</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">SLA</th>
-                                <th className="px-6 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                                <th className="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">User</th>
+                                <th className="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Subject</th>
+                                <th className="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Priority</th>
+                                <th className="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">AI Score</th>
+                                <th className="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Agent</th>
+                                <th className="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                <th className="px-6 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">SLA</th>
+                                <th className="px-6 py-5 text-center text-xs font-black text-slate-400 uppercase tracking-widest">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
+<<<<<<< HEAD
+                            {filteredTickets.map((ticket) => (
+                                <tr key={ticket.id} className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
+=======
                             {filteredTickets.map((ticket) => {
                                 const wasLiveChanged = String(lastChangedTicketId) === String(ticket.id);
                                 const isSelected = selectedTickets.includes(ticket.id);
@@ -571,6 +575,7 @@ const AdminTickets = () => {
 
                                 return (
                                 <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${wasLiveChanged ? 'bg-emerald-50/70 ring-1 ring-emerald-100' : slaRowClass} ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
+>>>>>>> upstream/gssoc
                                     {/* Ticket ID */}
                                     <td className="px-6 py-6">
                                         <span className="font-mono text-xs font-black text-emerald-600">#{formatTicketId(ticket.id)}</span>
@@ -678,7 +683,7 @@ const AdminTickets = () => {
                                             <Select
                                                 value={String(ticket.status || 'open').toLowerCase()}
                                                 onChange={(e) => handleUpdateTicket(ticket.id, { status: e.target.value })}
-                                                buttonClassName="bg-transparent text-[10px] font-black text-slate-600 uppercase tracking-widest outline-none cursor-pointer flex justify-between items-center w-full"
+                                                buttonClassName="bg-transparent text-xs font-black text-slate-600 uppercase tracking-widest outline-none cursor-pointer flex justify-between items-center w-full"
                                                 options={statuses.filter(s => s !== 'All').map(s => ({ value: s.toLowerCase(), label: s }))}
                                             />
                                         </div>

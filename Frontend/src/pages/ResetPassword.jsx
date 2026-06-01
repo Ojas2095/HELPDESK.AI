@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabaseClient";
 import { BrainCircuit, Lock, Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
 
@@ -50,7 +51,7 @@ function ResetPassword() {
             await supabase.auth.signOut();
 
             setMessage("Password successfully updated!");
-            setTimeout(() => navigate("/login"), 3000);
+            setTimeout(() => navigate("/login"), 3500);
         } catch (err) {
             console.error("Password update error:", err);
             setError(err.message || "Failed to update password. Link may have expired.");
@@ -87,6 +88,12 @@ function ResetPassword() {
                         <BrainCircuit className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                         <span className="font-bold text-lg text-slate-900 dark:text-slate-100 font-syne">HelpDesk.ai</span>
                     </Link>
+                    <h1 className="text-white text-2xl font-black tracking-tight font-syne uppercase">
+                        Account Recovery
+                    </h1>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
+                        Secure Authentication Node
+                    </p>
                 </div>
 
                 <div className="bg-white dark:bg-[#1a2e24] border border-slate-200 dark:border-[#2a4034] shadow-2xl rounded-3xl p-6 sm:p-8 w-full">

@@ -586,7 +586,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                             return (
                                 <div key={`div-${i}`} className="flex items-center gap-3 py-2">
                                     <div className="flex-1 h-px bg-slate-100" />
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
+                                    <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{item.label}</span>
                                     <div className="flex-1 h-px bg-slate-100" />
                                 </div>
                             );
@@ -695,7 +695,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                     })
                 )}
                 {isTyping && (
-                    <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-widest italic py-1 px-2 animate-pulse">
+                    <div className="flex items-center gap-2 text-slate-400 text-xs font-black uppercase tracking-widest italic py-1 px-2 animate-pulse">
                         <Loader2 className="w-3 h-3 animate-spin" /> Someone is typing...
                     </div>
                 )}

@@ -181,7 +181,6 @@ const TEAM_MEMBERS = [
   },
 ];
 
-// Helper to group members by team
 const TEAM_GROUPS = [
   { id: 'Coordination', label: 'Leadership & Coordination' },
   { id: 'Model', label: 'AI & Modeling' },
@@ -192,23 +191,31 @@ const TEAM_GROUPS = [
 
 export default function TeamSection() {
     return (
+<<<<<<< HEAD
+        <section className="py-16 sm:py-24 bg-white dark:bg-slate-950 transition-colors duration-300">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                
+                <div className="text-center mb-20 space-y-4">
+                    <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight font-syne">
+                        Meet the Team
+=======
         <section className="py-24 bg-gray-50/50 border-t border-gray-100">
             <div className="max-w-[1100px] mx-auto">
                 {/* Section Header */}
                 <div className="text-center mb-10 sm:mb-12 md:mb-16">
                     <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-3 sm:mb-4">
                         Meet the Team Behind helpdesk.ai
+>>>>>>> upstream/gssoc
                     </h2>
                     <p className="text-slate-500 font-medium text-lg max-w-2xl mx-auto dark:text-slate-300">
                         Built by engineers focused on intelligent support automation.
                     </p>
                 </div>
 
-                {/* Grouped by Team */}
-                <div className="space-y-20">
+                <div className="space-y-24">
                     {TEAM_GROUPS.map((group) => {
-                        const groupMembers = TEAM_MEMBERS.filter(m => m.team === group.id);
-                        if (groupMembers.length === 0) return null;
+                        const members = TEAM_MEMBERS.filter(m => m.team === group.id);
+                        if (!members.length) return null;
 
                         return (
                             <div key={group.id}>
@@ -216,6 +223,13 @@ export default function TeamSection() {
                                     {group.label}
                                 </h3>
 
+<<<<<<< HEAD
+                                <div className="flex flex-wrap justify-center gap-6 w-full">
+                                    {members.map((member, i) => (
+                                        <div 
+                                            key={i} 
+                                            className="group bg-gray-50/50 dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-2xl p-6 w-[240px] sm:w-[220px] flex flex-col items-center justify-center text-center hover:border-emerald-500/50 dark:hover:border-emerald-500/30 transition-all duration-300 hover:shadow-xl dark:hover:shadow-black/20"
+=======
                                 {/* Responsive Grid Layout */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 sm:gap-x-8 gap-y-8 sm:gap-y-12">
                                     {groupMembers.map((member, index) => (

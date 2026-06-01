@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, Inbox, AlertCircle, ArrowRight } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { formatTimelineDate } from '../../utils/dateUtils';
@@ -129,7 +130,6 @@ const RecentTickets = () => {
 
     useEffect(() => {
         fetchRecentTickets();
-     
     }, []);
 
     const getStatusBadge = (status) => {
@@ -166,7 +166,8 @@ const RecentTickets = () => {
                     onClick={() => navigate('/my-tickets')}
                     className="bg-transparent border-none cursor-pointer text-green-600 dark:text-green-400 text-[13px] font-bold hover:text-green-700 dark:hover:text-green-300 transition-colors"
                 >
-                    View All →
+                    <span>View All</span>
+                    <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
                 </button>
             </div>
 

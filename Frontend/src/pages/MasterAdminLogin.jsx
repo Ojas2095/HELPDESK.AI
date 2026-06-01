@@ -5,11 +5,7 @@ import useAuthStore from '../store/authStore';
 import { supabase } from '../lib/supabaseClient';
 
 /**
- * MasterAdminLogin — Hidden portal login page.
- * Route: /master-admin-login
- * Not linked from anywhere in the public UI.
- *
- * Intentionally minimal and dark — no HelpDesk.ai branding.
+ * MasterAdminLogin — Restricted security gateway portal.
  */
 function MasterAdminLogin() {
   const [email, setEmail] = useState('');

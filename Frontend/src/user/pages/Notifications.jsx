@@ -1,5 +1,6 @@
 import React from 'react';
-import { ArrowLeft, Bell, CheckCircle2, MessageSquare, Ticket, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bell, CheckCircle2, MessageSquare, Ticket, ArrowLeft, Inbox } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useTicketStore from '../../store/ticketStore';
 import { Card } from '../../components/ui/card';

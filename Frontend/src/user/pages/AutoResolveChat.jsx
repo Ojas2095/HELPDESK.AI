@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bot,
@@ -33,6 +33,39 @@ import { Card, CardContent } from '../../components/ui/card';
 import { askAI } from '../../services/aiAssistant';
 import useToastStore from '../../store/toastStore';
 
+const Shimmer = ({ className = "" }) => (
+    <div className={`relative overflow-hidden rounded-lg bg-white/5 ${className}`}>
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+    </div>
+);
+
+const SkeletonLoader = () => (
+    <div className="min-h-screen bg-slate-950 pb-20 pt-32 px-4 sm:px-6">
+        <div className="w-full max-w-4xl mx-auto space-y-8">
+            <div className="text-center space-y-3">
+                <Shimmer className="h-8 w-72 mx-auto" />
+                <Shimmer className="h-4 w-96 mx-auto" />
+            </div>
+            <Card className="rounded-[2.5rem] border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl">
+                <CardContent className="p-8 space-y-6">
+                    <div className="flex items-center gap-4">
+                        <Shimmer className="w-12 h-12 rounded-xl" />
+                        <div className="space-y-2">
+                            <Shimmer className="h-4 w-32" />
+                            <Shimmer className="h-3 w-48" />
+                        </div>
+                    </div>
+                    <div className="space-y-3 pt-4">
+                        <Shimmer className="h-5 w-full" />
+                        <Shimmer className="h-5 w-5/6" />
+                        <Shimmer className="h-5 w-4/5" />
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    </div>
+);
+
 const AutoResolveChat = () => {
     const { aiTicket } = useTicketStore();
     const navigate = useNavigate();
@@ -42,6 +75,7 @@ const AutoResolveChat = () => {
     const [isFinal, setIsFinal] = useState(false);
     const [inputText, setInputText] = useState('');
     const [isListening, setIsListening] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const { showToast } = useToastStore();
     const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -127,7 +161,6 @@ const AutoResolveChat = () => {
 
             } catch (error) {
                 console.error("AI Plan Generation Failed:", error);
-
                 const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 setMessages([{
                     role: 'bot',
@@ -139,7 +172,7 @@ const AutoResolveChat = () => {
             }
         };
 
-        if (messages.length === 0) {
+        if (!isLoading && aiTicket && messages.length === 0) {
             generateInitialPlan();
         }
 
@@ -262,13 +295,20 @@ const AutoResolveChat = () => {
     if (!aiTicket) return null;
 
     return (
-        <div className="relative min-[100dvh] pt-24 pb-12 px-6 flex flex-col">
-            {/* ─── Premium Palette Background ─── */}
-            <div className="fixed inset-0 -z-10 bg-[#f8faf9]">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-100/40 rounded-full blur-[120px] animate-pulse"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-teal-50/50 rounded-full blur-[120px] [animation-delay:2s] animate-pulse"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30%] h-[30%] bg-indigo-50/30 rounded-full blur-[100px] [animation-delay:4s] animate-pulse"></div>
-            </div>
+        <div className="min-h-screen bg-slate-950 pb-12 pt-24 px-4 sm:px-6 relative overflow-hidden font-sans">
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes shimmer {
+                    100% { transform: translateX(100%); }
+                }
+                .customize-scrollbar::-webkit-scrollbar { width: 6px; }
+                .customize-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .customize-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.04); border-radius: 99px; }
+                .customize-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.08); }
+            `}} />
+
+            {/* Ambient System Glow Blocks */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-emerald-500/5 rounded-full blur-[140px] pointer-events-none" />
+            <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(circle,#fff 1px,transparent 1px)', backgroundSize: '24px 24px' }} />
 
             <div className="max-w-4xl mx-auto relative">
                 {/* ─── Glassmorphic Chat Container ─── */}
@@ -278,37 +318,34 @@ const AutoResolveChat = () => {
                     <div className="px-10 py-7 border-b border-white/40 bg-white/40 flex items-center justify-between backdrop-blur-md">
                         <div className="flex items-center gap-5">
                             <motion.div
-                                initial={{ rotate: -10, scale: 0.9 }}
-                                animate={{ rotate: 3, scale: 1 }}
-                                transition={{ type: "spring", stiffness: 200 }}
-                                className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0"
+                                initial={{ rotate: -5, scale: 0.95 }}
+                                animate={{ rotate: 0, scale: 1 }}
+                                className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0"
                             >
-                                <BotIcon size={28} />
+                                <BotIcon size={22} />
                             </motion.div>
-                            <div>
-                                <h2 className="text-xl font-black text-slate-900 leading-tight tracking-tight uppercase italic">
+                            <div className="space-y-0.5">
+                                <h2 className="text-base font-black text-white tracking-wider font-syne uppercase italic m-0">
                                     Assistant // AI
                                 </h2>
-                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] flex items-center gap-1.5 mt-0.5">
-                                    <span className="relative flex h-2 w-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5 m-0">
+                                    <span className="relative flex h-1.5 w-1.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
                                     </span>
                                     Neural Connection Active
                                 </p>
                             </div>
                         </div>
 
-                        {/* "Escalate Anyway" Integrated Option */}
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => navigate('/ticket-tracking')}
-                                className="group px-6 py-2.5 bg-slate-900/5 hover:bg-slate-900 text-slate-600 hover:text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center gap-2 border border-slate-200/50 hover:border-slate-900"
-                            >
-                                <LifeBuoy size={14} className="group-hover:rotate-12 transition-transform" />
-                                Escalate Anyway
-                            </button>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/ticket-tracking')}
+                            className="group h-10 px-5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-slate-300 font-bold text-xs uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center gap-2 cursor-pointer shadow-xl"
+                        >
+                            <LifeBuoy size={14} className="group-hover:rotate-45 transition-transform" />
+                            <span>Escalate Route</span>
+                        </button>
                     </div>
 
                     {/* Troubleshooting Steps */}

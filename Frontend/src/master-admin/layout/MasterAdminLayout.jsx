@@ -113,7 +113,7 @@ function MasterAdminLayout() {
                                 })}
                                 {item.label}
                                 {item.count > 0 && (
-                                    <span className="ml-auto px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-black border border-emerald-500/20">
+                                    <span className="ml-auto px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-black border border-emerald-500/20">
                                         {item.count}
                                     </span>
                                 )}

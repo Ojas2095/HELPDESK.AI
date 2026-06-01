@@ -454,15 +454,15 @@ const AdminUsers = () => {
                     onClick={() => setActiveTab('pending')}
                 >
                     Pending Requests
-                    {stats.pending > 0 && <span className="bg-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-full">{stats.pending}</span>}
+                    {stats.pending > 0 && <span className="bg-amber-100 text-amber-600 text-xs px-2 py-0.5 rounded-full">{stats.pending}</span>}
                 </button>
             </div>
 
             {/* Terminal Interface */}
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl shadow-slate-200/40 overflow-hidden">
+            <div className="bg-white dark:bg-slate-950 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-slate-900/50 overflow-hidden">
                 {activeTab === 'active' ? (
                     <>
-                        <div className="p-8 border-b border-slate-100 bg-slate-50/30">
+                        <div className="p-8 border-b border-slate-100 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-900/70">
                             <div className="relative group max-w-md">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors w-5 h-5" />
                                 <input
@@ -478,17 +478,17 @@ const AdminUsers = () => {
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse">
                                 <thead>
-                                    <tr className="bg-slate-50/50">
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User ID</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Role</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Joined On</th>
-                                        <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
+                                    <tr className="bg-slate-50/50 dark:bg-slate-800/60">
+                                        <th className="px-8 py-5 text-left text-xs font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">User ID</th>
+                                        <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User</th>
+                                        <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Role</th>
+                                        <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Joined On</th>
+                                        <th className="px-8 py-5 text-center text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {filteredUsers.map((user) => (
-                                        <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <tr key={user.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-2">
                                                     <Hash size={12} className="text-slate-300" />
@@ -511,8 +511,8 @@ const AdminUsers = () => {
                                                         </div>
                                                     )}
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-slate-800 tracking-tight italic uppercase">{user.full_name || 'Unnamed User'}</span>
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 lowercase">
+                                                        <span className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight italic uppercase">{user.full_name || 'Unnamed User'}</span>
+                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 lowercase">
                                                             <Mail size={10} /> {user.email}
                                                         </div>
                                                     </div>
@@ -540,7 +540,7 @@ const AdminUsers = () => {
                                                 <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         onClick={() => openProfile(user)}
-                                                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 transition-all shadow-sm"
+                                                        className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-300 rounded-xl hover:text-indigo-600 hover:border-indigo-100 dark:hover:border-indigo-300 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-all shadow-sm"
                                                         title="View Profile"
                                                         aria-label="View Profile"
                                                     >
@@ -549,7 +549,7 @@ const AdminUsers = () => {
                                                     <button
                                                         onClick={() => confirmDelete(user)}
                                                         disabled={isProcessing === user.id || user.id === currentUser?.id}
-                                                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all shadow-sm disabled:opacity-30"
+                                                        className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-300 rounded-xl hover:text-red-600 dark:hover:text-red-400 hover:border-red-100 dark:hover:border-red-700 hover:bg-red-50 dark:hover:bg-slate-800 transition-all shadow-sm disabled:opacity-30"
                                                         title="Permanent Delete"
                                                         aria-label="Permanent Delete"
                                                     >
@@ -579,16 +579,16 @@ const AdminUsers = () => {
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse">
                                 <thead>
-                                    <tr className="bg-slate-50/50">
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Request ID</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Requested On</th>
-                                        <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
+                                    <tr className="bg-slate-50/50 dark:bg-slate-800/60">
+                                        <th className="px-8 py-5 text-left text-xs font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">Request ID</th>
+                                        <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User</th>
+                                        <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Requested On</th>
+                                        <th className="px-8 py-5 text-center text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {pendingRequests.map((request) => (
-                                        <tr key={request.id} className="hover:bg-slate-50/50 transition-colors group">
+                                        <tr key={request.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-2">
                                                     <Hash size={12} className="text-slate-300" />
@@ -611,8 +611,8 @@ const AdminUsers = () => {
                                                         </div>
                                                     )}
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-slate-800 tracking-tight italic uppercase">{request.user?.full_name || 'Unnamed User'}</span>
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 lowercase">
+                                                        <span className="text-sm font-black text-slate-800 dark:text-slate-100 tracking-tight italic uppercase">{request.user?.full_name || 'Unnamed User'}</span>
+                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 lowercase">
                                                             <Mail size={10} /> {request.user?.email}
                                                         </div>
                                                     </div>
@@ -629,7 +629,7 @@ const AdminUsers = () => {
                                                     <button
                                                         onClick={() => handleRejectUser(request)}
                                                         disabled={isProcessing === request.id}
-                                                        className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition-all shadow-sm disabled:opacity-30"
+                                                        className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-300 rounded-xl hover:text-red-600 dark:hover:text-red-400 hover:border-red-100 dark:hover:border-red-700 hover:bg-red-50 dark:hover:bg-slate-800 transition-all shadow-sm disabled:opacity-30"
                                                         title="Reject Request"
                                                         aria-label="Reject Request"
                                                     >
@@ -638,7 +638,7 @@ const AdminUsers = () => {
                                                     <button
                                                         onClick={() => handleApproveUser(request)}
                                                         disabled={isProcessing === request.id}
-                                                        className="flex flex-1 max-w-[120px] items-center justify-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm py-2 px-3 disabled:opacity-30"
+                                                        className="flex flex-1 max-w-[120px] items-center justify-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-emerald-500 hover:text-white transition-all shadow-sm py-2 px-3 disabled:opacity-30"
                                                         title="Approve User"
                                                     >
                                                         {isProcessing === request.id ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />} Approve
@@ -666,8 +666,8 @@ const AdminUsers = () => {
             {/* Profile Detail Modal */}
             {showProfileModal && activeProfile && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex justify-end p-0 md:p-6 animate-in fade-in duration-300">
-                    <div className="w-full md:w-3/4 max-w-2xl bg-white md:rounded-[2.5rem] border-none shadow-2xl h-full flex flex-col animate-in slide-in-from-right-10 duration-300">
-                        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50 md:rounded-t-[2.5rem]">
+                    <div className="w-full md:w-3/4 max-w-2xl bg-white dark:bg-slate-950 md:rounded-[2.5rem] border-none shadow-2xl h-full flex flex-col animate-in slide-in-from-right-10 duration-300">
+                        <div className="p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900 md:rounded-t-[2.5rem]">
                             <div className="flex items-center gap-4">
                                 <div className="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 border border-indigo-200">
                                     <UserIcon size={28} />
@@ -689,22 +689,22 @@ const AdminUsers = () => {
                             <div>
                                 <h4 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mb-4">Entity Metadata</h4>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">System Hash / UUID</span>
-                                        <span className="text-[11px] font-mono font-black text-slate-800 break-all">{activeProfile.id}</span>
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                        <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest block mb-1">System Hash / UUID</span>
+                                        <span className="text-[11px] font-mono font-black text-slate-800 dark:text-slate-100 break-all">{activeProfile.id}</span>
                                     </div>
                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Assigned Role</span>
+                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-widest block mb-1">Assigned Role</span>
                                         <span className={`text-xs font-black uppercase tracking-widest ${activeProfile.role === 'admin' ? 'text-indigo-600' : 'text-slate-600'}`}>
                                             {activeProfile.role}
                                         </span>
                                     </div>
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Joined Terminal</span>
-                                        <span className="text-xs font-black text-slate-800 uppercase italic">{new Date(activeProfile.created_at).toLocaleString()}</span>
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                        <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest block mb-1">Joined Terminal</span>
+                                        <span className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase italic">{new Date(activeProfile.created_at).toLocaleString()}</span>
                                     </div>
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Status</span>
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                        <span className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest block mb-1">Status</span>
                                         <span className="text-xs font-black text-emerald-500 uppercase tracking-widest">Authorized</span>
                                     </div>
                                 </div>
@@ -716,7 +716,7 @@ const AdminUsers = () => {
                             <button
                                 onClick={() => handleUpdateRole(activeProfile.id, activeProfile.role === 'admin' ? 'user' : 'admin')}
                                 disabled={activeProfile.id === currentUser?.id}
-                                className="flex-1 py-4 bg-white border border-slate-200 text-slate-700 font-black rounded-2xl hover:bg-slate-50 transition-all text-xs uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 disabled:opacity-30"
+                                className="flex-1 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-100 font-black rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-xs uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 disabled:opacity-30"
                             >
                                 <ShieldCheck size={16} className="text-indigo-500" />
                                 {activeProfile.role === 'admin' ? "Demote to User" : "Elevate to Admin"}
@@ -736,7 +736,7 @@ const AdminUsers = () => {
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-6 animate-in fade-in duration-300">
-                    <Card className="w-full max-w-sm bg-white rounded-[2.5rem] border-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                    <Card className="w-full max-w-sm bg-white dark:bg-slate-950 rounded-[2.5rem] border-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
                         <div className="p-8 text-center space-y-6">
                             <div className="w-20 h-20 bg-red-50 rounded-[2rem] flex items-center justify-center text-red-500 mx-auto border-4 border-white shadow-lg ring-8 ring-red-50">
                                 <AlertTriangle size={40} />
@@ -758,7 +758,7 @@ const AdminUsers = () => {
                                 </button>
                                 <button
                                     onClick={() => setShowDeleteModal(false)}
-                                    className="w-full py-4 bg-slate-50 text-slate-400 font-black rounded-2xl hover:bg-slate-100 transition-all text-xs uppercase tracking-widest"
+                                    className="w-full py-4 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-300 font-black rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-xs uppercase tracking-widest"
                                 >
                                     Abort
                                 </button>

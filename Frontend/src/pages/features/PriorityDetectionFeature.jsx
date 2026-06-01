@@ -1,6 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowRight, AlertCircle, Calendar, ShieldAlert, ChevronLeft } from 'lucide-react';
+import Header from "../../components/landing/Header";
+import Footer from "../../components/landing/Footer";
 
 const priorities = [
   {
@@ -45,6 +48,16 @@ const signals = [
   { signal: '"when you can"', priority: 'Low', weight: '↓↓' },
   { signal: '"class starts in 20 mins"', priority: 'High', weight: '↑↑' },
 ];
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 60, damping: 15 } }
+};
 
 export default function PriorityDetectionFeature() {
   const navigate = useNavigate();

@@ -1,4 +1,15 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { CheckCircle2, ArrowRight, Home, Inbox } from 'lucide-react';
+import { Card } from "../../components/ui/card";
+
+const TicketResult = ({ 
+    title = "Telemetry Ingested", 
+    description = "Your ticket has been successfully indexed. Our AI is currently prioritizing your request.",
+    ticketId = null 
+}) => {
+    const navigate = useNavigate();
 
 const TicketResult = () => {
   return (

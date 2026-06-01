@@ -175,7 +175,7 @@ const AdminSettings = () => {
                                     AI Confidence Threshold (<span className="text-indigo-600">{(settings.aiConfidenceThreshold * 100).toFixed(0)}%</span>)
                                 </label>
                             </div>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-lg mb-2">
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest max-w-lg mb-2">
                                 Minimum confidence required for AI to process and categorize tickets automatically.
                             </p>
                             <input
@@ -196,7 +196,7 @@ const AdminSettings = () => {
                                     Duplicate Detection (<span className="text-indigo-600">{(settings.duplicateSensitivity * 100).toFixed(0)}%</span>)
                                 </label>
                             </div>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-lg mb-2">
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest max-w-lg mb-2">
                                 Semantic similarity score needed to flag incoming tickets as duplicates.
                             </p>
                             <input
@@ -214,7 +214,7 @@ const AdminSettings = () => {
                         <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                             <div>
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Enable Auto Resolve</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Allow AI to close easily solved requests.</p>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Allow AI to close easily solved requests.</p>
                             </div>
                             <button
                                 onClick={() => handleChange('enableAutoResolve', !settings.enableAutoResolve)}
@@ -237,7 +237,7 @@ const AdminSettings = () => {
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div>
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Auto-Close Tickets</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Automatically archive resolved tickets after inactivity.</p>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Automatically archive resolved tickets after inactivity.</p>
                             </div>
                             <Select
                                 value={settings.autoCloseDays}
@@ -330,7 +330,7 @@ const AdminSettings = () => {
                         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                             <div>
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Email Notifications</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Receive daily system digests via email.</p>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Receive daily system digests via email.</p>
                             </div>
                             <button
                                 onClick={() => handleChange('emailNotifications', !settings.emailNotifications)}
@@ -360,7 +360,7 @@ const AdminSettings = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Critical Admin Alerts</h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Push notifications for Priority 1 system events.</p>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Push notifications for Priority 1 system events.</p>
                             </div>
                             <button
                                 onClick={() => handleChange('adminAlerts', !settings.adminAlerts)}

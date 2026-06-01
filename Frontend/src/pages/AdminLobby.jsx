@@ -5,8 +5,7 @@ import useAuthStore from '../store/authStore';
 import { Clock, LogOut, ShieldAlert, CheckCircle2 } from 'lucide-react';
 
 /**
- * AdminLobby — Waiting room for verified admins pending master admin approval.
- * Route: /admin-lobby
+ * AdminLobby — Optimized waiting room with high-fidelity feedback and real-time sync.
  */
 function AdminLobby() {
   const { profile, logout } = useAuthStore();

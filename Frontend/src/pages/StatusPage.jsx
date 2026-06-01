@@ -1,7 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, CheckCircle, AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Activity, CheckCircle, ArrowLeft, RefreshCw, Server, ShieldCheck, Cpu, Globe, CreditCard } from 'lucide-react';
 import { Card } from '../components/ui/card';
+import Header from "../components/landing/Header";
+import Footer from "../components/landing/Footer";
 
 export default function StatusPage() {
   const navigate = useNavigate();

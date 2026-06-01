@@ -1,348 +1,236 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import {
-  Activity, ArrowRight, Play, Check, Clock, MapPin,
-  Folder, AlertCircle, Search, Bell, Mail, Bot
-} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Activity, ArrowRight, Play, X, Mail, Search, Bell, AlertCircle, Folder, MapPin, Clock } from 'lucide-react';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.2, delayChildren: 0.1 }
-  }
-};
+// ---- Demo Modal ----
+function DemoModal({ onClose }) {
+    const [isPlaying, setIsPlaying] = useState(false);
+    const videoId = "Bj00LzeMylM";
+    const navigate = useNavigate();
 
-const fadeInUpVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: 'easeOut' }
-  }
-};
-
-const slideInRightVariants = {
-  hidden: { opacity: 0, x: 40 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: { duration: 0.7, ease: 'easeOut' }
-  }
-};
-
-export default function Hero({ onDemoClick, onGetStartedClick }) {
-  const [hoveredCard, setHoveredCard] = useState(null);
-
-  return (
-    <section className="relative min-h-screen bg-white overflow-hidden flex items-center">
-      {/* Background gradient accents */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-100/30 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-teal-100/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-emerald-50/40 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Main content container */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-12 md:py-0">
-        <motion.div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {/* LEFT COLUMN: Text & CTAs */}
-          <motion.div className="flex flex-col justify-center space-y-8" variants={fadeInUpVariants}>
-            {/* AI Badge */}
-            <motion.div
-              className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 w-fit"
-              variants={fadeInUpVariants}
+    return (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
+            <div
+                className="relative bg-white dark:bg-slate-900 rounded-3xl border border-gray-200 dark:border-slate-800 shadow-2xl w-full max-w-4xl overflow-hidden z-10 animate-in fade-in zoom-in duration-300"
+                onClick={e => e.stopPropagation()}
             >
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-bold tracking-wider uppercase">AI-Powered Helpdesk · Made in India 🇮🇳</span>
-            </motion.div>
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 dark:hover:text-white bg-white/10 dark:bg-slate-800 rounded-full p-2 transition-colors z-30"
+                >
+                    <X className="w-5 h-5" />
+                </button>
 
-            {/* Headline */}
-            <motion.div variants={fadeInUpVariants}>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-gray-900 leading-[1.1] tracking-tight">
-                Your IT<br />
-                <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                  Helpdesk,
-                </span>
-                <br />
-                Fully Automated
-              </h1>
-            </motion.div>
+                <div className="aspect-video w-full bg-black flex items-center justify-center relative group">
+                    {!isPlaying ? (
+                        <div
+                            className="absolute inset-0 cursor-pointer overflow-hidden"
+                            onClick={() => setIsPlaying(true)}
+                        >
+                            <img
+                                src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                                alt="Video Thumbnail"
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-300" />
 
-            {/* Description */}
-            <motion.p
-              className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-lg"
-              variants={fadeInUpVariants}
-            >
-              Turn messy user complaints into structured, categorized, and prioritized support tickets — instantly. No manual triage. No missed urgencies.
-            </motion.p>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-20 h-20 bg-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-emerald-600/50 transform group-hover:scale-110 transition-transform duration-300">
+                                    <Play className="w-8 h-8 text-white fill-white ml-1" />
+                                </div>
+                            </div>
 
-            {/* CTAs */}
-            <motion.div className="flex flex-col sm:flex-row gap-4 pt-4" variants={fadeInUpVariants}>
-              <motion.button
-                onClick={onGetStartedClick}
-                className="group relative px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold text-base shadow-xl shadow-emerald-900/25 overflow-hidden"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-800 to-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <span className="relative flex items-center justify-center gap-2">
-                  Get Started Free <ArrowRight className="w-4 h-4" />
-                </span>
-              </motion.button>
-
-              <motion.button
-                onClick={onDemoClick}
-                className="px-8 py-4 bg-white text-gray-900 border-2 border-gray-200 rounded-xl font-semibold text-base hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2"
-                whileHover={{ borderColor: '#059669', scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Play className="w-4 h-4 fill-current" /> Watch Demo
-              </motion.button>
-            </motion.div>
-
-            {/* Trust Indicators */}
-            <motion.div className="flex gap-8 pt-6" variants={fadeInUpVariants}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
-                  <Check className="w-5 h-5 text-emerald-600" />
+                            <div className="absolute bottom-6 left-6 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                <span className="text-xs font-black text-white uppercase tracking-widest">Click to Watch</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <iframe
+                            className="w-full h-full"
+                            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                            title="HelpDesk.ai Platform Demo"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        ></iframe>
+                    )}
                 </div>
-                <div className="text-sm">
-                  <div className="font-bold text-gray-900">99% Accuracy</div>
-                  <div className="text-gray-500 text-xs">Classification</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-emerald-600" />
-                </div>
-                <div className="text-sm">
-                  <div className="font-bold text-gray-900">24/7 Support</div>
-                  <div className="text-gray-500 text-xs">Auto Resolution</div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
 
-          {/* RIGHT COLUMN: Product Showcase */}
-          <motion.div
-            className="relative h-[500px] md:h-[600px] lg:h-[650px] hidden lg:flex items-center justify-center"
-            variants={slideInRightVariants}
-          >
-            {/* Glassmorphism cards container */}
-            <div className="relative w-full h-full flex items-center justify-center perspective">
-              {/* Background blur element */}
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 via-white/30 to-teal-50/50 rounded-3xl blur-2xl" />
-
-              {/* Incoming Complaint Card - Top Left */}
-              <motion.div
-                className="absolute w-72 md:w-80 bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 shadow-2xl shadow-emerald-500/10 p-5 md:p-6 cursor-grab active:cursor-grabbing"
-                style={{
-                  top: '10%',
-                  left: '5%',
-                  zIndex: hoveredCard === 'incoming' ? 30 : 20
-                }}
-                onHoverStart={() => setHoveredCard('incoming')}
-                onHoverEnd={() => setHoveredCard(null)}
-                whileHover={{
-                  y: -8,
-                  boxShadow: '0 20px 50px rgba(16, 185, 129, 0.25)'
-                }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              >
-                <div className="bg-gray-50 rounded-lg border border-gray-200 p-3 flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Incoming</span>
-                  </div>
-                  <span className="text-xs text-gray-400">2m ago</span>
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center font-bold text-xs text-purple-600">S</div>
-                  <div className="text-sm">
-                    <div className="font-semibold text-gray-900">Sarah Connors</div>
-                    <div className="text-xs text-gray-500">sarah@uni.edu</div>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  "Hey, WiFi in <span className="bg-yellow-100 px-1 rounded">Lab 3</span> is down. Class in 20 mins. <span className="font-semibold">URGENT!</span>"
-                </p>
-              </motion.div>
-
-              {/* Arrow indicator */}
-              <motion.div
-                className="absolute left-1/3 top-1/2 -translate-y-1/2 text-emerald-300 opacity-40"
-                animate={{ x: [0, 8, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <ArrowRight className="w-8 h-8" />
-              </motion.div>
-
-              {/* AI Processing Card - Center */}
-              <motion.div
-                className="absolute w-80 md:w-96 bg-gradient-to-br from-emerald-500/20 via-emerald-400/10 to-teal-400/10 backdrop-blur-2xl rounded-2xl border border-emerald-300/40 shadow-2xl p-6 flex flex-col items-center justify-center gap-6"
-                style={{
-                  top: '30%',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  zIndex: hoveredCard === 'processing' ? 30 : 25
-                }}
-                onHoverStart={() => setHoveredCard('processing')}
-                onHoverEnd={() => setHoveredCard(null)}
-                whileHover={{
-                  y: -12,
-                  boxShadow: '0 30px 60px rgba(5, 200, 140, 0.2)'
-                }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              >
-                <div className="text-center">
-                  <motion.div
-                    className="w-16 h-16 rounded-full bg-white/40 backdrop-blur-sm border border-white/60 flex items-center justify-center mx-auto mb-4"
-                    animate={{ scale: [1, 1.1, 1], y: [0, -4, 0] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                  >
-                    <Bot className="w-8 h-8 text-emerald-600" />
-                  </motion.div>
-                  <div className="text-xs font-bold text-white/70 uppercase tracking-widest mb-1">Processing</div>
-                  <div className="text-sm font-bold text-white">AI Transformation</div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 w-full">
-                  <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-3 py-2 text-center">
-                    <div className="text-[10px] font-bold text-white/60 uppercase mb-1">Priority</div>
-                    <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /> High
+                <div className="p-6 bg-gray-50 dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="text-left">
+                        <h2 className="text-xl font-extrabold text-gray-900 dark:text-white uppercase tracking-tight">Full Platform Walkthrough</h2>
+                        <p className="text-gray-500 dark:text-slate-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
                     </div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-3 py-2 text-center">
-                    <div className="text-[10px] font-bold text-white/60 uppercase mb-1">Category</div>
-                    <div className="text-xs font-bold text-white">Network</div>
-                  </div>
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <button
+                            onClick={() => { onClose(); navigate('/admin-signup'); }}
+                            className="flex-1 md:px-8 bg-emerald-600 hover:bg-emerald-500 text-white py-3 px-6 rounded-xl font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 border-none cursor-pointer"
+                        >
+                            Start Free <ArrowRight className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
-              </motion.div>
-
-              {/* Generated Ticket Card - Bottom Right */}
-              <motion.div
-                className="absolute w-80 md:w-96 bg-white/90 backdrop-blur-xl rounded-2xl border border-white/70 shadow-2xl shadow-emerald-500/15 overflow-hidden"
-                style={{
-                  bottom: '5%',
-                  right: '5%',
-                  zIndex: hoveredCard === 'ticket' ? 30 : 20
-                }}
-                onHoverStart={() => setHoveredCard('ticket')}
-                onHoverEnd={() => setHoveredCard(null)}
-                whileHover={{
-                  y: -10,
-                  boxShadow: '0 25px 50px rgba(16, 185, 129, 0.2)'
-                }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              >
-                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-bold text-white">#T-4029</span>
-                    <span className="bg-white/20 text-[10px] font-bold px-2 py-0.5 rounded-full text-white uppercase tracking-wide backdrop-blur-sm">Resolved</span>
-                  </div>
-                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center border border-white/30">
-                    <Check className="w-3.5 h-3.5 text-white" />
-                  </div>
-                </div>
-                <div className="p-6 space-y-5">
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg">WiFi Connectivity Issue</h3>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
-                      <Clock className="w-3 h-3" /> Created 1m ago <span>•</span> via Email
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                      <div className="text-[10px] font-bold text-gray-400 mb-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> Priority
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-red-500" />
-                        <span className="text-sm font-bold text-gray-800">High</span>
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                      <div className="text-[10px] font-bold text-gray-400 mb-1 flex items-center gap-1">
-                        <Folder className="w-3 h-3" /> Category
-                      </div>
-                      <span className="text-sm font-bold text-gray-800">Network</span>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 col-span-2">
-                      <div className="text-[10px] font-bold text-gray-400 mb-1 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" /> Location
-                      </div>
-                      <div className="text-sm font-bold text-gray-800">Lab 3 (Downstairs)</div>
-                    </div>
-                  </div>
-                  <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors">
-                    View Details
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* Subtle floating particle accents */}
-              <motion.div
-                className="absolute w-1 h-1 rounded-full bg-emerald-400 opacity-40"
-                style={{ top: '20%', right: '20%' }}
-                animate={{ y: [0, 20, 0], x: [0, 10, 0] }}
-                transition={{ duration: 4, repeat: Infinity }}
-              />
-              <motion.div
-                className="absolute w-1.5 h-1.5 rounded-full bg-teal-300 opacity-30"
-                style={{ top: '60%', left: '10%' }}
-                animate={{ y: [0, -15, 0], x: [0, -8, 0] }}
-                transition={{ duration: 5, repeat: Infinity }}
-              />
             </div>
-          </motion.div>
+        </div>
+    );
+}
 
-          {/* Mobile: Simplified showcase */}
-          <motion.div className="lg:hidden space-y-4" variants={fadeInUpVariants}>
-            {/* Mobile incoming card */}
-            <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-white/60 shadow-lg p-4">
-              <div className="bg-gray-50 rounded-lg border border-gray-200 p-2 flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Mail className="w-3 h-3 text-gray-400" />
-                  <span className="text-xs font-bold text-gray-500 uppercase">Incoming</span>
+export default function Hero() {
+    const navigate = useNavigate();
+    const [showDemo, setShowDemo] = useState(false);
+
+    return (
+        <div className="w-full relative">
+            {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
+
+            <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden bg-white dark:bg-slate-900 transition-colors duration-300">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 dark:from-emerald-950/10 to-transparent pointer-events-none -z-10" />
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider mb-8">
+                        <Activity className="w-3 h-3" />
+                        <span>AI-Powered Helpdesk Automation · Made in India 🇮🇳</span>
+                    </div>
+
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-6 leading-[1.1]">
+                        Your IT Helpdesk,<br />
+                        <span className="text-emerald-700 dark:text-emerald-400">Fully Automated.</span>
+                    </h1>
+
+                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 dark:text-slate-300 mb-10 leading-relaxed">
+                        Turn messy user complaints into structured, categorized, and prioritized support tickets — instantly. No manual triage. No missed urgencies.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
+                        <button
+                            onClick={() => navigate('/admin-signup')}
+                            className="w-full sm:w-auto px-8 py-4 bg-emerald-900 dark:bg-emerald-600 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/25 dark:shadow-emerald-900/10 hover:bg-emerald-800 dark:hover:bg-emerald-500 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base"
+                        >
+                            Get Started Free <ArrowRight className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={() => setShowDemo(true)}
+                            className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 rounded-xl font-semibold hover:border-emerald-500 dark:hover:border-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-all flex items-center justify-center gap-2 text-base"
+                        >
+                            <Play className="w-4 h-4 fill-gray-500 dark:fill-current" /> Watch a Demo
+                        </button>
+                    </div>
+
+                    {/* BENTO VISUAL */}
+                    <div className="relative max-w-6xl mx-auto">
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 dark:from-emerald-950/10 dark:via-slate-900 dark:to-emerald-900/10 blur-3xl opacity-60 -z-10 rounded-full" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+                            {/* LEFT: Email */}
+                            <div className="relative group perspective-1000">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-gray-200 to-gray-100 dark:from-slate-800 dark:to-slate-700 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000" />
+                                <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200/60 dark:border-slate-700 overflow-hidden transform transition-transform group-hover:scale-[1.01]">
+                                    <div className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+                                        <div className="flex gap-1.5">
+                                            <div className="w-3 h-3 rounded-full bg-red-400" />
+                                            <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                                            <div className="w-3 h-3 rounded-full bg-green-400" />
+                                        </div>
+                                        <div className="text-xs font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                            <Mail className="w-3 h-3" /> Incoming Request
+                                        </div>
+                                    </div>
+                                    <div className="p-6 text-left">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-sm">SC</div>
+                                                <div>
+                                                    <div className="font-semibold text-gray-900 dark:text-slate-100 text-sm">Sarah Connors</div>
+                                                    <div className="text-xs text-gray-500 dark:text-slate-400">sarah@university.edu</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-xs text-gray-400 dark:text-slate-400">2 mins ago</div>
+                                        </div>
+                                        <div className="mb-4">
+                                            <h3 className="text-sm font-bold text-gray-800 dark:text-slate-100 mb-1">Subject: Wifi down again in Lab 3??</h3>
+                                            <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+                                                Hey support, the wifi in <span className="bg-yellow-100 dark:bg-yellow-950/40 dark:text-yellow-200 px-1 rounded">downstairs lab 3</span> is acting up again.
+                                                Can't connect at all. Class starts in 20 mins, need this fixed ASAP!<br /><br />
+                                                Thanks,<br />Sarah
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="hidden md:flex absolute -right-8 top-1/2 -translate-y-1/2 z-20 text-emerald-300 dark:text-emerald-400">
+                                    <ArrowRight className="w-8 h-8 animate-pulse" />
+                                </div>
+                            </div>
+
+                            {/* RIGHT: Processed Ticket */}
+                            <div className="relative group">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000" />
+                                <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden transform transition-all group-hover:-translate-y-1">
+                                    <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-5 py-3 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-xs font-bold text-gray-500 dark:text-slate-400">#T-4029</span>
+                                            <span className="bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 text-xs font-bold px-2 py-0.5 rounded-full border border-green-200 dark:border-green-900/30 uppercase tracking-wide">AI Processed</span>
+                                        </div>
+                                        <div className="flex gap-2 text-gray-400 dark:text-slate-400">
+                                            <Search className="w-4 h-4" />
+                                            <Bell className="w-4 h-4" />
+                                            <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">AI</div>
+                                        </div>
+                                    </div>
+                                    <div className="p-6 space-y-5 text-left">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-bold text-gray-800 dark:text-slate-100 text-lg mb-1">WiFi Connectivity Issue</h3>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
+                                                    <Clock className="w-3 h-3" /> Created 1m ago
+                                                    <span>•</span> via Email
+                                                </div>
+                                            </div>
+                                            <button className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200 dark:shadow-none">
+                                                Resolve
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg border border-gray-100 dark:border-slate-700">
+                                                <div className="text-xs uppercase font-bold text-gray-400 dark:text-slate-500 mb-1 flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3" /> Priority
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                                    <span className="text-sm font-bold text-gray-800 dark:text-slate-100">High</span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg border border-gray-100 dark:border-slate-700">
+                                                <div className="text-xs uppercase font-bold text-gray-400 dark:text-slate-500 mb-1 flex items-center gap-1">
+                                                    <Folder className="w-3 h-3" /> Category
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-sm font-bold text-gray-800 dark:text-slate-100">Network</span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg border border-gray-100 dark:border-slate-700 col-span-2">
+                                                <div className="text-xs uppercase font-bold text-gray-400 dark:text-slate-500 mb-1 flex items-center gap-1">
+                                                    <MapPin className="w-3 h-3" /> Location
+                                                </div>
+                                                <div className="text-sm font-bold text-gray-800 dark:text-slate-100">Lab 3 (Downstairs)</div>
+                                            </div>
+                                        </div>
+                                        <div className="border-t border-gray-100 dark:border-slate-700 pt-3 flex items-center justify-between">
+                                            <div className="text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1">
+                                                Assigned to <span className="font-bold text-gray-700 dark:text-slate-200">NetOps Team</span>
+                                            </div>
+                                            <div className="flex -space-x-1">
+                                                <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 border-2 border-white dark:border-slate-800" />
+                                                <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 border-2 border-white dark:border-slate-800 flex items-center justify-center text-[8px] font-bold text-green-700 dark:text-green-300">+3</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <p className="text-sm text-gray-600 line-clamp-3">
-                "WiFi in <span className="font-semibold">Lab 3</span> is down. Need fixed ASAP!"
-              </p>
-            </div>
-
-            {/* Mobile processing indicator */}
-            <div className="text-center py-3">
-              <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center mx-auto"
-              >
-                <Bot className="w-4 h-4 text-emerald-600" />
-              </motion.div>
-            </div>
-
-            {/* Mobile resolved card */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
-              <div className="bg-emerald-600 px-4 py-2 flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-white">#T-4029</span>
-                <span className="text-[10px] font-bold text-white/80">RESOLVED</span>
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-gray-900 text-sm mb-2">WiFi Connectivity Issue</h3>
-                <div className="text-xs text-gray-500 space-y-1">
-                  <div>Priority: <span className="font-bold text-red-500">High</span></div>
-                  <div>Category: <span className="font-bold text-gray-800">Network</span></div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      </div>
-    </section>
-  );
+            </section>
+        </div>
+    );
 }

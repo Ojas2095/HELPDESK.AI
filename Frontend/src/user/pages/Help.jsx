@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, ChevronDown, Video, PlayCircle, Filter, Search, LifeBuoy, Keyboard, X } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Video, ChevronRight, ChevronDown, PlayCircle, Book, Mail, ShieldCheck, Search, Zap, LifeBuoy, Keyboard, X } from 'lucide-react';
+import { Card, CardContent } from "../../components/ui/card";
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
 import { SHORTCUTS_LEGEND } from '../../hooks/useKeyboardShortcuts';
 
@@ -305,11 +307,12 @@ ${fullName}`;
             </div>
           </div>
 
-                                {/* Modern Tab Filter */}
-                                <div className="flex items-center p-1 bg-gray-100 rounded-xl overflow-x-auto scrollbar-hide">
+                                {/* Segment Selection Row */}
+                                <div className="flex items-center p-1 bg-black/30 rounded-xl border border-white/5 overflow-x-auto customize-scrollbar shrink-0">
                                     {VIDEO_CATEGORIES.map((category) => (
                                         <button
                                             key={category}
+                                            type="button"
                                             onClick={() => setActiveTab(category)}
                                             aria-label={`Filter videos by ${category}`}
                                             aria-pressed={activeTab === category}
@@ -325,17 +328,16 @@ ${fullName}`;
                                 </div>
                             </div>
 
-                            {/* Resource Library Grid */}
+                            {/* Stream Cards Grid layout block */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {isLoading ? (
-                                    /* Premium Skeleton Loaders */
                                     Array(6).fill(0).map((_, i) => (
-                                        <div key={i} className="rounded-2xl border border-gray-100 bg-white overflow-hidden animate-pulse">
-                                            <div className="aspect-video bg-gray-200 w-full" />
+                                        <div key={i} className="rounded-2xl border border-white/[0.05] bg-white/[0.01] overflow-hidden">
+                                            <Shimmer className="aspect-video w-full rounded-none" />
                                             <div className="p-5 space-y-3">
-                                                <div className="h-5 bg-gray-200 rounded-md w-3/4" />
-                                                <div className="h-4 bg-gray-100 rounded-md w-full" />
-                                                <div className="h-4 bg-gray-100 rounded-md w-5/6" />
+                                                <Shimmer className="h-4 w-3xl" />
+                                                <Shimmer className="h-3 w-full" />
+                                                <Shimmer className="h-3 w-4/5" />
                                             </div>
                                         </div>
                                     ))
@@ -346,26 +348,26 @@ ${fullName}`;
                                             href={video.url} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
-                                            className="group flex flex-col rounded-2xl overflow-hidden border border-gray-100 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 hover:-translate-y-1 bg-white cursor-pointer"
+                                            className="group flex flex-col rounded-2xl overflow-hidden border border-white/[0.05] hover:border-emerald-500/30 bg-white/[0.01] hover:bg-white/[0.02] hover:-translate-y-1 transition-all duration-300 text-left relative"
                                         >
-                                            <div className="relative aspect-video w-full bg-gray-100 overflow-hidden">
+                                            <div className="relative aspect-video w-full bg-black overflow-hidden">
                                                 <img 
                                                     src={video.thumbnail_url} 
-                                                    alt={video.title}
-                                                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out"
+                                                    alt="" 
+                                                    className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" 
                                                 />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                                                    <PlayCircle className="w-14 h-14 text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 drop-shadow-lg" />
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <PlayCircle className="w-12 h-12 text-emerald-400 drop-shadow-xl" />
                                                 </div>
-                                                <div className="absolute top-4 left-4 bg-emerald-600/90 backdrop-blur-md text-white text-xs font-bold tracking-wide px-3 py-1.5 rounded-full shadow-sm">
+                                                <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md text-emerald-400 border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest px-2.5 h-5 flex items-center rounded-full">
                                                     {video.category}
-                                                </div>
+                                                </span>
                                             </div>
-                                            <div className="p-5 flex flex-col flex-1">
-                                                <h4 className="font-bold text-gray-900 text-base leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2">
+                                            <div className="p-5 flex flex-col flex-1 space-y-2">
+                                                <h4 className="font-extrabold text-white text-sm tracking-tight leading-snug line-clamp-2 m-0 group-hover:text-emerald-400 transition-colors font-syne">
                                                     {video.title}
                                                 </h4>
-                                                <p className="text-sm text-gray-500 mt-3 line-clamp-2 mt-auto leading-relaxed">
+                                                <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed m-0 mt-auto">
                                                     {video.description}
                                                 </p>
                                             </div>
@@ -373,14 +375,14 @@ ${fullName}`;
                                     ))
                                 )}
                             </div>
-                        </div>
+                        </Card>
 
-                        {/* Top FAQ Section inside Hub */}
-                        <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-sm border border-gray-100 mt-8">
-                            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3 mb-8">
-                                <Book className="w-6 h-6 text-indigo-500" /> Frequently Asked Questions
+                        {/* FAQ Collapse Layout Grid section */}
+                        <Card className="rounded-[2.5rem] border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl p-6 sm:p-8">
+                            <h2 className="text-xl font-black text-white flex items-center gap-2.5 font-syne uppercase tracking-wider mb-8 text-left">
+                                <Book className="w-5 h-5 text-indigo-400" /> Structural FAQ Matrix
                             </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {faqs.map((faq, index) => (
                                     <FAQItem key={index} faq={faq} />
                                 ))}
@@ -397,28 +399,23 @@ ${fullName}`;
                       <Mail size={20} />
                     </div>
 
-                    {/* Right Column: Contact Sidebar (Takes 1 column) */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                            <h3 className="text-xl font-bold mb-2">Still Need Help?</h3>
-                            <p className="text-gray-400 text-sm mb-6">Our dedicated support teams are ready to assist you.</p>
+                    {/* Right Side Column layout control nodes */}
+                    <div className="space-y-6 w-full text-left">
+                        <Card className="rounded-[2.5rem] border border-white/[0.08] bg-gradient-to-b from-[#111927] to-[#0c101b] p-6 shadow-2xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                            <h3 className="text-base font-black text-white font-syne uppercase tracking-wider mb-1">Escalation Relay</h3>
+                            <p className="text-xs text-slate-500 font-medium mb-6 leading-relaxed">Uplink parameter scripts directly onto our internal diagnostic engineers.</p>
                             
-                            <div className="space-y-3">
-                                <a href={generateMailto()} className="w-full group flex items-center justify-between bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 transition-all focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer block">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                                            <Mail size={20} />
-                                        </div>
-                                        <div className="text-left">
-                                            <div className="font-bold text-sm">Email Support</div>
-                                            <div className="text-xs text-gray-400">Response in 24h</div>
-                                        </div>
+                            <a href={generateMailto()} className="flex items-center justify-between bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 rounded-xl p-4 transition-colors no-underline group cursor-pointer">
+                                <div className="flex items-center gap-3.5 min-w-0">
+                                    <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl shrink-0 group-hover:bg-blue-600 group-hover:text-slate-950 transition-colors">
+                                        <Mail size={18} />
                                     </div>
-                                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-                                </a>
-                            </div>
-                        </div>
+                                    <div className="min-w-0 space-y-0.5">
+                                        <div className="font-extrabold text-xs text-white uppercase tracking-wider">Mailing Interface</div>
+                                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">SLA Triage &lt; 24h</div>
+                                    </div>
+                                </div>
 
                         {/* Keyboard Shortcuts Legend Trigger */}
                         <button
@@ -437,12 +434,17 @@ ${fullName}`;
                             </div>
                             <ChevronRight className="w-5 h-5 text-gray-400" />
                         </button>
+                                <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-white transition-colors shrink-0" />
+                            </a>
+                        </Card>
 
-                        {/* System Status Sidebar Entry */}
-                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between">
-                            <div>
-                                <h4 className="font-bold text-gray-900">System Status</h4>
-                                <p className="text-sm text-gray-500 mt-1">All services operational</p>
+                        {/* Real-time Environment Core Flag Node */}
+                        <div className="rounded-3xl border border-white/[0.06] bg-white/[0.01] p-5 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <h4 className="text-xs font-black text-white uppercase tracking-wider m-0">Core Status Flag</h4>
+                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest m-0 flex items-center gap-1.5 pt-0.5">
+                                    <ShieldCheck size={12} /> Environment Normalized
+                                </p>
                             </div>
                             <div className="h-3 w-3 bg-emerald-500 rounded-full animate-pulse ring-4 ring-emerald-50" />
                         </div>

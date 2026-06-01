@@ -56,20 +56,27 @@ const TopNav = () => {
                 <div className="flex items-center gap-3">
                     <ThemeToggle />
                     <NotificationPopover />
+                    
+                    <div className="h-6 w-px bg-white/[0.08] hidden sm:block" />
+
                     <div className="hidden md:block">
                         <Avatar
                             onClick={() => navigate('/profile')}
-                            className="size-9 border border-gray-200 cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 transition-all"
+                            className="size-9 border border-white/10 cursor-pointer hover:border-emerald-500/50 transition-all ring-offset-slate-950 hover:ring-2 hover:ring-emerald-500/20"
                         >
                             <AvatarImage src={profile?.profile_picture} />
-                            <AvatarFallback className="bg-gray-100 font-bold text-gray-600 text-xs">{initials}</AvatarFallback>
+                            <AvatarFallback className="bg-slate-950 font-black text-emerald-400 text-[10px] uppercase">
+                                {initials}
+                            </AvatarFallback>
                         </Avatar>
                     </div>
+
+                    {/* Mobile Command Trigger */}
                     <button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                         className="md:hidden p-2 text-gray-600 focus:outline-none dark:text-slate-200"
                     >
-                        {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                        {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
                     </button>
                 </div>
             </div>

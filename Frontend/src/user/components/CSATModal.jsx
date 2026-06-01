@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Star, CheckCircle2, X, Loader2, MessageSquare } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Star, CheckCircle2, X, Loader2, MessageSquare, ShieldAlert } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
 /**

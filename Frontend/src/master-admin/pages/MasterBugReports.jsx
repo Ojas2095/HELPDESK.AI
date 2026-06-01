@@ -568,3 +568,4 @@ const MasterBugReports = () => {
 };
 
 export default MasterBugReports;
+

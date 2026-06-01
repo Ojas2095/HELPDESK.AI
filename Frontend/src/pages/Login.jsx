@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
@@ -64,6 +64,7 @@ function Login() {
 
       if (profile.status === "rejected") {
         navigate("/not-approved");
+        return;
         return;
       }
 
@@ -131,26 +132,15 @@ function Login() {
   const currentSubmitHandler = isMagicLink ? handleMagicLink : handleLogin;
 
   return (
-    <div className="min-h-screen flex text-slate-900 dark:text-slate-100 bg-white dark:bg-[#102219] font-sans transition-colors duration-200">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
 
       {/* ── Left Panel ── */}
-      <div
-        className="hidden lg:flex lg:w-1/2 items-center justify-center p-12 relative overflow-hidden bg-gradient-to-br from-green-50 via-green-100 to-green-200 dark:from-emerald-950 dark:via-slate-900 dark:to-emerald-950 border-r border-green-100 dark:border-emerald-900/30"
-      >
-        <div
-          className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none opacity-100 dark:opacity-20"
-          style={{
-            background: isDark
-              ? 'radial-gradient(circle, rgba(34,160,69,0.08) 0%, transparent 70%)'
-              : 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)',
-          }}
-        />
+      <div className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden bg-gradient-to-br from-green-50 via-green-100/30 to-emerald-100/50 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950 border-r border-slate-100 dark:border-slate-900">
+        <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none bg-radial from-emerald-500/10 dark:from-emerald-500/5 to-transparent blur-3xl" />
 
         <div className="relative z-10 max-w-lg">
-          <div
-            className="p-3 rounded-2xl w-fit mb-8 bg-green-600/10 border border-green-200 dark:border-emerald-500/20"
-          >
-            <BrainCircuit className="w-10 h-10 text-green-600 dark:text-emerald-400" />
+          <div className="p-3 rounded-2xl w-fit mb-8 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-100 dark:border-emerald-900/30">
+            <BrainCircuit className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
           </div>
 
           <h1 className="font-syne text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-[1.1] mb-6">
@@ -225,7 +215,10 @@ function Login() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Check your email</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">We've sent a magic link to <span className="font-bold text-slate-900 dark:text-emerald-50">{email}</span></p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 font-syne uppercase">Check your email</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 font-medium">We've sent a magic link to <span className="font-bold text-slate-950 dark:text-slate-100">{email}</span></p>
               <button
+                type="button"
                 onClick={() => setMagicLinkSent(false)}
                 className="text-green-600 dark:text-emerald-400 font-bold text-sm hover:underline underline-offset-4 transition-all"
               >
@@ -317,7 +310,6 @@ function Login() {
                 <span>{googleLoading ? "Redirecting to Google..." : "Continue with Google"}</span>
               </button>
 
-              {/* Divider */}
               <div className="relative flex items-center py-2">
                 <div className="flex-grow border-t border-slate-100 dark:border-slate-800"></div>
                 <span className="flex-shrink-0 mx-4 text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest">Or</span>
@@ -327,7 +319,7 @@ function Login() {
               <button
                 type="button"
                 onClick={() => { setIsMagicLink(!isMagicLink); setError(""); }}
-                className="w-full py-3.5 bg-transparent border border-green-100 dark:border-emerald-500/20 text-green-700 dark:text-emerald-400 rounded-xl font-semibold text-sm hover:bg-green-50 dark:hover:bg-emerald-500/10 transition-all active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl p-3 text-xs font-black uppercase tracking-widest transition-colors duration-200 cursor-pointer"
               >
                 {isMagicLink ? 'Sign in with Password' : 'Sign in with Magic Link'}
               </button>

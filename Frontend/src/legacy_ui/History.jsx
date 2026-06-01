@@ -6,20 +6,17 @@ function History() {
   const [tickets, setTickets] = useState([]);
   const [searchText, setSearchText] = useState('');
 
-  // Load tickets from localStorage
   useEffect(() => {
     const storedTickets = JSON.parse(localStorage.getItem('tickets')) || [];
 
     setTickets(storedTickets);
   }, []);
 
-  // Clear all tickets
   const clearAllTickets = () => {
     localStorage.removeItem('tickets');
     setTickets([]);
   };
 
-  // Priority badge colors
   const getPriorityColor = (priority) => {
     switch (priority) {
       case 'Low':
@@ -35,7 +32,6 @@ function History() {
     }
   };
 
-  // Status badge colors
   const getStatusColor = (status) => {
     switch (status) {
       case 'Resolved':
@@ -48,7 +44,6 @@ function History() {
     }
   };
 
-  // Table columns configuration
   const columns = [
     {
       title: 'Ticket ID',
@@ -139,6 +134,7 @@ function History() {
       dataIndex: 'Channel',
       key: 'Channel',
       width: 120,
+      render: (text) => <span className="text-slate-700 dark:text-slate-300 transition-colors duration-300">{text}</span>,
     },
     {
       title: 'Routing Confidence',
@@ -170,6 +166,7 @@ function History() {
   return (
     <div className='p-4 md:p-8'>
       <Card
+        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 shadow-sm rounded-2xl transition-colors duration-300"
         title={
           <div className='flex justify-between items-center'>
             <h2 className='text-2xl font-bold m-0'>Ticket History</h2>
@@ -179,7 +176,7 @@ function History() {
                 prefix={<SearchOutlined />}
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                style={{ width: 250 }}
+                className="w-full sm:w-[250px] bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-xl placeholder-slate-400 dark:placeholder-slate-500 transition-all duration-200"
                 allowClear
               />
               {tickets.length > 0 && (

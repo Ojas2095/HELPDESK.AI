@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield } from 'lucide-react';
+import { ArrowLeft, Shield, Sparkles } from 'lucide-react';
 
 const sections = [
   {

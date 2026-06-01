@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useNavigate, useLocation } from 'react-router-dom';
-
-import { Bot } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bot, ShieldAlert, Cpu } from 'lucide-react';
 import useToastStore from '../../store/toastStore';
 import { Card } from '../../components/ui/card';
 import AIProcessingSteps from '../components/AIProcessingSteps';
@@ -42,28 +42,25 @@ const AIProcessing = () => {
   const hasCalledAPI = useRef(false);
   const [activeStep, setActiveStep] = useState(0);
 
-    const analyzeTicket = useCallback(async () => {
-        console.log("[AIProcessing] Starting analysis for:", text);
+    useEffect(() => {
+        if (!text) {
+            console.warn("[AIProcessing] Null payload. Redirecting to entry node.");
+            navigate('/create-ticket');
+            return;
+        }
 
+        if (hasCalledAPI.current) return;
+        hasCalledAPI.current = true;
+
+        const analyzeTicket = async () => {
             let uploadedImageUrl = null;
 
             try {
-
-                // === Single call to backend — handles ML classification + Gemini summary ===
-                // Classification, NER, priority, team assignment, duplicate detection → local ML model
-
-
-                // ── Upload Image if present ──
                 if (image_base64) {
-
                     try {
-
                         const base64Data = image_base64.split(',')[1] || image_base64;
-                        const contentType =
-                            image_base64.match(/data:(.*?);/)?.[1] || 'image/jpeg';
-
+                        const contentType = image_base64.match(/data:(.*?);/)?.[1] || 'image/jpeg';
                         const fileExt = contentType.split('/')[1] || 'jpeg';
-
                         const byteCharacters = atob(base64Data);
                         const byteNumbers = new Array(byteCharacters.length);
 
@@ -72,51 +69,34 @@ const AIProcessing = () => {
                         }
 
                         const byteArray = new Uint8Array(byteNumbers);
-
-                        const blob = new Blob([byteArray], {
-                            type: contentType
-                        });
-
-                        const fileName =
-                            `${user?.id || 'anon'}/${Date.now()}-${Math.random()
-                                .toString(36)
-                                .substring(7)}.${fileExt}`;
+                        const blob = new Blob([byteArray], { type: contentType });
+                        const fileName = `${user?.id || 'anon'}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
                         const { error: uploadError } = await supabase.storage
                             .from('ticket-attachments')
-                            .upload(fileName, blob, {
-                                contentType,
-                                upsert: true
-                            });
+                            .upload(fileName, blob, { contentType, upsert: true });
 
                         if (!uploadError) {
-
                             const { data: publicUrlData } = supabase.storage
                                 .from('ticket-attachments')
                                 .getPublicUrl(fileName);
-
                             uploadedImageUrl = publicUrlData?.publicUrl;
                         }
-
                     } catch (err) {
-                        console.error("[AIProcessing] Image upload failed:", err);
+                        console.error("[AIProcessing] Media uplink failed:", err);
                     }
                 }
 
                 const payload = {
-                    text: text,
+                    text,
                     image_text: image_text || "",
                     image_base64: image_base64 || "",
                     user_id: user?.id,
-                    company:
-                        profile?.company ||
-                        user?.user_metadata?.company ||
-                        "System",
+                    company: profile?.company || user?.user_metadata?.company || "System",
                     company_id: profile?.company_id || null,
                     image_url: uploadedImageUrl,
                     confidence_threshold: settings.aiConfidenceThreshold,
                     duplicate_sensitivity: settings.duplicateSensitivity,
-                    // Smart Template metadata (backend can use for improved routing)
                     template_id: template_id || null,
                     template_used: template_used || false,
                     user_modified: user_modified || false,
@@ -124,150 +104,62 @@ const AIProcessing = () => {
                 };
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000);
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-                const response = await fetch(
-                    `${API_CONFIG.BACKEND_URL}/ai/analyze_stream`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload),
-                        signal: controller.signal
-                    }
-                );
+                const response = await fetch(`${API_CONFIG.BACKEND_URL}/ai/analyze_stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
                 clearTimeout(timeoutId);
 
-                if (!response.ok) {
-                    throw new Error("Backend streaming failed");
-                }
-
-                // ==============================
-                // FIXED SSE BUFFERED PARSING
-                // ==============================
+                if (!response.ok) throw new Error("Stream connection severed");
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder("utf-8");
-
                 let done = false;
                 let finalTicket = null;
-                
-
-                // Buffer stores incomplete SSE chunks
                 let buffer = "";
 
                 while (!done) {
-
                     const { value, done: readerDone } = await reader.read();
-
                     done = readerDone;
 
                     if (value) {
-
-
-                        // Append chunk to buffer
                         buffer += decoder.decode(value, { stream: true });
-
-                        // SSE events separated by blank line
                         const events = buffer.split('\n\n');
-
-                        // Keep incomplete trailing event
                         buffer = events.pop() || "";
 
                         for (const event of events) {
-
                             const lines = event.split('\n');
-
                             for (const line of lines) {
-
                                 if (!line.startsWith('data: ')) continue;
-
-
                                 try {
-
-                                    const data = JSON.parse(
-                                        line.substring(6)
-                                    );
-
+                                    const data = JSON.parse(line.substring(6));
                                     if (data.step === 'done') {
-
                                         setActiveStep(steps.length);
-
                                         finalTicket = data.result;
-
                                     } else {
-
-                                        const stepIndex =
-                                            steps.indexOf(data.step);
-
-                                        if (stepIndex !== -1) {
-                                            setActiveStep(stepIndex);
-                                        }
+                                        const stepIndex = steps.indexOf(data.step);
+                                        if (stepIndex !== -1) setActiveStep(stepIndex);
                                     }
-
                                 } catch (e) {
-
-
-
-
-                                    console.error(
-                                        "Error parsing stream data",
-                                        e,
-                                        line
-                                    );
- 
+                                    console.error("Incomplete packet parse:", e);
                                 }
                             }
                         }
                     }
                 }
 
-                // Optional leftover buffer parsing
-                if (buffer.trim()) {
+                if (!finalTicket) throw new Error("EMPTY_PAYLOAD");
 
-                    const lines = buffer.split('\n');
-
-                    for (const line of lines) {
-
-                        if (!line.startsWith('data: ')) continue;
-
-                        try {
-
-                            const data = JSON.parse(
-                                line.substring(6)
-                            );
-
-                            if (data.step === 'done') {
-                                finalTicket = data.result;
-                            }
-
-                        } catch (e) {
-
-                            console.error(
-                                "Final buffer parse error",
-                                e,
-                                line
-                            );
-                        }
-                    }
-                }
-
-                if (!finalTicket) {
-                    throw new Error("BACKEND_STARTUP");
-                }
-
-                // Override the backend summary using the robust frontend multi-provider failover
                 try {
                     const aiResult = await analyzeTicketWithAI(text, image_text, image_base64);
                     finalTicket.summary = aiResult.summary || finalTicket.summary;
-                    if (aiResult.image_description) {
-                        finalTicket.image_description = aiResult.image_description;
-                    }
+                    if (aiResult.image_description) finalTicket.image_description = aiResult.image_description;
                     
-                    // The local ML model is weak with regional languages (e.g., Telugu).
-                    // If the LLM returned classification fields, we trust it more than a low-confidence ML prediction.
-                    if (aiResult.category && (finalTicket.confidence < 0.6 || finalTicket.category === 'Unknown' || finalTicket.category === 'Access')) {
+                    if (aiResult.category && (finalTicket.confidence < 0.6 || finalTicket.category === 'Unknown')) {
                         finalTicket.category = aiResult.category;
                         finalTicket.subcategory = aiResult.subcategory || finalTicket.subcategory;
                         finalTicket.priority = aiResult.priority || finalTicket.priority;
@@ -275,7 +167,7 @@ const AIProcessing = () => {
                         finalTicket.confidence = aiResult.confidence || 0.95;
                     }
                 } catch (aiErr) {
-                    console.warn("[AIProcessing] Frontend summary generation failed:", aiErr);
+                    console.warn("[AIProcessing] Heuristic enhancement bypassed:", aiErr);
                 }
 
                 const aiTicketObject = {
@@ -289,95 +181,52 @@ const AIProcessing = () => {
                 };
 
                 setAITicket(aiTicketObject);
-
-                setTimeout(() => navigate('/ai-understanding'), 1000);
+                setTimeout(() => navigate('/ai-understanding'), 1200);
 
             } catch (error) {
-
                 console.error("[AIProcessing] Analysis Failed:", error);
+                console.warn("[AIProcessing] Backend unreachable or preparing. Using local fallback.");
 
-                // Graceful fallback for any error (e.g. backend 503 offline, streaming failed, or network protocol errors)
-                if (
-                    error !== undefined // Always fallback gracefully to keep the ticket creation flow 100% operational!
-                ) {
+                let summary = (text.charAt(0).toUpperCase() + text.slice(1)).substring(0, 100) + (text.length > 100 ? '…' : '');
+                let image_description = "";
+                let fallbackCategory = "General";
+                let fallbackPriority = "Medium";
+                let fallbackTeam = "General Support";
 
-
-                    console.warn(
-                        "[AIProcessing] Backend unreachable or preparing. Using local fallback."
-                    );
-
-                    let summary =
-    (text.charAt(0).toUpperCase() + text.slice(1))
-        .substring(0, 100)
-    + (text.length > 100 ? '…' : '');
-                    let image_description = "";
-                    let fallbackCategory = "General";
-                    let fallbackSub = "General Support";
-                    let fallbackPriority = "Medium";
-                    let fallbackTeam = "General Support";
-
-                    try {
-                        const aiResult = await analyzeTicketWithAI(text, image_text, image_base64);
-                        summary = aiResult.summary || summary;
-                        image_description = aiResult.image_description || "";
-                        
-                        if (aiResult.category) {
-                            fallbackCategory = aiResult.category;
-                            fallbackSub = aiResult.subcategory || fallbackSub;
-                            fallbackPriority = aiResult.priority || fallbackPriority;
-                            fallbackTeam = aiResult.assigned_team || fallbackTeam;
-                        }
-                    } catch (aiErr) {
-                        console.warn("[AIProcessing] Fallback AI summary failed:", aiErr);
+                try {
+                    const aiResult = await analyzeTicketWithAI(text, image_text, image_base64);
+                    summary = aiResult.summary || summary;
+                    image_description = aiResult.image_description || "";
+                    if (aiResult.category) {
+                        fallbackCategory = aiResult.category;
+                        fallbackPriority = aiResult.priority || fallbackPriority;
+                        fallbackTeam = aiResult.assigned_team || fallbackTeam;
                     }
-
-                    const fallbackTicket = {
-                        summary,
-                        status: 'analyzing',
-                        category: fallbackCategory,
-                        subcategory: fallbackSub,
-                        priority: fallbackPriority,
-                        auto_resolve: false,
-                        assigned_team: fallbackTeam,
-                        entities: [],
-
-                        duplicate_ticket: {
-                            is_duplicate: false,
-                            similarity: 0
-                        },
-                        confidence: 0.9,
-                        needs_review: true,
-                        reasoning:
-                                "Analyzed via AI Fallback — backend ML model was unreachable.",
-                        image_description,
-
-                        ocr_text: image_text || "",
-                        highlights: [],
-                        originalIssue: original_text || text,
-                        originalLanguage: original_language || 'en',
-                        capturedFileBase64: image_base64,
-                        ocrText: image_text,
-                        image_url: uploadedImageUrl || null
-                    };
-
-                    setAITicket(fallbackTicket);
-
-                    setTimeout(
-                        () => navigate('/ai-understanding'),
-                        500
-                    );
-
-                } else {
-
-                    showToast(
-                        "AI Analysis sequence failed. Check network protocols.",
-                        "error"
-                    );
-
-                    navigate('/create-ticket');
+                } catch (aiErr) {
+                    console.warn("[AIProcessing] Local summary node failed.");
                 }
+
+                setAITicket({
+                    summary,
+                    status: 'analyzing',
+                    category: fallbackCategory,
+                    priority: fallbackPriority,
+                    assigned_team: fallbackTeam,
+                    duplicate_ticket: { is_duplicate: false, similarity: 0 },
+                    confidence: 0.85,
+                    reasoning: "Autonomous fallback established — primary ML model unreachable.",
+                    image_description,
+                    originalIssue: original_text || text,
+                    capturedFileBase64: image_base64,
+                    image_url: uploadedImageUrl || null
+                });
+
+                setTimeout(() => navigate('/ai-understanding'), 500);
             }
-    }, [text, image_text, image_base64, navigate, setAITicket, settings, user, profile, showToast, template_id, template_used, user_modified, ticket_title]);
+        };
+
+        analyzeTicket();
+    }, [text, image_text, image_base64, navigate, setAITicket, settings, user, profile, showToast, template_id, template_used, user_modified, ticket_title, original_text, original_language]);
 
     useEffect(() => {
         if (!text) {
@@ -390,7 +239,7 @@ const AIProcessing = () => {
         hasCalledAPI.current = true;
 
         analyzeTicket();
-    }, [text, navigate, analyzeTicket]);
+    }, [text, image_text, image_base64, navigate, setAITicket, settings, user, profile]);
 
         if (!response.ok) {
           throw new Error('Backend streaming failed');
@@ -620,3 +469,4 @@ const AIProcessing = () => {
 };
 
 export default AIProcessing;
+

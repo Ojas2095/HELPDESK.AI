@@ -12,10 +12,6 @@ import useAuthStore from "../store/authStore";
 import { Select } from "../components/ui/select";
 import { getPasswordValidation, getPasswordValidationMessage } from "../utils/passwordValidation";
 
-/**
- * AdminSignup — Premium Multi-step Company Registration
- * Path: /admin-signup
- */
 function AdminSignup() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -61,14 +57,17 @@ function AdminSignup() {
     }
   }, [user, profile, navigate]);
 
-    // Password complexity validator — mirrors Supabase's policy
     const validatePassword = (pw) => {
         if (pw.length < 8) return 'Password must be at least 8 characters long.';
         if (!/[a-z]/.test(pw)) return 'Password must contain at least one lowercase letter (a-z).';
         if (!/[A-Z]/.test(pw)) return 'Password must contain at least one uppercase letter (A-Z).';
         if (!/[0-9]/.test(pw)) return 'Password must contain at least one number (0-9).';
+<<<<<<< HEAD
+        return null;
+=======
         if (!/[^A-Za-z0-9]/.test(pw)) return 'Password must contain at least one special character.';
         return null; // valid
+>>>>>>> upstream/gssoc
     };
 
   // Password strength calculation
@@ -192,12 +191,36 @@ function AdminSignup() {
 
     if (isSubmitted) {
         return (
+<<<<<<< HEAD
+            <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-gradient-to-br from-green-50 via-green-100/40 to-green-200 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950 transition-colors duration-300">
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none bg-radial from-emerald-500/10 dark:from-emerald-500/5 to-transparent blur-3xl" />
+=======
             <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-gradient-to-br from-[#f0fdf4] via-[#dcfce7] to-[#bbf7d0] dark:from-[#102219] dark:via-[#142f22] dark:to-[#173a2a] text-slate-900 dark:text-slate-100 transition-colors duration-200" style={{ fontFamily: "'Inter', sans-serif" }}>
                 <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none opacity-100 dark:opacity-20" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
+>>>>>>> upstream/gssoc
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
+<<<<<<< HEAD
+                    className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-10 max-w-lg w-full text-center relative z-10 shadow-xl dark:shadow-black/30 border border-green-50 dark:border-slate-700/60 transition-colors duration-300"
+                >
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/30">
+                        <Mail className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <h2 className="font-syne text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-4">Check Your Email</h2>
+                    <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed mb-8">
+                        Registration request received! We've sent a verification link to <span className="font-bold text-emerald-600 dark:text-emerald-400">{formData.email}</span>.
+                    </p>
+                    <div className="rounded-2xl p-5 sm:p-6 text-left mb-8 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
+                        <h4 className="font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2 text-sm sm:text-base">
+                            <Info className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Next Steps:
+                        </h4>
+                        <ul className="space-y-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium">
+                            <li className="flex gap-2"><span className="text-emerald-600 dark:text-emerald-400 font-bold">1.</span> Verify your email by clicking the link in our message.</li>
+                            <li className="flex gap-2"><span className="text-emerald-600 dark:text-emerald-400 font-bold">2.</span> Your request will be reviewed by our Master Admin.</li>
+                            <li className="flex gap-2"><span className="text-emerald-600 dark:text-emerald-400 font-bold">3.</span> You'll receive a final confirmation once approved.</li>
+=======
                     className="bg-white dark:bg-[#1a2e24] rounded-3xl p-10 max-w-lg w-full text-center relative z-10 shadow-xl dark:shadow-slate-950/50 border border-[#f0fdf4] dark:border-[#2a4034]"
                 >
                     <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 bg-emerald-50 dark:bg-[#102219] border border-emerald-100 dark:border-emerald-950/20">
@@ -215,13 +238,18 @@ function AdminSignup() {
                             <li className="flex gap-2"><span className="font-bold">1.</span> Verify your email by clicking the link in our message.</li>
                             <li className="flex gap-2"><span className="font-bold">2.</span> Your request will be reviewed by our Master Admin.</li>
                             <li className="flex gap-2"><span className="font-bold">3.</span> You'll receive a final confirmation once approved.</li>
+>>>>>>> upstream/gssoc
                         </ul>
                     </div>
                     <button
                         onClick={() => navigate('/login')}
+<<<<<<< HEAD
+                        className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-xl py-4 text-sm sm:text-base font-semibold shadow-lg shadow-emerald-500/20 hover:translate-y-[-1px] active:translate-y-[0px] transition-all duration-200 cursor-pointer border-none"
+=======
                         className="w-full rounded-xl py-4 font-bold transition-all flex items-center justify-center text-white bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-lg shadow-emerald-600/20"
                         onMouseEnter={(e) => { e.currentTarget.style.transform='translateY(-1px)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.transform='translateY(0)'; }}
+>>>>>>> upstream/gssoc
                     >
                         Return to Login
                     </button>
@@ -288,6 +316,16 @@ function AdminSignup() {
 
   if (isSubmitted) {
     return (
+<<<<<<< HEAD
+        <div className="min-h-screen flex flex-col lg:flex-row bg-white dark:bg-slate-900 transition-colors duration-300">
+
+            {/* Left Side: Branding/Hero */}
+            <div className="hidden lg:flex w-5/12 items-center justify-center p-12 xl:p-16 relative overflow-hidden bg-gradient-to-br from-green-50 via-green-100/50 to-green-200 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-950 transition-colors duration-300">
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none bg-radial from-emerald-500/10 dark:from-emerald-500/5 to-transparent blur-3xl" />
+
+                <Link to="/" className="absolute top-8 left-8 flex items-center gap-2 font-medium text-sm text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors group">
+                    <div className="p-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm group-hover:border-emerald-500/30">
+=======
         <div className="min-h-screen flex overflow-hidden text-slate-900 dark:text-slate-100 bg-white dark:bg-[#102219] font-sans transition-colors duration-200" style={{ fontFamily: "'Inter', sans-serif" }}>
 
             {/* Left Side: Branding/Hero */}
@@ -299,11 +337,21 @@ function AdminSignup() {
                     className="absolute top-8 left-8 flex items-center gap-2 z-10 transition-all text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 group"
                 >
                     <div className="p-2 rounded-full bg-white dark:bg-[#1a2e24] border border-slate-200 dark:border-[#2a4034] group-hover:border-emerald-500 transition-colors">
+>>>>>>> upstream/gssoc
                         <ChevronLeft className="w-4 h-4" />
                     </div>
                     <span className="text-sm font-semibold">Back to Home</span>
                 </Link>
 
+<<<<<<< HEAD
+                <div className="relative z-10 w-full max-w-md">
+                    <div className="p-3 rounded-2xl w-fit mb-8 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-100 dark:border-emerald-900/30 cursor-pointer" onClick={() => navigate('/')}>
+                        <BrainCircuit className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <p className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] tracking-widest uppercase mb-4">Enterprise Edition</p>
+                    <h1 className="font-syne text-4xl xl:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1] mb-10">
+                        Scale your <span className="text-emerald-600 dark:text-emerald-400">IT Support</span> globally.
+=======
                 <div className="relative z-10 max-w-md">
                     <div className="p-3 rounded-2xl w-fit mb-8 bg-[#16a34a]/10 border border-emerald-200 dark:border-emerald-800 cursor-pointer" onClick={() => navigate('/')}>
                         <BrainCircuit className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
@@ -311,6 +359,7 @@ function AdminSignup() {
                     <p className="text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-widest mb-4">Enterprise Edition</p>
                     <h1 className="font-syne text-4xl font-black text-[#0f1f12] dark:text-emerald-400 tracking-tight leading-tight mb-8">
                         Scale your <span className="text-emerald-600 dark:text-emerald-300">IT Support</span> globally.
+>>>>>>> upstream/gssoc
                     </h1>
 
                     <div className="space-y-8">
@@ -327,18 +376,35 @@ function AdminSignup() {
                             title: 'Admin Approval System',
                             desc: 'Multi-tenant architecture with human-verified vetting process.'
                         }].map((item, i) => (
+<<<<<<< HEAD
+                            <div key={i} className="flex gap-4 items-start">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-100 dark:border-emerald-900/30">
+                                    {item.icon}
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-base text-slate-900 dark:text-white mb-1">{item.title}</h4>
+=======
                             <div key={i} className="flex gap-4 items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-[#16a34a]/10 border border-emerald-200 dark:border-emerald-800">
                                     {item.icon}
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-base text-[#0f1f12] dark:text-slate-100 mb-1">{item.title}</h4>
+>>>>>>> upstream/gssoc
                                     <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{item.desc}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
 
+<<<<<<< HEAD
+                    <div className="mt-12 bg-white dark:bg-slate-800/80 border border-emerald-100 dark:border-slate-700/60 rounded-2xl p-[14px] px-[18px] shadow-sm dark:shadow-black/20 backdrop-blur-sm">
+                        <div className="flex items-center gap-3">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                            <div>
+                                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">System Status</p>
+                                <p className="text-sm text-slate-900 dark:text-slate-100 font-medium">All systems operational. 99.9% uptime.</p>
+=======
                     {/* System Status Badge */}
                     <div className="mt-10 bg-white dark:bg-[#1a2e24] border border-emerald-100 dark:border-[#2a4034] rounded-2xl p-4 shadow-sm text-slate-800 dark:text-slate-200">
                         <div className="flex items-center gap-3">
@@ -346,6 +412,7 @@ function AdminSignup() {
                             <div>
                                 <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-0.5">System Status</p>
                                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">All systems operational. 99.9% uptime.</p>
+>>>>>>> upstream/gssoc
                             </div>
                         </div>
                     </div>
@@ -353,6 +420,14 @@ function AdminSignup() {
             </div>
 
             {/* Right Side: Step Form */}
+<<<<<<< HEAD
+            <div className="flex-1 overflow-y-auto px-4 py-12 sm:p-12 relative flex justify-center items-center bg-white dark:bg-slate-900 border-l border-green-50 dark:border-slate-800 transition-colors duration-300">
+                <div className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-[2rem] p-4 sm:p-8 md:p-12 shadow-xl dark:shadow-black/10 border border-green-50 dark:border-slate-700/60 transition-colors duration-300">
+
+                    {/* Progress Indicator */}
+                    <div className="flex items-center justify-between mb-12 max-w-md mx-auto relative px-2">
+                        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 dark:bg-slate-700 -translate-y-1/2 z-0" />
+=======
             <div className="flex-1 overflow-y-auto px-4 py-8 lg:p-12 relative flex flex-col items-center justify-start lg:justify-center bg-white dark:bg-[#102219] border-l border-emerald-50 dark:border-[#2a4034] transition-colors duration-200">
 
                 {/* Expose Mobile Back to Home Navigation */}
@@ -371,13 +446,30 @@ function AdminSignup() {
                     <div className="flex items-center justify-between mb-12 max-w-md mx-auto relative">
                         {/* Connector Line */}
                         <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 dark:bg-emerald-950/50 -translate-y-1/2 z-0"></div>
+>>>>>>> upstream/gssoc
                         <div
-                            className="absolute top-1/2 left-0 h-0.5 bg-emerald-600 -translate-y-1/2 z-0 transition-all duration-500"
+                            className="absolute top-1/2 left-0 w-full h-0.5 bg-emerald-600 -translate-y-1/2 z-0 transition-all duration-500"
                             style={{ width: `${(step - 1) * 50}%` }}
-                        ></div>
+                        />
 
                         {[1, 2, 3].map((s) => (
                             <div key={s} className="relative z-10 flex flex-col items-center gap-2">
+<<<<<<< HEAD
+                                <div 
+                                    style={{
+                                        background: step >= s ? 'linear-gradient(135deg,#16a34a,#22c55e)' : '',
+                                        boxShadow: step >= s ? '0 4px 12px rgba(34,160,69,0.25)' : 'none'
+                                    }}
+                                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-all duration-300 ${
+                                        step >= s 
+                                        ? 'text-white border-none' 
+                                        : 'bg-slate-50 dark:bg-slate-900 text-slate-400 border-2 border-slate-200 dark:border-slate-700'
+                                    }`}
+                                >
+                                    {step > s ? <CheckCircle2 className="w-5 h-5" /> : s}
+                                </div>
+                                <span className={`text-[9px] sm:text-xs uppercase font-bold tracking-wider ${step >= s ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'}`}>
+=======
                                 <div style={{
                                     width: '40px', height: '40px', borderRadius: '50%',
                                     fontWeight: 700, fontSize: '14px', transition: 'all 0.3s',
@@ -390,6 +482,7 @@ function AdminSignup() {
                                     {step > s ? <CheckCircle2 className="w-5 h-5" /> : s}
                                 </div>
                                 <span className={`text-[10px] uppercase font-bold tracking-wider ${step >= s ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'}`}>
+>>>>>>> upstream/gssoc
                                     {s === 1 ? "Personal" : s === 2 ? "Company" : "Agreement"}
                                 </span>
                             </div>
@@ -400,12 +493,20 @@ function AdminSignup() {
                         <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
+<<<<<<< HEAD
+                            className="mb-8 flex items-start gap-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl p-4"
+=======
                             className="mb-8 flex items-start gap-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-2xl p-4"
+>>>>>>> upstream/gssoc
                         >
                             <div className="rounded-full p-1 mt-0.5 bg-red-100 dark:bg-red-900/50">
                                 <ShieldCheck className="w-3 h-3 text-red-600 dark:text-red-400 rotate-180" />
                             </div>
+<<<<<<< HEAD
+                            <p className="text-sm font-medium text-red-700 dark:text-red-400 leading-snug">{error}</p>
+=======
                             <p className="text-sm font-medium text-red-700 dark:text-red-400">{error}</p>
+>>>>>>> upstream/gssoc
                         </motion.div>
                     )}
 
@@ -413,6 +514,12 @@ function AdminSignup() {
                         <AnimatePresence mode="wait">
                             {/* STEP 1: PERSONAL INFO */}
                             {step === 1 && (
+<<<<<<< HEAD
+                                <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                                    <div className="mb-6">
+                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Personal Information</h2>
+                                        <p className="text-slate-400 dark:text-slate-400 text-sm mt-1">Tell us who you are and create your admin account.</p>
+=======
                                 <motion.div
                                     key="step1"
                                     initial={{ opacity: 0, x: 20 }}
@@ -423,12 +530,18 @@ function AdminSignup() {
                                     <div className="mb-8">
                                         <h2 className="text-2xl font-bold text-slate-900 dark:text-emerald-400 font-syne">Personal Information</h2>
                                         <p className="text-slate-500 dark:text-slate-400 text-sm">Tell us who you are and create your admin account.</p>
+>>>>>>> upstream/gssoc
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div className="space-y-2">
+<<<<<<< HEAD
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                <User className="w-3 h-3" /> Full Name
+=======
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <User className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Full Name
+>>>>>>> upstream/gssoc
                                             </label>
                                             <input
                                                 type="text"
@@ -437,12 +550,21 @@ function AdminSignup() {
                                                 placeholder="Alex Mercer"
                                                 value={formData.fullName}
                                                 onChange={handleChange}
+<<<<<<< HEAD
+                                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Mail className="w-3 h-3" /> Work Email
+=======
                                                 className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <Mail className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Work Email
+>>>>>>> upstream/gssoc
                                             </label>
                                             <input
                                                 type="email"
@@ -451,12 +573,21 @@ function AdminSignup() {
                                                 placeholder="alex.mercer@acmecorp.com"
                                                 value={formData.email}
                                                 onChange={handleChange}
+<<<<<<< HEAD
+                                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Phone className="w-3 h-3" /> Phone Number
+=======
                                                 className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <Phone className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Phone Number
+>>>>>>> upstream/gssoc
                                             </label>
                                             <input
                                                 type="tel"
@@ -464,12 +595,21 @@ function AdminSignup() {
                                                 placeholder="+1 (415) 555-0198"
                                                 value={formData.phone}
                                                 onChange={handleChange}
+<<<<<<< HEAD
+                                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Briefcase className="w-3 h-3" /> Job Title
+=======
                                                 className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <Briefcase className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Job Title
+>>>>>>> upstream/gssoc
                                             </label>
                                             <input
                                                 type="text"
@@ -477,15 +617,26 @@ function AdminSignup() {
                                                 placeholder="Director of Operations"
                                                 value={formData.jobTitle}
                                                 onChange={handleChange}
+<<<<<<< HEAD
+                                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-all"
+=======
                                                 className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
+>>>>>>> upstream/gssoc
                                             />
                                         </div>
                                     </div>
 
+<<<<<<< HEAD
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                        <div className="space-y-2">
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Lock className="w-3 h-3" /> Create Password
+=======
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-[#2a4034]">
                                         <div className="space-y-2 text-left">
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <Lock className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Create Password
+>>>>>>> upstream/gssoc
                                             </label>
                                             <div className="relative">
                                                 <input
@@ -495,6 +646,35 @@ function AdminSignup() {
                                                     placeholder="••••••••••"
                                                     value={formData.password}
                                                     onChange={handleChange}
+<<<<<<< HEAD
+                                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-all pr-11"
+                                                />
+                                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600"><Eye size={16} /></button>
+                                            </div>
+                                            <div className="mt-2 space-y-1">
+                                                {formData.password && (
+                                                    <div className="flex justify-between items-center text-xs font-bold uppercase tracking-widest text-slate-400">
+                                                        <span>Strength: {getStrengthText()}</span>
+                                                        <span>{passwordStrength}%</span>
+                                                    </div>
+                                                )}
+                                                {formData.password && (
+                                                    <div className="h-1 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                        <motion.div className={`h-full ${getStrengthColor()}`} initial={{ width: 0 }} animate={{ width: `${passwordStrength}%` }} />
+                                                    </div>
+                                                )}
+                                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2">
+                                                    {[
+                                                        { label: '8+ characters', ok: formData.password.length >= 8 },
+                                                        { label: 'Uppercase (A-Z)', ok: /[A-Z]/.test(formData.password) },
+                                                        { label: 'Lowercase (a-z)', ok: /[a-z]/.test(formData.password) },
+                                                        { label: 'Number (0-9)', ok: /[0-9]/.test(formData.password) },
+                                                    ].map(({ label, ok }) => (
+                                                        <span key={label} className={`text-xs font-bold flex items-center gap-1 transition-colors ${formData.password ? (ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-400') : 'text-slate-300 dark:text-slate-600'}`}>
+                                                            <span>{ok ? '✓' : '○'}</span> {label}
+                                                        </span>
+                                                    ))}
+=======
                                                     className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm pr-11 focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                                 />
                                                 <button
@@ -525,12 +705,18 @@ function AdminSignup() {
                                                     >
                                                         {passwordWarning || "Password requirements met."}
                                                     </div>
+>>>>>>> upstream/gssoc
                                                 </div>
                                             )}
                                         </div>
                                         <div className="space-y-2">
+<<<<<<< HEAD
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Lock className="w-3 h-3" /> Confirm Password
+=======
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <Lock className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Confirm Password
+>>>>>>> upstream/gssoc
                                             </label>
                                             <div className="relative">
                                                 <input
@@ -540,6 +726,11 @@ function AdminSignup() {
                                                     placeholder="••••••••••"
                                                     value={formData.confirmPassword}
                                                     onChange={handleChange}
+<<<<<<< HEAD
+                                                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-all pr-11"
+                                                />
+                                                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600"><Eye size={16} /></button>
+=======
                                                     className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm pr-11 focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all pr-11 focus:ring-4 focus:ring-emerald-500/5"
                                                 />
                                                 <button
@@ -549,22 +740,43 @@ function AdminSignup() {
                                                 >
                                                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                 </button>
+>>>>>>> upstream/gssoc
                                             </div>
                                         </div>
                                     </div>
 
                                     <button
+<<<<<<< HEAD
+                                        type="button"
+                                        onClick={nextStep}
+                                        className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-xl py-4 text-sm font-semibold shadow-lg shadow-emerald-500/20 active:scale-[0.98] hover:translate-y-[-1px] transition-all flex items-center justify-center gap-2 mt-8 border-none cursor-pointer"
+                                    >
+                                        Continue to Company Details <ChevronRight className="w-5 h-5" />
+                                    </button>
+=======
                                          type="button"
                                          onClick={nextStep}
                                          className="w-full rounded-xl py-4 font-bold transition-all mt-8 flex items-center justify-center gap-2 text-white bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-lg shadow-emerald-600/20"
                                      >
                                          Continue to Company Details <ChevronRight className="w-5 h-5" />
                                      </button>
+>>>>>>> upstream/gssoc
                                 </motion.div>
                             )}
 
                             {/* STEP 2: COMPANY DETAILS */}
                             {step === 2 && (
+<<<<<<< HEAD
+                                <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                                    <div className="mb-6">
+                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Company Details</h2>
+                                        <p className="text-slate-400 dark:text-slate-400 text-sm mt-1">Tell us about the organization you're registering.</p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                            <Building2 className="w-3 h-3" /> Company Name
+=======
                                 <motion.div
                                     key="step2"
                                     initial={{ opacity: 0, x: 20 }}
@@ -580,6 +792,7 @@ function AdminSignup() {
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                             <Building2 className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Company Name
+>>>>>>> upstream/gssoc
                                         </label>
                                         <input
                                             type="text"
@@ -588,14 +801,23 @@ function AdminSignup() {
                                             placeholder="Acme Global Inc."
                                             value={formData.companyName}
                                             onChange={handleChange}
+<<<<<<< HEAD
+                                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-all"
+=======
                                             className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
+>>>>>>> upstream/gssoc
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div className="space-y-2">
+<<<<<<< HEAD
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                <User className="w-3 h-3" /> Company Size
+=======
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <User className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Company Size
+>>>>>>> upstream/gssoc
                                             </label>
                                             <Select
                                                 name="companySize"
@@ -604,7 +826,7 @@ function AdminSignup() {
                                                 placeholder="Select Size"
                                                 options={[
                                                     { value: "1-10", label: "1-10 Employees" },
-                                                    { value: "11-50", label: "11-50 Employees" },
+                                                    { value: "11-50", label: "11-51 Employees" },
                                                     { value: "51-200", label: "51-200 Employees" },
                                                     { value: "201-1000", label: "201-1,000 Employees" },
                                                     { value: "1000+", label: "1,000+ Employees" }
@@ -612,8 +834,13 @@ function AdminSignup() {
                                             />
                                         </div>
                                         <div className="space-y-2">
+<<<<<<< HEAD
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                <Briefcase className="w-3 h-3" /> Industry
+=======
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <Briefcase className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Industry
+>>>>>>> upstream/gssoc
                                             </label>
                                             <Select
                                                 name="industry"
@@ -633,10 +860,15 @@ function AdminSignup() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div className="space-y-2">
+<<<<<<< HEAD
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-2">
+                                                <Globe className="w-3 h-3" /> Company Website
+=======
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <Globe className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Company Website
+>>>>>>> upstream/gssoc
                                             </label>
                                             <input
                                                 type="url"
@@ -644,12 +876,21 @@ function AdminSignup() {
                                                 placeholder="https://acme.com"
                                                 value={formData.website}
                                                 onChange={handleChange}
+<<<<<<< HEAD
+                                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-all"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-2">
+                                                <Globe className="w-3 h-3" /> Country
+=======
                                                 className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
                                             />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
                                                 <Globe className="w-3 h-3 text-slate-400 dark:text-slate-500" /> Country
+>>>>>>> upstream/gssoc
                                             </label>
                                             <input
                                                 type="text"
@@ -658,11 +899,25 @@ function AdminSignup() {
                                                 placeholder="United States"
                                                 value={formData.country}
                                                 onChange={handleChange}
+<<<<<<< HEAD
+                                                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-950 transition-all"
+=======
                                                 className="w-full bg-slate-50 dark:bg-[#102219] border border-slate-200 dark:border-[#2a4034] rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white dark:focus:bg-[#102219] text-slate-900 dark:text-slate-100 outline-none transition-all focus:ring-4 focus:ring-emerald-500/5"
+>>>>>>> upstream/gssoc
                                             />
                                         </div>
                                     </div>
 
+<<<<<<< HEAD
+                                    <div className="flex gap-4 pt-4">
+                                        <button type="button" onClick={prevStep} className="flex-1 bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl py-4 font-bold transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                            <ChevronLeft className="w-5 h-5" /> Back
+                                        </button>
+                                        <button type="button" onClick={nextStep} className="flex-[2] bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-xl py-4 font-bold shadow-lg shadow-emerald-500/20 active:scale-[0.98] hover:translate-y-[-1px] transition-all flex items-center justify-center gap-2 border-none cursor-pointer">
+                                            Review &amp; Confirm <ChevronRight className="w-5 h-5" />
+                                        </button>
+                                    </div>
+=======
                                      <div className="flex gap-4 pt-8">
                                          <button type="button" onClick={prevStep}
                                              className="flex-1 rounded-xl py-4 font-bold transition-all flex items-center justify-center gap-2 bg-[#f9fafb] dark:bg-[#102219] text-[#374151] dark:text-slate-300 border border-[#e5e7eb] dark:border-[#2a4034]"
@@ -675,11 +930,21 @@ function AdminSignup() {
                                              Review &amp; Confirm <ChevronRight className="w-5 h-5" />
                                          </button>
                                      </div>
+>>>>>>> upstream/gssoc
                                 </motion.div>
                             )}
 
                             {/* STEP 3: AGREEMENT */}
                             {step === 3 && (
+<<<<<<< HEAD
+                                <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                                    <div className="mb-6">
+                                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Final Confirmation</h2>
+                                        <p className="text-slate-400 dark:text-slate-400 text-sm mt-1">Review our policies and submit your application.</p>
+                                    </div>
+
+                                    <div className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4">
+=======
                                 <motion.div
                                     key="step3"
                                     initial={{ opacity: 0, x: 20 }}
@@ -693,32 +958,50 @@ function AdminSignup() {
                                     </div>
 
                                     <div className="bg-gray-50 dark:bg-[#102219] border border-gray-100 dark:border-[#2a4034] rounded-2xl p-6 space-y-4">
+>>>>>>> upstream/gssoc
                                         <label className="flex items-start gap-4 cursor-pointer group">
                                             <input
                                                 type="checkbox"
                                                 name="agreedToTerms"
                                                 checked={formData.agreedToTerms}
                                                 onChange={handleChange}
-                                                className="mt-1 w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 transition-all"
+                                                className="mt-1 w-5 h-5 rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500 bg-white dark:bg-slate-900 transition-all"
                                             />
+<<<<<<< HEAD
+                                            <span className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                                                I agree to the <Link to="/terms" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Privacy Policy</Link>. I understand that my data will be stored securely.
+                                            </span>
+                                        </label>
+                                        <label className="flex items-start gap-4 cursor-pointer group pt-4 border-t border-slate-100 dark:border-slate-800">
+=======
                                             <span className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                                                 I agree to the <Link to="/terms" className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline">Terms of Service</Link> and <Link to="/privacy" className="text-emerald-700 dark:text-emerald-400 font-bold hover:underline">Privacy Policy</Link>. I understand that my data will be stored securely.
                                             </span>
                                         </label>
                                         <label className="flex items-start gap-4 cursor-pointer group pt-4 border-t border-gray-200/50 dark:border-emerald-950/20">
+>>>>>>> upstream/gssoc
                                             <input
                                                 type="checkbox"
                                                 name="isAuthorized"
                                                 checked={formData.isAuthorized}
                                                 onChange={handleChange}
-                                                className="mt-1 w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 transition-all"
+                                                className="mt-1 w-5 h-5 rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500 bg-white dark:bg-slate-900 transition-all"
                                             />
+<<<<<<< HEAD
+                                            <span className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                                                I confirm that I am authorized to register <span className="font-bold text-slate-900 dark:text-white underline">{formData.companyName || "my company"}</span> on the HelpDesk.ai platform as a primary administrator.
+=======
                                             <span className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
                                                 I confirm that I am authorized to register <span className="font-bold text-gray-900 dark:text-slate-100 underline">{formData.companyName || "my company"}</span> on the HelpDesk.ai platform as a primary administrator.
+>>>>>>> upstream/gssoc
                                             </span>
                                         </label>
                                     </div>
 
+<<<<<<< HEAD
+                                    <div className="flex gap-4 pt-4">
+                                        <button type="button" onClick={prevStep} disabled={loading} className="flex-1 bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl py-4 font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border border-slate-200 dark:border-slate-800 disabled:opacity-50">
+=======
                                     <div className="flex gap-4 pt-8">
                                         <button
                                             type="button"
@@ -726,12 +1009,17 @@ function AdminSignup() {
                                             disabled={loading}
                                             className="flex-1 bg-gray-100 dark:bg-[#102219] text-gray-700 dark:text-slate-300 rounded-xl py-4 font-bold hover:bg-gray-200 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2 border border-transparent dark:border-[#2a4034]"
                                         >
+>>>>>>> upstream/gssoc
                                             <ChevronLeft className="w-5 h-5" /> Back
                                         </button>
                                         <button
                                             type="submit"
                                             disabled={loading}
+<<<<<<< HEAD
+                                            className="flex-[2] bg-emerald-900 dark:bg-emerald-600 text-white rounded-xl py-4 font-bold hover:bg-emerald-800 dark:hover:bg-emerald-500 shadow-xl shadow-emerald-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border-none cursor-pointer disabled:opacity-50"
+=======
                                             className="flex-[2] bg-emerald-900 dark:bg-emerald-800 text-white rounded-xl py-4 font-bold hover:bg-emerald-800 dark:hover:bg-emerald-750 transition-all shadow-xl shadow-emerald-900/20 flex items-center justify-center gap-2"
+>>>>>>> upstream/gssoc
                                         >
                                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
                                             {loading ? "Processing..." : "Submit Registration"}
@@ -742,10 +1030,17 @@ function AdminSignup() {
                         </AnimatePresence>
                     </form>
 
+<<<<<<< HEAD
+                    <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 mt-10">
+                        Secure enterprise registration portal. Your data is protected by 256-bit encryption.
+                    </p>
+                    <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-4 font-medium">
+=======
                     <p className="text-center mt-12 text-slate-400 dark:text-slate-500 text-xs">
                         Secure enterprise registration portal. Your data is protected by 256-bit encryption.
                     </p>
                     <p className="text-center mt-4 text-slate-500 dark:text-slate-400 text-xs">
+>>>>>>> upstream/gssoc
                         Are you an employee?{' '}
                         <Link to="/signup" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
                             Join your team here →
