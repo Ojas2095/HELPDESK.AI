@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import TeamSection from '../components/landing/TeamSection';
+import ThemeToggle from '../components/shared/ThemeToggle';
 
 // ---- Count-up animation component ----
 function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false }) {
@@ -273,37 +274,38 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-800">
+        <div className="min-h-screen bg-white font-sans text-slate-800 transition-colors duration-200 dark:bg-[#07140f] dark:text-slate-100">
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
-            <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+            <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm transition-colors duration-200 dark:bg-[#061a13]/95 dark:border-emerald-900/40 dark:shadow-black/30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
                             <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
-                            <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
+                            <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase dark:text-emerald-300">HelpDesk.ai</span>
                         </div>
 
                         {/* Desktop Links */}
                         <div className="hidden md:flex items-center gap-8">
-                            <a href="#features" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">Features</a>
-                            <a href="#how-it-works" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">How It Works</a>
-                            <a href="#pricing" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">Pricing</a>
+                            <a href="#features" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors dark:text-slate-300 dark:hover:text-emerald-300">Features</a>
+                            <a href="#how-it-works" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors dark:text-slate-300 dark:hover:text-emerald-300">How It Works</a>
+                            <a href="#pricing" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors dark:text-slate-300 dark:hover:text-emerald-300">Pricing</a>
                         </div>
 
                         {/* CTA Buttons */}
                         <div className="hidden md:flex items-center gap-3">
+                            <ThemeToggle />
                             <button
                                 onClick={() => navigate('/login')}
-                                className="text-sm font-semibold text-gray-700 hover:text-emerald-800 transition-colors px-4 py-2 rounded-lg hover:bg-gray-50"
+                                className="text-sm font-semibold text-gray-700 hover:text-emerald-800 transition-colors px-4 py-2 rounded-lg hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-emerald-300"
                             >
                                 Sign In
                             </button>
                             <button
                                 onClick={() => setShowDemo(true)}
-                                className="text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 transition-all flex items-center gap-1.5"
+                                className="text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 transition-all flex items-center gap-1.5 dark:border-emerald-500/30 dark:text-emerald-300 dark:hover:bg-emerald-500/10"
                             >
                                 <Play className="w-3.5 h-3.5 fill-emerald-700" /> Watch Demo
                             </button>
@@ -316,8 +318,9 @@ export default function LandingPage() {
                         </div>
 
                         {/* Mobile Menu Button */}
-                        <div className="md:hidden">
-                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-emerald-800 p-2">
+                        <div className="md:hidden flex items-center gap-2">
+                            <ThemeToggle />
+                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-emerald-800 p-2 dark:text-slate-200 dark:hover:text-emerald-300">
                                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                             </button>
                         </div>
@@ -326,16 +329,16 @@ export default function LandingPage() {
 
                 {/* Mobile Menu */}
                 {isMenuOpen && (
-                    <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-xl z-50">
+                    <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-xl z-50 dark:bg-[#061a13] dark:border-emerald-900/40">
                         <div className="px-5 pt-3 pb-6 space-y-4">
-                            <a href="#features" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Features</a>
-                            <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">How It Works</a>
-                            <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Pricing</a>
-                            <div className="pt-4 flex flex-col gap-3 border-t border-gray-100">
+                            <a href="#features" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2 dark:text-slate-200 dark:hover:text-emerald-300">Features</a>
+                            <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2 dark:text-slate-200 dark:hover:text-emerald-300">How It Works</a>
+                            <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2 dark:text-slate-200 dark:hover:text-emerald-300">Pricing</a>
+                            <div className="pt-4 flex flex-col gap-3 border-t border-gray-100 dark:border-emerald-900/40">
                                 <button onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} className="w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2">
                                     <Play className="w-4 h-4 fill-emerald-700" /> Watch Demo
                                 </button>
-                                <button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg">
+                                <button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg dark:border-emerald-900/40 dark:text-slate-200">
                                     Sign In
                                 </button>
                                 <button onClick={() => navigate('/admin-signup')} className="w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow">
@@ -349,20 +352,20 @@ export default function LandingPage() {
 
             {/* ==================== HERO ==================== */}
             <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10 dark:from-emerald-950/70" />
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-8">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-8 dark:bg-emerald-400/10 dark:border-emerald-400/20 dark:text-emerald-300">
                         <Activity className="w-3 h-3" />
                         <span>AI-Powered Helpdesk Automation · Made in India 🇮🇳</span>
                     </div>
 
-                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1] dark:text-white">
                         Your IT Helpdesk,<br />
                         <span className="text-emerald-700">Fully Automated.</span>
                     </h1>
 
-                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 mb-10 leading-relaxed">
+                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 mb-10 leading-relaxed dark:text-slate-300">
                         Turn messy user complaints into structured, categorized, and prioritized support tickets — instantly. No manual triage. No missed urgencies.
                     </p>
 
@@ -375,7 +378,7 @@ export default function LandingPage() {
                         </button>
                         <button
                             onClick={() => setShowDemo(true)}
-                            className="w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 text-base"
+                            className="w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 text-base dark:bg-white/10 dark:text-slate-100 dark:border-white/15 dark:hover:border-emerald-400 dark:hover:text-emerald-300"
                         >
                             <Play className="w-4 h-4 fill-gray-500" /> Watch a Demo
                         </button>
@@ -509,17 +512,17 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== FEATURES GRID ==================== */}
-            <section className="py-24 bg-white" id="features">
+            <section className="py-24 bg-white dark:bg-[#07140f]" id="features">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-16">
                         <span className="text-xs font-bold tracking-widest text-emerald-700 uppercase mb-3 block">Core Intelligence</span>
-                        <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight">Work Smarter, Not Harder</h2>
-                        <p className="text-gray-500 mt-4 text-lg max-w-xl mx-auto">Three AI capabilities that eliminate manual helpdesk work.</p>
+                        <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight dark:text-white">Work Smarter, Not Harder</h2>
+                        <p className="text-gray-500 mt-4 text-lg max-w-xl mx-auto dark:text-slate-300">Three AI capabilities that eliminate manual helpdesk work.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {/* Card 1: Auto-Categorization */}
-                        <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
+                        <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 dark:bg-[#0f1f18] dark:border-emerald-900/30 dark:hover:shadow-black/30">
                             <div className="h-52 bg-gradient-to-br from-blue-50 to-gray-50 p-6 flex items-center justify-center relative overflow-hidden">
                                 <div className="relative z-10 flex flex-col gap-3 items-center">
                                     <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-xs font-bold text-gray-400 flex items-center gap-2 transform -translate-x-4 opacity-60">
@@ -540,8 +543,8 @@ export default function LandingPage() {
                                 </div>
                             </div>
                             <div className="p-8">
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Auto-Categorization</h3>
-                                <p className="text-gray-500 leading-relaxed mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 mb-3 dark:text-white">Auto-Categorization</h3>
+                                <p className="text-gray-500 leading-relaxed mb-6 dark:text-slate-300">
                                     Instantly detects if an issue is Network, Hardware, Software, or Access-related — no manual tagging.
                                 </p>
                                 <button
@@ -554,7 +557,7 @@ export default function LandingPage() {
                         </div>
 
                         {/* Card 2: Priority Detection */}
-                        <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
+                        <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 dark:bg-[#0f1f18] dark:border-emerald-900/30 dark:hover:shadow-black/30">
                             <div className="h-52 bg-gradient-to-br from-red-50 to-orange-50 p-6 flex items-center justify-center relative overflow-hidden">
                                 <div className="relative z-10 w-full max-w-[200px] space-y-2.5">
                                     <div className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between opacity-50 scale-95">
@@ -581,8 +584,8 @@ export default function LandingPage() {
                                 </div>
                             </div>
                             <div className="p-8">
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Priority Detection</h3>
-                                <p className="text-gray-500 leading-relaxed mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 mb-3 dark:text-white">Priority Detection</h3>
+                                <p className="text-gray-500 leading-relaxed mb-6 dark:text-slate-300">
                                     Understands urgency signals in text and automatically flags issues from Low to Critical.
                                 </p>
                                 <button
@@ -595,7 +598,7 @@ export default function LandingPage() {
                         </div>
 
                         {/* Card 3: Smart Resolution */}
-                        <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1">
+                        <div className="group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 dark:bg-[#0f1f18] dark:border-emerald-900/30 dark:hover:shadow-black/30">
                             <div className="h-52 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 flex items-center justify-center relative overflow-hidden">
                                 <div className="relative z-10 w-full max-w-[200px] flex flex-col gap-3">
                                     <div className="self-end bg-emerald-600 text-white p-2.5 rounded-2xl rounded-tr-none shadow-sm text-[10px] max-w-[80%]">
@@ -616,8 +619,8 @@ export default function LandingPage() {
                                 </div>
                             </div>
                             <div className="p-8">
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Smart Resolution</h3>
-                                <p className="text-gray-500 leading-relaxed mb-6">
+                                <h3 className="text-xl font-bold text-gray-900 mb-3 dark:text-white">Smart Resolution</h3>
+                                <p className="text-gray-500 leading-relaxed mb-6 dark:text-slate-300">
                                     Checks historical data to auto-fix simple issues, or routes complex ones to the right human team.
                                 </p>
                                 <button
@@ -717,14 +720,14 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== PRICING ==================== */}
-            <section className="py-24 bg-gray-50" id="pricing">
+            <section className="py-24 bg-gray-50 dark:bg-[#0b1712]" id="pricing">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
-                        <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹) · GST applicable</p>
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 dark:text-white">Simple, Transparent Pricing</h2>
+                        <p className="text-gray-500 mb-8 dark:text-slate-400">All plans in Indian Rupees (₹) · GST applicable</p>
 
                         {/* Billing Toggle */}
-                        <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm">
+                        <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm dark:bg-[#0f1f18] dark:border-emerald-900/30">
                             <button
                                 onClick={() => setBillingAnnual(false)}
                                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
@@ -744,18 +747,18 @@ export default function LandingPage() {
                         {pricingPlans.map(({ name, price, priceLabel, period, desc, cta, ctaStyle, features, popular }) => (
                             <div
                                 key={name}
-                                className={`p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
+                                className={`p-8 rounded-2xl bg-white transition-all relative dark:bg-[#0f1f18] ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 scale-[1.02] dark:border-emerald-400/70' : 'border border-gray-200 hover:border-gray-300 dark:border-emerald-900/30 dark:hover:border-emerald-500/40'}`}
                             >
                                 {popular && (
                                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg">
                                         ⭐ MOST POPULAR
                                     </div>
                                 )}
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">{name}</h3>
-                                <div className="text-4xl font-extrabold text-gray-900 mb-2">
-                                    {priceLabel ? priceLabel : <>₹{price.toLocaleString('en-IN')}<span className="text-base font-normal text-gray-500">{period}</span></>}
+                                <h3 className="text-lg font-bold text-gray-900 mb-2 dark:text-white">{name}</h3>
+                                <div className="text-4xl font-extrabold text-gray-900 mb-2 dark:text-white">
+                                    {priceLabel ? priceLabel : <>₹{price.toLocaleString('en-IN')}<span className="text-base font-normal text-gray-500 dark:text-slate-400">{period}</span></>}
                                 </div>
-                                <p className="text-sm text-gray-500 mb-6">{desc}</p>
+                                <p className="text-sm text-gray-500 mb-6 dark:text-slate-400">{desc}</p>
                                 <button
                                     onClick={() => handlePricingClick(name)}
                                     disabled={isRedirecting && name === 'Growth'}
@@ -772,7 +775,7 @@ export default function LandingPage() {
                                 </button>
                                 <ul className="space-y-3">
                                     {features.map(feat => (
-                                        <li key={feat} className="flex items-start gap-3 text-sm text-gray-600">
+                                        <li key={feat} className="flex items-start gap-3 text-sm text-gray-600 dark:text-slate-300">
                                             <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0 mt-px" />
                                             {feat}
                                         </li>

@@ -193,14 +193,14 @@ const TEAM_GROUPS = [
 
 export default function TeamSection() {
     return (
-        <section className="py-24 bg-gray-50/50 border-t border-gray-100">
+        <section className="py-24 bg-gray-50/50 border-t border-gray-100 dark:bg-[#081510] dark:border-emerald-900/30">
             <div className="max-w-[1100px] mx-auto px-6">
                 {/* Section Header */}
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">
+                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4 dark:text-white">
                         Meet the Team Behind helpdesk.ai
                     </h2>
-                    <p className="text-slate-500 font-medium text-lg max-w-2xl mx-auto">
+                    <p className="text-slate-500 font-medium text-lg max-w-2xl mx-auto dark:text-slate-300">
                         Built by engineers focused on intelligent support automation.
                     </p>
                 </div>
@@ -213,7 +213,7 @@ export default function TeamSection() {
 
                         return (
                             <div key={group.id}>
-                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest border-b border-gray-200 pb-2 mb-8 inline-block">
+                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest border-b border-gray-200 pb-2 mb-8 inline-block dark:text-slate-100 dark:border-emerald-900/40">
                                     {group.label}
                                 </h3>
 
@@ -222,10 +222,10 @@ export default function TeamSection() {
                                     {groupMembers.map((member, index) => (
                                         <div
                                             key={index}
-                                            className="group relative bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col items-center text-center"
+                                            className="group relative bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col items-center text-center dark:bg-[#0f1f18] dark:border-emerald-900/35 dark:hover:shadow-black/30"
                                         >
                                             {/* Image Container with Hover Overlay */}
-                                            <div className="relative w-32 h-32 mb-5 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-100/50">
+                                            <div className="relative w-32 h-32 mb-5 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-100/50 dark:border-emerald-100 dark:bg-emerald-950/40">
                                                 {member.image ? (
                                                     <img
                                                         src={member.image}
@@ -273,7 +273,7 @@ export default function TeamSection() {
 
                                             {/* Text Content */}
                                             <div>
-                                                <h3 className="text-lg font-bold text-slate-900 mb-1 leading-tight">{member.name}</h3>
+                                                <h3 className="text-lg font-bold text-slate-900 mb-1 leading-tight dark:text-white">{member.name}</h3>
                                                 <p className={`text-[11px] font-black uppercase tracking-widest ${member.role.includes('Lead') ? 'text-indigo-600' : 'text-emerald-600'}`}>
                                                     {member.role}
                                                 </p>

@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import useAuthStore from "../store/authStore";
 import { Select } from "../components/ui/select";
+import ThemeToggle from "../components/shared/ThemeToggle";
+import { useTheme } from "../components/shared/ThemeProvider";
 
 /**
  * AdminSignup — Premium Multi-step Company Registration
@@ -44,6 +46,26 @@ function AdminSignup() {
 
     const navigate = useNavigate();
     const { signup, loading, user, profile } = useAuthStore();
+    const { isDark } = useTheme();
+
+    const theme = {
+        page: isDark ? '#07140f' : '#ffffff',
+        leftBg: isDark
+            ? 'linear-gradient(160deg, #061a13 0%, #0f2a1d 58%, #123d28 100%)'
+            : 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)',
+        rightBg: isDark ? '#07140f' : '#ffffff',
+        cardBg: isDark ? '#0f1f18' : '#ffffff',
+        subtleBg: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(34,160,69,0.08)',
+        title: isDark ? '#f8fafc' : '#0f1f12',
+        body: isDark ? '#cbd5e1' : '#374151',
+        muted: isDark ? '#9fb0ba' : '#6b7280',
+        accent: isDark ? '#34d399' : '#16a34a',
+        accentStrong: isDark ? '#86efac' : '#15803d',
+        border: isDark ? 'rgba(52, 211, 153, 0.22)' : '#f0fdf4',
+        strongBorder: isDark ? 'rgba(52, 211, 153, 0.32)' : '#d1fae5',
+        inputBg: isDark ? '#081c14' : '#f9fafb',
+        inputBorder: isDark ? 'rgba(52, 211, 153, 0.24)' : '#e5e7eb',
+    };
 
     // Redirect if already logged in and verified
     useEffect(() => {
@@ -177,27 +199,28 @@ function AdminSignup() {
 
     if (isSubmitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden" style={{ fontFamily: "'Inter', sans-serif", background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
-                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
+            <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden" style={{ fontFamily: "'Inter', sans-serif", background: theme.leftBg }}>
+                <div className="absolute top-6 right-6 z-20"><ThemeToggle /></div>
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: isDark ? 'radial-gradient(circle, rgba(52,211,153,0.16) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white rounded-3xl p-10 max-w-lg w-full text-center relative z-10"
-                    style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.08)', border: '1px solid #f0fdf4' }}
+                    className="rounded-3xl p-10 max-w-lg w-full text-center relative z-10"
+                    style={{ background: theme.cardBg, boxShadow: isDark ? '0 8px 40px rgba(0,0,0,0.28)' : '0 8px 40px rgba(0,0,0,0.08)', border: `1px solid ${theme.border}` }}
                 >
-                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
-                        <Mail className="w-10 h-10" style={{ color: '#16a34a' }} />
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: theme.subtleBg, border: `1px solid ${theme.strongBorder}` }}>
+                        <Mail className="w-10 h-10" style={{ color: theme.accent }} />
                     </div>
-                    <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '28px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', marginBottom: '16px' }}>Check Your Email</h2>
-                    <p style={{ color: '#374151', fontSize: '15px', lineHeight: 1.7, marginBottom: '32px' }}>
-                        Registration request received! We've sent a verification link to <span style={{ fontWeight: 700, color: '#16a34a' }}>{formData.email}</span>.
+                    <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '28px', fontWeight: 800, color: theme.title, letterSpacing: '-0.02em', marginBottom: '16px' }}>Check Your Email</h2>
+                    <p style={{ color: theme.body, fontSize: '15px', lineHeight: 1.7, marginBottom: '32px' }}>
+                        Registration request received! We've sent a verification link to <span style={{ fontWeight: 700, color: theme.accent }}>{formData.email}</span>.
                     </p>
-                    <div className="rounded-2xl p-6 text-left mb-8" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
-                        <h4 className="font-bold mb-2 flex items-center gap-2" style={{ color: '#0f1f12' }}>
-                            <Info className="w-4 h-4" style={{ color: '#16a34a' }} /> Next Steps:
+                    <div className="rounded-2xl p-6 text-left mb-8" style={{ background: theme.subtleBg, border: `1px solid ${theme.strongBorder}` }}>
+                        <h4 className="font-bold mb-2 flex items-center gap-2" style={{ color: theme.title }}>
+                            <Info className="w-4 h-4" style={{ color: theme.accent }} /> Next Steps:
                         </h4>
-                        <ul className="space-y-3" style={{ fontSize: '14px', color: '#374151' }}>
+                        <ul className="space-y-3" style={{ fontSize: '14px', color: theme.body }}>
                             <li className="flex gap-2"><span className="font-bold">1.</span> Verify your email by clicking the link in our message.</li>
                             <li className="flex gap-2"><span className="font-bold">2.</span> Your request will be reviewed by our Master Admin.</li>
                             <li className="flex gap-2"><span className="font-bold">3.</span> You'll receive a final confirmation once approved.</li>
@@ -218,67 +241,67 @@ function AdminSignup() {
     }
 
     return (
-        <div className="min-h-screen flex overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="min-h-screen flex overflow-hidden" style={{ fontFamily: "'Inter', sans-serif", background: theme.page }}>
 
             {/* Left Side: Branding/Hero */}
-            <div className="hidden lg:flex w-5/12 items-center justify-center p-16 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
-                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
+            <div className="hidden lg:flex w-5/12 items-center justify-center p-16 relative overflow-hidden" style={{ background: theme.leftBg }}>
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: isDark ? 'radial-gradient(circle, rgba(52,211,153,0.16) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
 
                 {/* Back to Home */}
                 <Link to="/"
                     className="absolute top-8 left-8 flex items-center gap-2 z-10 transition-all"
-                    style={{ color: '#374151', fontWeight: 500, fontSize: '14px' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#16a34a'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#374151'}
+                    style={{ color: theme.body, fontWeight: 500, fontSize: '14px' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = theme.accent}
+                    onMouseLeave={(e) => e.currentTarget.style.color = theme.body}
                 >
-                    <div className="p-2 rounded-full" style={{ background: '#ffffff', border: '1px solid #e5e7eb' }}>
+                    <div className="p-2 rounded-full" style={{ background: theme.cardBg, border: `1px solid ${theme.inputBorder}` }}>
                         <ChevronLeft className="w-4 h-4" />
                     </div>
                     <span>Back to Home</span>
                 </Link>
 
                 <div className="relative z-10 max-w-md">
-                    <div className="p-3 rounded-2xl w-fit mb-8 cursor-pointer" style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }} onClick={() => navigate('/')}>
-                        <BrainCircuit className="w-10 h-10" style={{ color: '#16a34a' }} />
+                    <div className="p-3 rounded-2xl w-fit mb-8 cursor-pointer" style={{ background: theme.subtleBg, border: `1px solid ${theme.strongBorder}` }} onClick={() => navigate('/')}>
+                        <BrainCircuit className="w-10 h-10" style={{ color: theme.accent }} />
                     </div>
-                    <p style={{ color: '#16a34a', fontWeight: 700, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Enterprise Edition</p>
-                    <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '42px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '32px' }}>
-                        Scale your <span style={{ color: '#16a34a' }}>IT Support</span> globally.
+                    <p style={{ color: theme.accent, fontWeight: 700, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Enterprise Edition</p>
+                    <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '42px', fontWeight: 800, color: theme.title, letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '32px' }}>
+                        Scale your <span style={{ color: theme.accent }}>IT Support</span> globally.
                     </h1>
 
                     <div className="space-y-8">
                         {[{
-                            icon: <ShieldCheck className="w-6 h-6" style={{ color: '#16a34a' }} />,
+                            icon: <ShieldCheck className="w-6 h-6" style={{ color: theme.accent }} />,
                             title: 'Company-wide Isolation',
                             desc: 'Secure data siloing for departments and multiple office locations.'
                         }, {
-                            icon: <Building2 className="w-6 h-6" style={{ color: '#16a34a' }} />,
+                            icon: <Building2 className="w-6 h-6" style={{ color: theme.accent }} />,
                             title: 'Custom Dashboards',
                             desc: 'Tailored analytics and ticket routing for your industry specific needs.'
                         }, {
-                            icon: <User className="w-6 h-6" style={{ color: '#16a34a' }} />,
+                            icon: <User className="w-6 h-6" style={{ color: theme.accent }} />,
                             title: 'Admin Approval System',
                             desc: 'Multi-tenant architecture with human-verified vetting process.'
                         }].map((item, i) => (
                             <div key={i} className="flex gap-4 items-start">
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }}>
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: theme.subtleBg, border: `1px solid ${theme.strongBorder}` }}>
                                     {item.icon}
                                 </div>
                                 <div>
-                                    <h4 style={{ fontWeight: 700, fontSize: '16px', color: '#0f1f12', marginBottom: '4px' }}>{item.title}</h4>
-                                    <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: 1.6 }}>{item.desc}</p>
+                                    <h4 style={{ fontWeight: 700, fontSize: '16px', color: theme.title, marginBottom: '4px' }}>{item.title}</h4>
+                                    <p style={{ color: theme.muted, fontSize: '14px', lineHeight: 1.6 }}>{item.desc}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
 
                     {/* System Status Badge */}
-                    <div className="mt-10" style={{ background: '#ffffff', border: '1px solid #d1fae5', borderRadius: '14px', padding: '14px 18px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+                    <div className="mt-10" style={{ background: theme.cardBg, border: `1px solid ${theme.strongBorder}`, borderRadius: '14px', padding: '14px 18px', boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.24)' : '0 2px 12px rgba(0,0,0,0.06)' }}>
                         <div className="flex items-center gap-3">
                             <span className="inline-block w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: '#22c55e' }} />
                             <div>
-                                <p style={{ fontSize: '11px', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>System Status</p>
-                                <p style={{ fontSize: '13px', color: '#111827', fontWeight: 500 }}>All systems operational. 99.9% uptime.</p>
+                                <p style={{ fontSize: '11px', fontWeight: 600, color: theme.body, textTransform: 'uppercase', letterSpacing: '0.05em' }}>System Status</p>
+                                <p style={{ fontSize: '13px', color: theme.title, fontWeight: 500 }}>All systems operational. 99.9% uptime.</p>
                             </div>
                         </div>
                     </div>
@@ -286,14 +309,17 @@ function AdminSignup() {
             </div>
 
             {/* Right Side: Step Form */}
-            <div className="flex-1 overflow-y-auto px-4 py-8 lg:p-12 relative flex justify-center items-start lg:items-center" style={{ background: '#ffffff', borderLeft: '1px solid #f0fdf4' }}>
+            <div className="flex-1 overflow-y-auto px-4 py-8 lg:p-12 relative flex justify-center items-start lg:items-center" style={{ background: theme.rightBg, borderLeft: `1px solid ${theme.border}` }}>
+                <div className="absolute top-6 right-6 z-20">
+                    <ThemeToggle />
+                </div>
 
-                <div className="w-full max-w-2xl bg-white rounded-[2rem] p-6 md:p-12 my-auto relative z-10" style={{ boxShadow: '0 4px 40px rgba(0,0,0,0.06)', border: '1px solid #f0fdf4' }}>
+                <div className="w-full max-w-2xl rounded-[2rem] p-6 md:p-12 my-auto relative z-10" style={{ background: theme.cardBg, boxShadow: isDark ? '0 4px 40px rgba(0,0,0,0.26)' : '0 4px 40px rgba(0,0,0,0.06)', border: `1px solid ${theme.border}` }}>
 
                     {/* Progress Indicator */}
                     <div className="flex items-center justify-between mb-12 max-w-md mx-auto relative">
                         {/* Connector Line */}
-                        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0"></div>
+                        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0" style={{ background: isDark ? 'rgba(148, 163, 184, 0.18)' : undefined }}></div>
                         <div
                             className="absolute top-1/2 left-0 h-0.5 bg-emerald-600 -translate-y-1/2 z-0 transition-all duration-500"
                             style={{ width: `${(step - 1) * 50}%` }}
@@ -304,14 +330,14 @@ function AdminSignup() {
                                 <div style={{
                                     width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontWeight: 700, fontSize: '14px', transition: 'all 0.3s',
-                                    background: step >= s ? 'linear-gradient(135deg,#16a34a,#22c55e)' : '#f9fafb',
-                                    color: step >= s ? '#fff' : '#9ca3af',
-                                    border: step >= s ? 'none' : '2px solid #e5e7eb',
+                                    background: step >= s ? 'linear-gradient(135deg,#16a34a,#22c55e)' : theme.inputBg,
+                                    color: step >= s ? '#fff' : theme.muted,
+                                    border: step >= s ? 'none' : `2px solid ${theme.inputBorder}`,
                                     boxShadow: step >= s ? '0 4px 12px rgba(34,160,69,0.25)' : 'none'
                                 }}>
                                     {step > s ? <CheckCircle2 className="w-5 h-5" /> : s}
                                 </div>
-                                <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', color: step >= s ? '#16a34a' : '#9ca3af' }}>
+                                <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', color: step >= s ? theme.accent : theme.muted }}>
                                     {s === 1 ? "Personal" : s === 2 ? "Company" : "Agreement"}
                                 </span>
                             </div>

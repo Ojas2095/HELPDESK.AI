@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import ThemeToggle from '../../components/shared/ThemeToggle';
 
 /**
  * AdminHeader Component
@@ -52,12 +53,12 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
     };
 
     return (
-        <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-6 md:px-10 flex items-center justify-between">
+        <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-6 md:px-10 flex items-center justify-between transition-colors duration-200 dark:bg-[#061a13] dark:border-emerald-900/40">
             <div className="flex items-center gap-4 flex-1">
                 {/* Mobile Menu Toggle */}
                 <button
                     onClick={onMobileNavToggle}
-                    className="lg:hidden p-2 hover:bg-slate-50 rounded-xl text-slate-500 transition-colors"
+                    className="lg:hidden p-2 hover:bg-slate-50 rounded-xl text-slate-500 transition-colors dark:text-slate-300 dark:hover:bg-white/10"
                 >
                     <Menu size={20} />
                 </button>
@@ -66,7 +67,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                 {onToggleSidebar && (
                     <button
                         onClick={onToggleSidebar}
-                        className="hidden md:flex p-2 hover:bg-emerald-50 rounded-xl text-slate-400 hover:text-emerald-600 transition-all"
+                        className="hidden md:flex p-2 hover:bg-emerald-50 rounded-xl text-slate-400 hover:text-emerald-600 transition-all dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
                         title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
                         {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
@@ -83,7 +84,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={handleSearchKeyDown}
                         placeholder="Search tickets, users… (press Enter)"
-                        className="w-full bg-slate-50/50 border border-slate-200 rounded-xl pl-11 pr-9 py-2 text-sm font-medium tracking-tight focus:outline-none focus:ring-4 focus:ring-emerald-600/5 focus:border-emerald-600 focus:bg-white transition-all text-slate-600 placeholder:text-slate-400"
+                        className="w-full bg-slate-50/50 border border-slate-200 rounded-xl pl-11 pr-9 py-2 text-sm font-medium tracking-tight focus:outline-none focus:ring-4 focus:ring-emerald-600/5 focus:border-emerald-600 focus:bg-white transition-all text-slate-600 placeholder:text-slate-400 dark:bg-[#0f1f18] dark:border-emerald-900/40 dark:text-slate-100 dark:focus:bg-[#102219]"
                     />
                     {searchQuery && (
                         <button
@@ -99,8 +100,9 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
 
             {/* Header Operations */}
             <div className="flex items-center gap-4 lg:gap-6">
+                <ThemeToggle />
                 {/* Communications Hub */}
-                <div className="relative border-r border-slate-200 pr-4 lg:pr-6 hidden sm:block">
+                <div className="relative border-r border-slate-200 pr-4 lg:pr-6 hidden sm:block dark:border-emerald-900/40">
                     <NotificationPopover isAdmin={true} />
                 </div>
 
@@ -108,7 +110,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                 <div className="relative" ref={dropdownRef}>
                     <button
                         onClick={() => setIsProfileOpen(!isProfileOpen)}
-                        className="flex items-center gap-3 hover:bg-slate-50 p-1 rounded-2xl border border-transparent hover:border-slate-100 transition-all group"
+                        className="flex items-center gap-3 hover:bg-slate-50 p-1 rounded-2xl border border-transparent hover:border-slate-100 transition-all group dark:hover:bg-white/10 dark:hover:border-emerald-900/40"
                     >
                         <Avatar className="w-8 h-8 rounded-lg shadow-md group-hover:scale-105 transition-transform">
                             <AvatarImage src={adminProfile?.profile_picture} className="object-cover" />
@@ -118,7 +120,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                         </Avatar>
                         <div className="hidden lg:block text-left">
                             <div className="flex items-center gap-1">
-                                <p className="text-xs font-black text-slate-900 tracking-tight leading-none italic uppercase">Admin</p>
+                                <p className="text-xs font-black text-slate-900 tracking-tight leading-none italic uppercase dark:text-white">Admin</p>
                                 <ChevronDown size={12} className={`text-slate-400 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
                             </div>
                         </div>
@@ -126,20 +128,20 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
 
                     {/* Dropdown Menu */}
                     {isProfileOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/50 py-2 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/50 py-2 animate-in fade-in zoom-in-95 duration-200 dark:bg-[#0f1f18] dark:border-emerald-900/40 dark:shadow-black/30">
                             <button
                                 onClick={() => { navigate('/admin/profile'); setIsProfileOpen(false); }}
-                                className="w-full flex items-center gap-3 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 transition-colors"
+                                className="w-full flex items-center gap-3 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 transition-colors dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-emerald-300"
                             >
                                 <UserCircle size={16} /> Profile
                             </button>
                             <button
                                 onClick={() => { navigate('/admin/settings'); setIsProfileOpen(false); }}
-                                className="w-full flex items-center gap-3 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 transition-colors"
+                                className="w-full flex items-center gap-3 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-emerald-600 transition-colors dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-emerald-300"
                             >
                                 <Settings size={16} /> Settings
                             </button>
-                            <div className="my-1 border-t border-slate-100"></div>
+                            <div className="my-1 border-t border-slate-100 dark:border-emerald-900/40"></div>
                             <button
                                 onClick={handleLogout}
                                 className="w-full flex items-center gap-3 px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors"

@@ -13,6 +13,7 @@ import {
     ChevronRight
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { useTheme } from '../../components/shared/ThemeProvider';
 
 const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
     const navItems = [
@@ -24,6 +25,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
     ];
 
     const { logout } = useAuthStore();
+    const { isDark } = useTheme();
     const navigate = useNavigate();
 
     const handleLogout = async () => {
@@ -38,9 +40,9 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
             className={`${isMobile ? 'w-full h-full' : 'fixed left-0 top-0 h-full'} z-40 transition-all duration-300 overflow-hidden flex flex-col`}
             style={{
                 width: isMobile ? '100%' : (isCollapsed ? '80px' : '260px'),
-                background: '#ffffff',
-                borderRight: '1px solid #f0fdf4',
-                boxShadow: '2px 0 12px rgba(0,0,0,0.04)'
+                background: isDark ? '#0f1f18' : '#ffffff',
+                borderRight: isDark ? '1px solid rgba(148, 163, 184, 0.16)' : '1px solid #f0fdf4',
+                boxShadow: isDark ? '2px 0 18px rgba(0,0,0,0.28)' : '2px 0 12px rgba(0,0,0,0.04)'
             }}
         >
             {/* Logo Section */}
@@ -66,9 +68,10 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                     <button
                         onClick={onToggleCollapse}
                         style={{
-                            background: '#f0fdf4', border: '1px solid #d1fae5',
+                            background: isDark ? 'rgba(16, 185, 129, 0.12)' : '#f0fdf4',
+                            border: isDark ? '1px solid rgba(52, 211, 153, 0.28)' : '1px solid #d1fae5',
                             borderRadius: '8px', padding: '4px', cursor: 'pointer',
-                            color: '#15803d', display: 'flex', alignItems: 'center',
+                            color: isDark ? '#86efac' : '#15803d', display: 'flex', alignItems: 'center',
                             justifyContent: 'center', transition: 'all 0.2s ease',
                             position: isCollapsed ? 'absolute' : 'relative',
                             right: isCollapsed ? '-12px' : 'auto',
@@ -85,7 +88,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
             {/* Navigation Links */}
             <nav className="flex-1 px-3 py-8 space-y-1.5 overflow-y-auto custom-scrollbar">
                 {showLabels && (
-                    <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#9ca3af', fontWeight: 600, paddingLeft: '14px', marginBottom: '16px' }} className="uppercase">
+                    <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: isDark ? '#789286' : '#9ca3af', fontWeight: 600, paddingLeft: '14px', marginBottom: '16px' }} className="uppercase">
                         CORE MODULES
                     </p>
                 )}
@@ -97,8 +100,8 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                         style={({ isActive }) => ({
                             display: 'flex', alignItems: 'center', gap: '12px',
                             borderRadius: '10px', padding: isCollapsed && !isMobile ? '10px' : '9px 14px',
-                            color: isActive ? '#15803d' : '#6b7280',
-                            background: isActive ? '#f0fdf4' : 'transparent',
+                            color: isActive ? (isDark ? '#86efac' : '#15803d') : (isDark ? '#a7b7c2' : '#6b7280'),
+                            background: isActive ? (isDark ? 'rgba(16, 185, 129, 0.12)' : '#f0fdf4') : 'transparent',
                             fontWeight: isActive ? 600 : 500,
                             textDecoration: 'none', transition: 'all 0.2s ease',
                             justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
@@ -129,8 +132,8 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                     style={({ isActive }) => ({
                         display: 'flex', alignItems: 'center', gap: '12px',
                         borderRadius: '10px', padding: isCollapsed && !isMobile ? '10px' : '9px 14px',
-                        color: isActive ? '#15803d' : '#6b7280',
-                        background: isActive ? '#f0fdf4' : 'transparent',
+                        color: isActive ? (isDark ? '#86efac' : '#15803d') : (isDark ? '#a7b7c2' : '#6b7280'),
+                        background: isActive ? (isDark ? 'rgba(16, 185, 129, 0.12)' : '#f0fdf4') : 'transparent',
                         fontWeight: isActive ? 600 : 500,
                         textDecoration: 'none', transition: 'all 0.2s ease',
                         justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
@@ -146,7 +149,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                     style={{
                         display: 'flex', alignItems: 'center', gap: '12px',
                         borderRadius: '10px', padding: isCollapsed && !isMobile ? '10px' : '9px 14px',
-                        color: '#6b7280', background: 'transparent',
+                        color: isDark ? '#a7b7c2' : '#6b7280', background: 'transparent',
                         fontWeight: 500, border: 'none', cursor: 'pointer',
                         transition: 'all 0.2s ease', width: '100%',
                         justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'

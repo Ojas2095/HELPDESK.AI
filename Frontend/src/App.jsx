@@ -12,6 +12,7 @@ import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
+import { ThemeProvider } from "./components/shared/ThemeProvider";
 
 // Auth Components
 import Login from "./pages/Login";
@@ -227,30 +228,33 @@ function App() {
 
   if (isDocsSubdomain) {
     return (
+      <ThemeProvider>
+        <BrowserRouter>
+          <TitleUpdater />
+          <ScrollToTop />
+          <Toaster />
+          <BugReportWidget />
+          <Routes>
+            <Route path="/" element={<DocsPortal />} />
+            <Route path="/docs" element={<Navigate to="/" replace />} />
+            <Route path="/api-reference" element={<ApiReference />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/status" element={<StatusPage />} />
+            <Route path="*" element={<DocsPortal />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
+    );
+  }
+
+  return (
+    <ThemeProvider>
       <BrowserRouter>
         <TitleUpdater />
         <ScrollToTop />
         <Toaster />
         <BugReportWidget />
         <Routes>
-          <Route path="/" element={<DocsPortal />} />
-          <Route path="/docs" element={<Navigate to="/" replace />} />
-          <Route path="/api-reference" element={<ApiReference />} />
-          <Route path="/changelog" element={<Changelog />} />
-          <Route path="/status" element={<StatusPage />} />
-          <Route path="*" element={<DocsPortal />} />
-        </Routes>
-      </BrowserRouter>
-    );
-  }
-
-  return (
-    <BrowserRouter>
-      <TitleUpdater />
-      <ScrollToTop />
-      <Toaster />
-      <BugReportWidget />
-      <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -297,8 +301,9 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/*" element={<AppLayout />} />
         </Route>
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

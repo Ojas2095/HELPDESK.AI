@@ -10,6 +10,7 @@ import useTicketStore from "../../store/ticketStore";
 import NotificationPopover from "./NotificationPopover";
 
 import useAuthStore from "../../store/authStore";
+import ThemeToggle from "../../components/shared/ThemeToggle";
 
 const TopNav = () => {
     const navigate = useNavigate();
@@ -28,26 +29,27 @@ const TopNav = () => {
 
 
     return (
-        <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
+        <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50 transition-colors duration-200 dark:bg-[#061a13] dark:border-emerald-900/40">
             <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
                     <div className="flex items-center justify-center overflow-hidden">
                         <img src="/favicon.png" alt="HELPDESK.AI Logo" className="w-7 h-7 object-contain" />
                     </div>
-                    <h1 className="text-xl font-black tracking-tighter text-gray-900 italic">HELPDESK.AI</h1>
+                    <h1 className="text-xl font-black tracking-tighter text-gray-900 italic dark:text-emerald-300">HELPDESK.AI</h1>
                 </div>
 
                 {/* Center: Navigation Links */}
                 <nav className="hidden md:flex items-center gap-8">
-                    <Link className="text-sm font-semibold text-gray-900 hover:text-emerald-600 transition-colors" to="/dashboard">Dashboard</Link>
-                    <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors" to="/my-tickets">My Tickets</Link>
-                    <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors" to="/help">Help</Link>
-                    <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors" to="/docs">Documentation</Link>
+                    <Link className="text-sm font-semibold text-gray-900 hover:text-emerald-600 transition-colors dark:text-white dark:hover:text-emerald-300" to="/dashboard">Dashboard</Link>
+                    <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors dark:text-slate-300 dark:hover:text-white" to="/my-tickets">My Tickets</Link>
+                    <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors dark:text-slate-300 dark:hover:text-white" to="/help">Help</Link>
+                    <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors dark:text-slate-300 dark:hover:text-white" to="/docs">Documentation</Link>
                 </nav>
 
                 {/* Right: Profile */}
                 <div className="flex items-center gap-3">
+                    <ThemeToggle />
                     <NotificationPopover />
                     <div className="hidden md:block">
                         <Avatar
@@ -60,7 +62,7 @@ const TopNav = () => {
                     </div>
                     <button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className="md:hidden p-2 text-gray-600 focus:outline-none"
+                        className="md:hidden p-2 text-gray-600 focus:outline-none dark:text-slate-200"
                     >
                         {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
                     </button>
@@ -69,16 +71,16 @@ const TopNav = () => {
 
             {/* Mobile Menu Overlay */}
             {isMenuOpen && (
-                <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 dark:bg-[#061a13] dark:border-emerald-900/40">
                     <div className="px-6 py-8 space-y-6">
-                        <div className="flex items-center gap-4 border-b border-gray-50 pb-6">
+                        <div className="flex items-center gap-4 border-b border-gray-50 pb-6 dark:border-emerald-900/40">
                             <Avatar className="size-12 border border-gray-100">
                                 <AvatarImage src={profile?.profile_picture} />
                                 <AvatarFallback className="bg-emerald-50 text-emerald-700 font-black">{initials}</AvatarFallback>
                             </Avatar>
                             <div>
-                                <p className="font-bold text-gray-900">{profile?.full_name}</p>
-                                <p className="text-xs text-gray-400 font-medium">{profile?.email}</p>
+                                <p className="font-bold text-gray-900 dark:text-white">{profile?.full_name}</p>
+                                <p className="text-xs text-gray-400 font-medium dark:text-slate-400">{profile?.email}</p>
                             </div>
                         </div>
 
@@ -86,37 +88,37 @@ const TopNav = () => {
                             <Link
                                 to="/dashboard"
                                 onClick={() => setIsMenuOpen(false)}
-                                className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors"
+                                className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors dark:text-slate-200 dark:hover:text-emerald-300"
                             >
                                 <Box size={20} className="text-gray-400" /> Dashboard
                             </Link>
                             <Link
                                 to="/my-tickets"
                                 onClick={() => setIsMenuOpen(false)}
-                                className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors"
+                                className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors dark:text-slate-200 dark:hover:text-emerald-300"
                             >
                                 <MessageSquare size={20} className="text-gray-400" /> My Tickets
                             </Link>
                             <Link
                                 to="/profile"
                                 onClick={() => setIsMenuOpen(false)}
-                                className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors"
+                                className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors dark:text-slate-200 dark:hover:text-emerald-300"
                             >
                                 <UserIcon size={20} className="text-gray-400" /> My Profile
                             </Link>
                             <Link
                                 to="/docs"
                                 onClick={() => setIsMenuOpen(false)}
-                                className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors"
+                                className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors dark:text-slate-200 dark:hover:text-emerald-300"
                             >
                                 <BookOpen size={20} className="text-gray-400" /> Documentation
                             </Link>
                         </div>
 
-                        <div className="pt-6 border-t border-gray-50">
+                        <div className="pt-6 border-t border-gray-50 dark:border-emerald-900/40">
                             <button
                                 onClick={handleLogout}
-                                className="w-full py-4 bg-gray-50 rounded-2xl flex items-center justify-center gap-2 text-red-600 font-bold active:scale-95 transition-all"
+                                className="w-full py-4 bg-gray-50 rounded-2xl flex items-center justify-center gap-2 text-red-600 font-bold active:scale-95 transition-all dark:bg-red-500/10 dark:text-red-300"
                             >
                                 <LogOut size={18} /> Sign Out
                             </button>

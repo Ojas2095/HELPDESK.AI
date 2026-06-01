@@ -16,6 +16,7 @@ import {
     Settings,
     Activity
 } from "lucide-react";
+import ThemeToggle from "../../components/shared/ThemeToggle";
 
 /**
  * MasterAdminLayout — Professional sidebar-based layout for platform oversight.
@@ -137,6 +138,7 @@ function MasterAdminLayout() {
                     </div>
 
                     <div className="flex items-center gap-6">
+                        <ThemeToggle className="border-white/10 bg-white/5 text-slate-100 hover:bg-indigo-500/10 hover:text-indigo-200" />
                         <div className="flex items-center gap-3 pl-6 border-l border-white/10">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-semibold text-white truncate max-w-[150px]">{profile?.full_name}</p>

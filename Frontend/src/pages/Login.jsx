@@ -4,6 +4,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import useAuthStore from "../store/authStore";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
+import ThemeToggle from "../components/shared/ThemeToggle";
+import { useTheme } from "../components/shared/ThemeProvider";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -16,6 +18,26 @@ function Login() {
 
   const navigate = useNavigate();
   const { login, signInWithMagicLink, loading, user, profile } = useAuthStore();
+  const { isDark } = useTheme();
+
+  const theme = {
+    page: isDark ? '#07140f' : '#ffffff',
+    leftBg: isDark
+      ? 'linear-gradient(160deg, #061a13 0%, #0f2a1d 58%, #123d28 100%)'
+      : 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)',
+    rightBg: isDark ? '#0b1712' : '#ffffff',
+    panelBorder: isDark ? '1px solid rgba(52, 211, 153, 0.16)' : '1px solid #f0fdf4',
+    title: isDark ? '#f8fafc' : '#0f1f12',
+    body: isDark ? '#cbd5e1' : '#374151',
+    muted: isDark ? '#94a3b8' : '#6b7280',
+    inputBg: isDark ? '#102219' : '#f9fafb',
+    inputBorder: isDark ? 'rgba(148, 163, 184, 0.24)' : '#e5e7eb',
+    cardBg: isDark ? 'rgba(15, 31, 24, 0.94)' : '#ffffff',
+    cardBorder: isDark ? 'rgba(52, 211, 153, 0.24)' : '#d1fae5',
+    softGreen: isDark ? 'rgba(16, 185, 129, 0.12)' : '#f0fdf4',
+    accent: isDark ? '#34d399' : '#16a34a',
+    accentStrong: isDark ? '#86efac' : '#15803d',
+  };
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -101,20 +123,20 @@ function Login() {
   const currentSubmitHandler = isMagicLink ? handleMagicLink : handleLogin;
 
   return (
-    <div className="min-h-screen flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen flex" style={{ fontFamily: "'Inter', sans-serif", background: theme.page }}>
 
       {/* ── Left Panel ── */}
       <div
         className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden"
         style={{
-          background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)',
+          background: theme.leftBg,
         }}
       >
         {/* Radial glow */}
         <div
           className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none"
           style={{
-            background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)',
+            background: isDark ? 'radial-gradient(circle, rgba(52,211,153,0.16) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)',
           }}
         />
 
@@ -122,9 +144,9 @@ function Login() {
           {/* Logo / Icon */}
           <div
             className="p-3 rounded-2xl w-fit mb-8"
-            style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }}
+            style={{ background: theme.softGreen, border: theme.cardBorder }}
           >
-            <BrainCircuit className="w-10 h-10" style={{ color: '#16a34a' }} />
+            <BrainCircuit className="w-10 h-10" style={{ color: theme.accent }} />
           </div>
 
           {/* Headline */}
@@ -133,44 +155,44 @@ function Login() {
               fontFamily: "'Syne', sans-serif",
               fontSize: '48px',
               fontWeight: 800,
-              color: '#0f1f12',
+              color: theme.title,
               letterSpacing: '-0.03em',
               lineHeight: 1.1,
               marginBottom: '24px',
             }}
           >
             Automate your{' '}
-            <span style={{ color: '#16a34a' }}>IT Support</span>
+            <span style={{ color: theme.accent }}>IT Support</span>
           </h1>
 
           {/* Subtext */}
-          <p style={{ color: '#374151', fontSize: '16px', lineHeight: 1.7, marginBottom: '32px' }}>
+          <p style={{ color: theme.body, fontSize: '16px', lineHeight: 1.7, marginBottom: '32px' }}>
             Join thousands of IT teams using HelpDesk.ai to categorize, route, and resolve tickets instantly.
           </p>
 
           {/* System Status Badge */}
           <div
             style={{
-              background: '#ffffff',
-              border: '1px solid #d1fae5',
+              background: theme.cardBg,
+              border: theme.cardBorder,
               borderRadius: '14px',
               padding: '14px 18px',
               boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
             }}
           >
             <div className="flex gap-4 items-start">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: '#f0fdf4' }}>
-                <div style={{ color: '#0f1f12', fontWeight: 800, fontSize: '14px' }}>AI</div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: theme.softGreen }}>
+                <div style={{ color: theme.title, fontWeight: 800, fontSize: '14px' }}>AI</div>
               </div>
               <div>
-                <p className="flex items-center gap-2" style={{ fontSize: '12px', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                <p className="flex items-center gap-2" style={{ fontSize: '12px', fontWeight: 600, color: theme.body, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
                   <span
                     className="inline-block w-2 h-2 rounded-full animate-pulse"
                     style={{ background: '#22c55e' }}
                   />
                   System Status
                 </p>
-                <p style={{ color: '#111827', fontWeight: 500, fontSize: '14px' }}>All systems operational. 99.9% uptime this month.</p>
+                <p style={{ color: theme.title, fontWeight: 500, fontSize: '14px' }}>All systems operational. 99.9% uptime this month.</p>
               </div>
             </div>
           </div>
@@ -180,17 +202,21 @@ function Login() {
       {/* ── Right Panel ── */}
       <div
         className="flex w-full lg:w-1/2 items-center justify-center p-6 relative"
-        style={{ background: '#ffffff', borderLeft: '1px solid #f0fdf4' }}
+        style={{ background: theme.rightBg, borderLeft: theme.panelBorder }}
       >
+        <div className="absolute top-8 right-8">
+          <ThemeToggle />
+        </div>
+
         {/* Back Button */}
         <Link
           to="/"
           className="absolute top-8 left-8 flex items-center gap-2 transition-all group"
-          style={{ color: '#374151', fontWeight: 500, fontSize: '14px' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#16a34a'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#374151'}
+          style={{ color: theme.body, fontWeight: 500, fontSize: '14px' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = theme.accent}
+          onMouseLeave={(e) => e.currentTarget.style.color = theme.body}
         >
-          <div className="p-2 rounded-full transition-all" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
+          <div className="p-2 rounded-full transition-all" style={{ background: theme.inputBg, border: `1px solid ${theme.inputBorder}` }}>
             <ArrowLeft className="w-4 h-4" />
           </div>
           <span>Back to Home</span>
@@ -204,14 +230,14 @@ function Login() {
                 fontFamily: "'Syne', sans-serif",
                 fontSize: '28px',
                 fontWeight: 800,
-                color: '#0f1f12',
+                color: theme.title,
                 letterSpacing: '-0.02em',
                 marginBottom: '8px',
               }}
             >
               Welcome Back
             </h2>
-            <p style={{ color: '#6b7280', fontSize: '14px' }}>Please sign in to continue</p>
+            <p style={{ color: theme.muted, fontSize: '14px' }}>Please sign in to continue</p>
           </div>
 
           {/* Role Toggle Removed */}
@@ -230,12 +256,12 @@ function Login() {
               <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
                 <BrainCircuit className="w-8 h-8" style={{ color: '#16a34a' }} />
               </div>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#0f1f12', marginBottom: '8px' }}>Check your email</h3>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>We've sent a magic link to <span style={{ fontWeight: 600, color: '#111827' }}>{email}</span></p>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, color: theme.title, marginBottom: '8px' }}>Check your email</h3>
+              <p style={{ color: theme.muted, fontSize: '14px', marginBottom: '24px' }}>We've sent a magic link to <span style={{ fontWeight: 600, color: theme.title }}>{email}</span></p>
               <button
                 onClick={() => setMagicLinkSent(false)}
                 className="hover:underline transition-all"
-                style={{ color: '#16a34a', fontWeight: 700, fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ color: theme.accent, fontWeight: 700, fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Try another email
               </button>
@@ -246,7 +272,7 @@ function Login() {
               <div>
                 <label
                   className="block mb-2"
-                  style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+                  style={{ fontSize: '12px', fontWeight: 600, color: theme.body, letterSpacing: '0.05em', textTransform: 'uppercase' }}
                 >
                   Email Address
                 </label>
@@ -255,17 +281,17 @@ function Login() {
                   placeholder="Enter your system email"
                   style={{
                     width: '100%',
-                    background: '#f9fafb',
-                    border: '1.5px solid #e5e7eb',
+                    background: theme.inputBg,
+                    border: `1.5px solid ${theme.inputBorder}`,
                     borderRadius: '12px',
                     padding: '13px 16px',
                     fontSize: '15px',
-                    color: '#111827',
+                    color: theme.title,
                     outline: 'none',
                     transition: 'border-color 0.2s, box-shadow 0.2s',
                   }}
                   onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 0 3px rgba(34,160,69,0.1)'; }}
-                  onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
+                  onBlur={(e) => { e.target.style.borderColor = theme.inputBorder; e.target.style.boxShadow = 'none'; }}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -277,7 +303,7 @@ function Login() {
                   <div className="flex justify-between items-center mb-2">
                     <label
                       className="block"
-                      style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+                      style={{ fontSize: '12px', fontWeight: 600, color: theme.body, letterSpacing: '0.05em', textTransform: 'uppercase' }}
                     >
                       Password
                     </label>
@@ -285,7 +311,7 @@ function Login() {
                       to="/forgot-password"
                       title="Reset your password"
                       className="transition-all"
-                      style={{ fontSize: '12px', fontWeight: 600, color: '#16a34a' }}
+                      style={{ fontSize: '12px', fontWeight: 600, color: theme.accent }}
                     >
                       Forgot password?
                     </Link>
@@ -296,18 +322,18 @@ function Login() {
                       placeholder="Enter your password"
                       style={{
                         width: '100%',
-                        background: '#f9fafb',
-                        border: '1.5px solid #e5e7eb',
+                        background: theme.inputBg,
+                        border: `1.5px solid ${theme.inputBorder}`,
                         borderRadius: '12px',
                         padding: '13px 16px',
                         paddingRight: '44px',
                         fontSize: '15px',
-                        color: '#111827',
+                        color: theme.title,
                         outline: 'none',
                         transition: 'border-color 0.2s, box-shadow 0.2s',
                       }}
                       onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 0 3px rgba(34,160,69,0.1)'; }}
-                      onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
+                      onBlur={(e) => { e.target.style.borderColor = theme.inputBorder; e.target.style.boxShadow = 'none'; }}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
@@ -349,9 +375,9 @@ function Login() {
 
               {/* Divider */}
               <div className="relative flex items-center py-2">
-                <div className="flex-grow" style={{ borderTop: '1px solid #e5e7eb' }}></div>
-                <span className="flex-shrink-0 mx-4" style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 500 }}>Or</span>
-                <div className="flex-grow" style={{ borderTop: '1px solid #e5e7eb' }}></div>
+                <div className="flex-grow" style={{ borderTop: `1px solid ${theme.inputBorder}` }}></div>
+                <span className="flex-shrink-0 mx-4" style={{ color: theme.muted, fontSize: '13px', fontWeight: 500 }}>Or</span>
+                <div className="flex-grow" style={{ borderTop: `1px solid ${theme.inputBorder}` }}></div>
               </div>
 
               {/* Magic Link Toggle */}
@@ -360,9 +386,9 @@ function Login() {
                 onClick={() => { setIsMagicLink(!isMagicLink); setError(""); }}
                 className="w-full flex items-center justify-center gap-2 transition-all"
                 style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #d1fae5',
-                  color: '#15803d',
+                  background: theme.cardBg,
+                  border: `1.5px solid ${isDark ? 'rgba(52, 211, 153, 0.3)' : '#d1fae5'}`,
+                  color: theme.accentStrong,
                   borderRadius: '12px',
                   padding: '13px',
                   fontWeight: 500,
@@ -370,16 +396,16 @@ function Login() {
                   cursor: 'pointer',
                   transition: 'background 0.2s',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                onMouseEnter={(e) => e.currentTarget.style.background = theme.softGreen}
+                onMouseLeave={(e) => e.currentTarget.style.background = theme.cardBg}
               >
                 {isMagicLink ? "Sign in with Password" : "Sign in with Magic Link"}
               </button>
 
               {/* Create Account */}
-              <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '32px' }}>
+              <p className="text-center" style={{ fontSize: '14px', color: theme.muted, marginTop: '32px' }}>
                 Don't have an account?{" "}
-                <Link to="/signup" className="hover:underline transition-all" style={{ color: '#16a34a', fontWeight: 600 }}>
+                <Link to="/signup" className="hover:underline transition-all" style={{ color: theme.accent, fontWeight: 600 }}>
                   Create Account
                 </Link>
               </p>
