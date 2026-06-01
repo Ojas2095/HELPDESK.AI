@@ -269,10 +269,30 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiter — 10 AI requests per minute per IP (free tier protection)
+# Rate limiter — per IP, with per-endpoint overrides (Issue #905)
+from backend.services.rate_limit_config import get_retry_after_seconds, RATE_LIMIT_AI
+
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+async def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Custom 429 handler that returns JSON with retry_after field."""
+    limit_str = str(exc.detail) if hasattr(exc, 'detail') else RATE_LIMIT_AI
+    retry_after = get_retry_after_seconds(limit_str)
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "rate_limit_exceeded",
+            "message": f"Too many requests. Please retry after {retry_after} seconds.",
+            "retry_after": retry_after,
+            "limit": limit_str,
+        },
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
+app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
 # CORS — locked to production + local dev only
 app.add_middleware(
@@ -426,19 +446,20 @@ class TroubleshootResponse(BaseModel):
     is_final: bool
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
-async def troubleshoot(request: TroubleshootRequest):
-    """Get dynamic troubleshooting steps from Gemini."""
+@limiter.limit("10/minute")
+async def troubleshoot(request: Request, request_body: TroubleshootRequest):
+    """Get dynamic troubleshooting steps from Gemini. Rate limited: 10/minute."""
     if not gemini_service or not gemini_service._initialized:
         return TroubleshootResponse(
             step_text="AI Troubleshooting is currently unavailable.",
             options=["Continue to tracking"],
             is_final=True
         )
-    
+
     result = gemini_service.get_troubleshooting_step(
-        request.text,
-        request.history,
-        request.category
+        request_body.text,
+        request_body.history,
+        request_body.category
     )
     return TroubleshootResponse(**result)
 
@@ -453,18 +474,19 @@ class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
-async def analyze_bug(request: BugReportAnalysisRequest):
-    """Analyze a bug report using Gemini to generate a Probable Cause."""
+@limiter.limit("10/minute")
+async def analyze_bug(request: Request, request_body: BugReportAnalysisRequest):
+    """Analyze a bug report using Gemini to generate a Probable Cause. Rate limited: 10/minute."""
     if not gemini_service or not gemini_service._initialized:
         return BugReportAnalysisResponse(
             probable_cause="AI Diagnostics are currently unavailable."
         )
     
     cause = gemini_service.analyze_bug_report(
-        request.bug_title,
-        request.description,
-        request.steps_to_reproduce,
-        request.console_errors
+        request_body.bug_title,
+        request_body.description,
+        request_body.steps_to_reproduce,
+        request_body.console_errors
     )
     return BugReportAnalysisResponse(probable_cause=cause)
 
@@ -536,7 +558,8 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+@limiter.limit("30/minute")
+async def get_tickets(request: Request, company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -549,7 +572,8 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+@limiter.limit("30/minute")
+async def save_ticket(request: Request, request_body: TicketSaveRequest):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -652,7 +676,8 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+@limiter.limit("30/minute")
+async def get_ticket_by_id(request: Request, ticket_id: str):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -731,9 +756,10 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def analyze_only(request: Request, request_body: TicketRequest):
     """
-    PERFORMANCE UPGRADE: AI Analysis phase only. 
+    PERFORMANCE UPGRADE: AI Analysis phase only. Rate limited: 10/minute.
     Does NOT persist to DB. This allows the user to review the analysis 
     and duplicate check before committing to a ticket creation.
     """
@@ -1151,7 +1177,8 @@ class SignupBody(BaseModel):
     company: str | None = None
 
 @app.post("/auth/login")
-async def auth_login(body: LoginBody, response: Response):
+@limiter.limit("5/minute")
+async def auth_login(request: Request, body: LoginBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     try:
@@ -1171,7 +1198,8 @@ async def auth_login(body: LoginBody, response: Response):
     return {"user": user_payload, "message": "Session cookies set"}
 
 @app.post("/auth/signup")
-async def auth_signup(body: SignupBody, response: Response):
+@limiter.limit("5/minute")
+async def auth_signup(request: Request, body: SignupBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     metadata = {}
