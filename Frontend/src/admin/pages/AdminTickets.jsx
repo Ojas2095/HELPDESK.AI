@@ -56,6 +56,13 @@ const AdminTickets = () => {
     const [agents, setAgents] = useState([]); // All staff/admins in the company
     const [tagFilters, setTagFilters] = useState([]);
 
+    // Pagination State
+    const PAGE_SIZE = 25;
+    const [page, setPage] = useState(0);
+    const [totalCount, setTotalCount] = useState(null);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const hasMore = totalCount === null ? false : (page + 1) * PAGE_SIZE < totalCount;
+
     const ticketMatchesFilters = useCallback((ticket) => {
         if (statusFilter !== 'All' && String(ticket.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
         if (categoryFilter !== 'All' && ticket.category !== categoryFilter) return false;
@@ -109,8 +116,9 @@ const AdminTickets = () => {
         }
     };
 
-    const fetchTickets = async () => {
-        setError(null);
+    const fetchTickets = async (pageNum = 0, append = false) => {
+        if (!append) setError(null);
+        if (append) setLoadingMore(true);
         try {
             const { profile } = useAuthStore.getState();
             
@@ -121,7 +129,7 @@ const AdminTickets = () => {
                     *,
                     creator:profiles!tickets_user_id_fkey(full_name, email, profile_picture),
                     assignee:profiles!tickets_assigned_agent_id_fkey(full_name, email, profile_picture)
-                `);
+                `, { count: 'exact' });
 
             if (profile?.role === 'admin' && profile?.company) {
                 query = query.eq('company', profile.company);
@@ -132,21 +140,39 @@ const AdminTickets = () => {
             if (priorityFilter !== 'All') query = query.eq('priority', priorityFilter.toLowerCase());
             if (teamFilter !== 'All') query = query.eq('assigned_team', teamFilter);
 
-            let { data, error: sbError } = await query.order('created_at', { ascending: false });
+            const start = pageNum * PAGE_SIZE;
+            const end = start + PAGE_SIZE - 1;
+            let { data, error: sbError, count } = await query
+                .order('created_at', { ascending: false })
+                .range(start, end);
 
             if (sbError) {
                 // Secondary check: If the FK alias fails, try a simpler select
                 console.warn("Retrying fetch without relationship aliases...");
-                const basicQuery = supabase.from('tickets').select('*, profiles(full_name, email)');
-                const { data: basicData, error: basicError } = await basicQuery.eq('company', profile?.company).order('created_at', { ascending: false });
+                const basicQuery = supabase.from('tickets').select('*, profiles(full_name, email)', { count: 'exact' });
+                const { data: basicData, error: basicError, count: basicCount } = await basicQuery
+                    .eq('company', profile?.company)
+                    .order('created_at', { ascending: false })
+                    .range(start, end);
                 if (basicError) throw basicError;
-                setTickets(basicData || []);
+                setTickets(append ? prev => [...prev, ...(basicData || [])] : (basicData || []));
+                setTotalCount(basicCount ?? null);
             } else {
-                setTickets(data || []);
+                setTickets(append ? prev => [...prev, ...(data || [])] : (data || []));
+                setTotalCount(count ?? null);
             }
+            setPage(pageNum);
         } catch (err) {
             console.error("Admin fetch error:", err);
             setError(err.message);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
+    const loadMore = () => {
+        if (hasMore && !loadingMore) {
+            fetchTickets(page + 1, true);
         }
     };
 
@@ -323,7 +349,7 @@ const AdminTickets = () => {
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">Ticket Management</h1>
                     <p className="text-sm font-bold text-slate-400 mt-1 flex items-center gap-2">
-                        <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} tickets matching current filters.
+                        <Activity size={14} className="text-indigo-500" /> {totalCount !== null ? totalCount : filteredTickets.length} tickets{totalCount !== null ? ' in total' : ' matching current filters'}.
                     </p>
                 </div>
 
@@ -659,6 +685,31 @@ const AdminTickets = () => {
                         </div>
                         <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">No Incidents Found</h3>
                         <p className="text-sm text-slate-500 font-medium max-w-xs mx-auto mt-2 italic">Refine your search parameters to view more data points.</p>
+                    </div>
+                )}
+
+                {/* Pagination: Load More */}
+                {!loading && filteredTickets.length > 0 && (
+                    <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            Showing {filteredTickets.length}{totalCount !== null ? ` of ${totalCount}` : ''} tickets
+                        </p>
+                        {hasMore && (
+                            <button
+                                onClick={loadMore}
+                                disabled={loadingMore}
+                                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {loadingMore ? (
+                                    <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Loading...
+                                    </>
+                                ) : (
+                                    'Load More'
+                                )}
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
