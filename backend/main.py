@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -892,7 +892,8 @@ async def analyze_only(request_body: TicketRequest):
     )
 
 @app.post("/ai/analyze_stream")
-async def analyze_stream(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def analyze_stream(request_body: TicketRequest, request: Request):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
     """
@@ -1201,7 +1202,14 @@ async def auth_signup(body: SignupBody, response: Response):
     return {"user": user_payload, "message": "Signup complete"}
 
 @app.post("/auth/logout")
-async def auth_logout(response: Response):
+async def auth_logout(response: Response, request: Request):
+    # Invalidate the Supabase session server-side before clearing cookies
+    token = extract_token(request)
+    if token and supabase:
+        try:
+            supabase.auth.sign_out()
+        except Exception:
+            pass  # Best-effort: still clear cookies even if sign_out fails
     _clear_session_cookies(response)
     return {"ok": True}
 
