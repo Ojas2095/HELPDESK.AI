@@ -5,6 +5,7 @@ Priority and other fields are derived from the category mapping.
 """
 
 import os
+import time
 import json
 try:
     import torch
@@ -135,7 +136,6 @@ class ClassifierService:
             input_ids = encoding["input_ids"].to(DEVICE)
             attention_mask = encoding["attention_mask"].to(DEVICE)
 
-            import time
             _t0 = time.perf_counter()
             try:
                 with torch.no_grad():
@@ -188,7 +188,8 @@ class ClassifierService:
                         confidence = max(confidence, 0.92) 
                         break
 
-            MODEL_PREDICTIONS_TOTAL.labels(status="success").inc()
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="ok").inc()
             return {
                 "category": category,
                 "subcategory": subcategory,
@@ -198,8 +199,10 @@ class ClassifierService:
                 "confidence": confidence,
             }
         except Exception as e:
-            MODEL_PREDICTIONS_TOTAL.labels(status="failure").inc()
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
             raise e
         finally:
             duration = time.time() - start_time
-            MODEL_PREDICTION_LATENCY.observe(duration)
+            if _METRICS_ENABLED:
+                CLASSIFIER_LATENCY.labels(model="distilbert").observe(duration)
