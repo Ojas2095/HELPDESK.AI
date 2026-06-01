@@ -5,6 +5,7 @@ Provides:
   detect_language(text: str) -> str          – ISO-639-1 code (e.g. 'hi')
   translate_to_english(text, source_lang)    – Helsinki-NLP/opus-mt-{src}-en
   translate_from_english(text, target_lang)  – Helsinki-NLP/opus-mt-en-{tgt}
+  detect_and_translate_ticket_text(text)     – detect + translate for AI pipeline
 
 Language detection uses `langdetect` (offline, fast).
 Translation uses Helsinki-NLP MarianMT models loaded lazily via `transformers`.
@@ -142,3 +143,72 @@ def translate_from_english(text: str, target_lang: str) -> str:
             model_name, exc,
         )
         return text
+
+
+def detect_and_translate_ticket_text(text: str) -> dict:
+    """Detect language and translate non-English ticket text to English.
+
+    Returns a context dict for the AI pipeline with ``translation_failed`` set
+    when all translation attempts are exhausted without producing English text.
+    """
+    original_text = (text or "").strip()
+    if not original_text:
+        return {
+            "text_for_analysis": text or "",
+            "source_language": "en",
+            "source_language_name": "English",
+            "was_translated": False,
+            "translation_failed": False,
+            "original_text": "",
+            "metadata": {},
+        }
+
+    detected_lang = detect_language(original_text)
+    source_name = LANGUAGE_NAMES.get(detected_lang, detected_lang.upper())
+
+    if detected_lang in ("en", "eng", "unknown"):
+        return {
+            "text_for_analysis": original_text,
+            "source_language": "en" if detected_lang in ("en", "eng") else detected_lang,
+            "source_language_name": (
+                "English" if detected_lang in ("en", "eng") else source_name
+            ),
+            "was_translated": False,
+            "translation_failed": False,
+            "original_text": original_text,
+            "metadata": {},
+        }
+
+    lang = str(detected_lang).lower().split("-")[0][:2]
+    model_name = f"Helsinki-NLP/opus-mt-{lang}-en"
+    translated_text = original_text
+
+    try:
+        translated_text = _run_translation(original_text, model_name)
+    except Exception as e:
+        logger.error(
+            "Translation failed: %s | detected language: %s",
+            str(e),
+            detected_lang,
+        )
+
+    if not translated_text or not translated_text.strip() or translated_text.strip() == original_text:
+        return {
+            "text_for_analysis": original_text,
+            "source_language": detected_lang,
+            "source_language_name": source_name,
+            "was_translated": False,
+            "translation_failed": True,
+            "original_text": original_text,
+            "metadata": {},
+        }
+
+    return {
+        "text_for_analysis": translated_text.strip(),
+        "source_language": detected_lang,
+        "source_language_name": source_name,
+        "was_translated": True,
+        "translation_failed": False,
+        "original_text": original_text,
+        "metadata": {},
+    }
