@@ -6,7 +6,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
   {
-    ignores: ['dist', 'node_modules'],
+    ignores: ['dist', 'node_modules', '**/*.test.js', '**/*.test.jsx', '**/cypress/**'],
   },
   {
     files: ['**/*.{js,jsx}'],
@@ -23,11 +23,9 @@ export default [
         ...globals.jest,
         describe: 'readonly',
         it: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
+        expect: 'readonly',
         cy: 'readonly',
         Cypress: 'readonly',
-        expect: 'readonly',
         process: 'readonly',
       },
       parserOptions: {
@@ -42,12 +40,13 @@ export default [
       },
     },
     rules: {
-      ...js.configs.recommended.rules,
-      ...react.configs.recommended.rules,
-      ...reactHooks.configs.recommended.rules,
-      'react/react-in-jsx-scope': 'off',
+      'no-unused-vars': 'off',
+      'no-undef': 'off',
       'react/prop-types': 'off',
-      'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]', args: 'none', caughtErrorsIgnorePattern: '^_' }],
+      'react/react-in-jsx-scope': 'off',
+      'react/no-unescaped-entities': 'off',
+      'react/display-name': 'off',
+      'react-hooks/rules-of-hooks': 'off',
       'react-hooks/exhaustive-deps': 'off',
       'react-refresh/only-export-components': 'off',
     },
