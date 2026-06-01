@@ -42,6 +42,12 @@
     --radius: 0.5rem;
   }
 
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   body {
     @apply bg-[#f6f8f7] text-slate-900;
   }
@@ -93,7 +99,10 @@
 
 html{
   overflow-y: scroll;
+  overflow-x: hidden;
   scrollbar-width: none; /* Firefox */
+  min-width: 320px;
+  width: 100%;
 }
 
 html::-webkit-scrollbar{
@@ -103,4 +112,15 @@ html::-webkit-scrollbar{
 
 body{
   overflow-x: hidden;
+  min-width: 320px;
+  width: 100%;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  height: auto;
 }
