@@ -1370,15 +1370,33 @@ async def log_correction(raw_request: Request, user: dict = Depends(get_current_
     }
 
     try:
-        async with _corrections_lock:
-            if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
-                with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
-                    logs = json.load(f)
-            else:
-                logs = []
+        CORRECTIONS_LOG_MAX = int(os.getenv("CORRECTIONS_LOG_MAX", "10000"))
 
-            logs.append(entry)
-            _atomic_write_json(CORRECTIONS_LOG_PATH, logs)
+        def _read_write_log():
+            """Read-modify-write cycle with cross-process file locking."""
+            CORRECTIONS_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+            lock_path = CORRECTIONS_LOG_PATH.with_suffix(".lock")
+            with open(lock_path, "w") as lock_fd:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX)
+                try:
+                    if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
+                        with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
+                            logs = json.load(f)
+                    else:
+                        logs = []
+
+                    if len(logs) >= CORRECTIONS_LOG_MAX:
+                        logs = logs[-(CORRECTIONS_LOG_MAX - 1):]
+
+                    logs.append(entry)
+                    _atomic_write_json(CORRECTIONS_LOG_PATH, logs)
+                finally:
+                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+
+        loop = asyncio.get_event_loop()
+        async with _corrections_lock:
+            await loop.run_in_executor(None, _read_write_log)
 
         logging.info(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
         return {"status": "saved", "changed_fields": changed_fields}
