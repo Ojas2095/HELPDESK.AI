@@ -1,4 +1,3 @@
-import torch
 """
 Duplicate Detection Service
 Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
@@ -12,6 +11,13 @@ import numpy as np
 import os
 import threading
 from typing import Any
+
+try:
+    import torch
+    _HAS_TORCH = True
+except Exception:  # pragma: no cover - optional runtime dependency
+    torch = None  # type: ignore[assignment]
+    _HAS_TORCH = False
 
 try:
     from sentence_transformers import SentenceTransformer, util
@@ -32,7 +38,7 @@ class DuplicateService:
         # In-memory store: list of (ticket_id, embedding, text)
         self._tickets: list[tuple[str, object, str]] = []
         # Pre-computed embedding matrix for vectorized search
-        self._embedding_matrix: torch.Tensor | None = None
+        self._embedding_matrix: Any | None = None
         self._ticket_ids: list[str] = []
         self._embedding_matrix_dirty: bool = True
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
@@ -159,6 +165,12 @@ class DuplicateService:
         loop in ``check_duplicate``.
         """
         if not self._tickets:
+            self._embedding_matrix = None
+            self._ticket_ids = []
+            self._embedding_matrix_dirty = False
+            return
+
+        if not _HAS_TORCH:
             self._embedding_matrix = None
             self._ticket_ids = []
             self._embedding_matrix_dirty = False
