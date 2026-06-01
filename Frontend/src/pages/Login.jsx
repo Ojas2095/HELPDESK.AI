@@ -4,6 +4,8 @@ import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import useAuthStore from "../store/authStore";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
+import ThemeToggle from "../components/shared/ThemeToggle";
+import { useTheme } from "../components/shared/ThemeProvider";
 
 function Login() {
   const { theme } = useTheme();

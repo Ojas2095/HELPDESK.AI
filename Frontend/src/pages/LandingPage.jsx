@@ -548,12 +548,12 @@ export default function LandingPage() {
                         </div>
                     </div>
 
-                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1] dark:text-white">
                         Your IT Helpdesk,<br />
                         <span className="text-emerald-700">Fully Automated.</span>
                     </h1>
 
-                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 mb-10 leading-relaxed">
+                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 mb-10 leading-relaxed dark:text-slate-300">
                         Turn messy user complaints into structured, categorized, and prioritized support tickets — instantly. No manual triage. No missed urgencies.
                     </p>
 
@@ -987,7 +987,7 @@ export default function LandingPage() {
                         <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹) · GST applicable</p>
 
                         {/* Billing Toggle */}
-                        <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm">
+                        <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm dark:bg-[#0f1f18] dark:border-emerald-900/30">
                             <button
                                 onClick={() => setBillingAnnual(false)}
                                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
@@ -1018,7 +1018,7 @@ export default function LandingPage() {
                                 <div className="text-4xl font-extrabold text-gray-900 mb-2">
                                     {priceLabel ? priceLabel : <><span className="text-3xl sm:text-4xl">₹{price.toLocaleString('en-IN')}</span><span className="text-base font-normal text-gray-500">{period}</span></>}
                                 </div>
-                                <p className="text-sm text-gray-500 mb-6">{desc}</p>
+                                <p className="text-sm text-gray-500 mb-6 dark:text-slate-400">{desc}</p>
                                 <button
                                     onClick={() => handlePricingClick(name)}
                                     disabled={isRedirecting && name === 'Growth'}
@@ -1035,7 +1035,7 @@ export default function LandingPage() {
                                 </button>
                                 <ul className="space-y-3">
                                     {features.map(feat => (
-                                        <li key={feat} className="flex items-start gap-3 text-sm text-gray-600">
+                                        <li key={feat} className="flex items-start gap-3 text-sm text-gray-600 dark:text-slate-300">
                                             <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0 mt-px" />
                                             {feat}
                                         </li>

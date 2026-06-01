@@ -83,15 +83,15 @@ function MasterAdminLayout() {
             </div>
 
             {/* Sidebar */}
-            <aside className="w-64 border-r border-white/5 bg-white/[0.02] backdrop-blur-xl z-20 flex flex-col shrink-0">
-                <div className="p-6 border-b border-white/5">
+            <aside className="w-64 border-r border-slate-200 bg-white/90 backdrop-blur-xl z-20 flex flex-col shrink-0 shadow-sm dark:border-white/5 dark:bg-white/[0.02] dark:shadow-none">
+                <div className="p-6 border-b border-slate-100 dark:border-white/5">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-                            <ShieldCheck className="w-5 h-5 text-indigo-400" />
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shadow-sm dark:bg-indigo-500/20 dark:border-indigo-500/30 dark:shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                            <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                         </div>
                         <div>
-                            <h1 className="text-white font-bold tracking-tight">HelpDesk.ai</h1>
-                            <p className="text-[10px] text-indigo-400 uppercase tracking-widest font-semibold">Master Admin</p>
+                            <h1 className="text-slate-950 font-bold tracking-tight dark:text-white">HelpDesk.ai</h1>
+                            <p className="text-[10px] text-indigo-600 uppercase tracking-widest font-semibold dark:text-indigo-400">Master Admin</p>
                         </div>
                     </div>
                 </div>
@@ -104,12 +104,12 @@ function MasterAdminLayout() {
                                 key={item.path}
                                 to={item.path}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all group ${isActive
-                                    ? "bg-indigo-500/10 text-indigo-300 border border-indigo-500/20"
-                                    : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
+                                    ? "bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:border-indigo-500/20"
+                                    : "text-slate-500 hover:text-slate-950 hover:bg-slate-50 border border-transparent dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/5"
                                     }`}
                             >
                                 {React.cloneElement(item.icon, {
-                                    className: `w-5 h-5 transition-colors ${isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300"}`
+                                    className: `w-5 h-5 transition-colors ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300"}`
                                 })}
                                 {item.label}
                                 {item.count > 0 && (
@@ -118,19 +118,19 @@ function MasterAdminLayout() {
                                     </span>
                                 )}
                                 {item.label === "Pending Requests" && item.count === 0 && (
-                                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-slate-700"></span>
+                                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700"></span>
                                 )}
                             </Link>
                         );
                     })}
                 </nav>
 
-                <div className="p-4 border-t border-white/5">
+                <div className="p-4 border-t border-slate-100 dark:border-white/5">
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/5 transition-all group"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all group dark:text-slate-400 dark:hover:text-red-400 dark:hover:bg-red-500/5"
                     >
-                        <LogOut className="w-5 h-5 text-slate-500 group-hover:text-red-400 transition-colors" />
+                        <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-600 transition-colors dark:text-slate-500 dark:group-hover:text-red-400" />
                         Sign Out
                     </button>
                 </div>
@@ -139,27 +139,28 @@ function MasterAdminLayout() {
             {/* Main Content Area */}
             <main className="flex-1 flex flex-col min-w-0 relative z-10 h-screen overflow-hidden">
                 {/* Top Bar */}
-                <header className="h-16 border-b border-white/5 bg-white/[0.01] backdrop-blur-md flex items-center justify-between px-8 shrink-0">
+                <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 shrink-0 dark:border-white/5 dark:bg-white/[0.01]">
                     <div className="flex items-center gap-4 flex-1 max-w-xl">
                         <div className="relative w-full group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors dark:text-slate-500 dark:group-focus-within:text-indigo-400" />
                             <input
                                 type="text"
                                 placeholder="Global search admins, companies, or IDs..."
-                                className="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all"
+                                className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all dark:bg-white/5 dark:border-white/10 dark:text-slate-100"
                                 onChange={(e) => console.log("Global search:", e.target.value)}
                             />
                         </div>
                     </div>
 
                     <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-3 pl-6 border-l border-white/10">
+                        <ThemeToggle />
+                        <div className="flex items-center gap-3 pl-6 border-l border-slate-200 dark:border-white/10">
                             <div className="text-right hidden sm:block">
-                                <p className="text-sm font-semibold text-white truncate max-w-[150px]">{profile?.full_name}</p>
+                                <p className="text-sm font-semibold text-slate-950 truncate max-w-[150px] dark:text-white">{profile?.full_name}</p>
                                 <p className="text-[10px] text-emerald-400 font-medium uppercase tracking-wider">Superuser Access</p>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center overflow-hidden">
-                                <UserCircle className="w-6 h-6 text-indigo-400" />
+                            <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden dark:bg-indigo-500/20 dark:border-indigo-500/30">
+                                <UserCircle className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                             </div>
                         </div>
                     </div>

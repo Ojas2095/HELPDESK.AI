@@ -11,6 +11,7 @@ import NotificationPopover from "./NotificationPopover";
 import ThemeToggle from "../../components/shared/ThemeToggle";
 
 import useAuthStore from "../../store/authStore";
+import ThemeToggle from "../../components/shared/ThemeToggle";
 
 const TopNav = () => {
     const navigate = useNavigate();
@@ -66,7 +67,7 @@ const TopNav = () => {
                     </div>
                     <button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className="md:hidden p-2 text-gray-600 focus:outline-none"
+                        className="md:hidden p-2 text-gray-600 focus:outline-none dark:text-slate-200"
                     >
                         {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
                     </button>

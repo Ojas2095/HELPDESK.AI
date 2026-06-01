@@ -5,6 +5,7 @@ import NotificationPopover from '../../user/components/NotificationPopover';
 import ThemeToggle from '../../components/shared/ThemeToggle';
 import useAuthStore from '../../store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import ThemeToggle from '../../components/shared/ThemeToggle';
 
 /**
  * AdminHeader Component

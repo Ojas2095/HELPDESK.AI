@@ -14,6 +14,7 @@ import {
     Clock
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { useTheme } from '../../components/shared/ThemeProvider';
 
 const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
     const navItems = [

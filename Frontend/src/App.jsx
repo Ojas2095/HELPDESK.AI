@@ -291,6 +291,27 @@ export default function App() {
 
   if (isDocsSubdomain) {
     return (
+      <ThemeProvider>
+        <BrowserRouter>
+          <TitleUpdater />
+          <ScrollToTop />
+          <Toaster />
+          <BugReportWidget />
+          <Routes>
+            <Route path="/" element={<DocsPortal />} />
+            <Route path="/docs" element={<Navigate to="/" replace />} />
+            <Route path="/api-reference" element={<ApiReference />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/status" element={<StatusPage />} />
+            <Route path="*" element={<DocsPortal />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
+    );
+  }
+
+  return (
+    <ThemeProvider>
       <BrowserRouter>
         <TitleUpdater />
         <ScrollToTop />
