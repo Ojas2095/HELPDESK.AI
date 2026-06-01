@@ -897,6 +897,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
+)
 
 # Security Headers Middleware
 @app.middleware("http")
@@ -2755,3 +2756,63 @@ async def metrics(request: Request):
                 raise HTTPException(status_code=403, detail="Forbidden")
 
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+# ---------------------------------------------------------------------------
+# Tenant Isolation Security Audit API  (Issue #1054)
+# ---------------------------------------------------------------------------
+
+from backend.security.isolation_audit import IsolationAuditEngine
+
+_audit_engine = IsolationAuditEngine()
+
+
+@app.get("/api/security/audit")
+async def run_security_audit(current_user: dict = Depends(get_current_user)):
+    """
+    Run automated tenant isolation audit.
+    Only accessible by admin and master_admin roles.
+    Returns audit findings with risk score and leakage risk assessment.
+    """
+    role = current_user.get("role", "user")
+    if role not in ("admin", "company_admin", "master_admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Only administrators can run security audits.",
+        )
+
+    company_id = current_user.get("company_id")
+    company_ids = [company_id] if company_id else None
+
+    result = _audit_engine.run_full_audit(company_ids=company_ids)
+    report = _audit_engine.generate_json_report(result)
+
+    return {"status": "success", **report}
+
+
+@app.get("/api/security/report")
+async def download_security_report(current_user: dict = Depends(get_current_user)):
+    """
+    Download tenant isolation audit report as Markdown.
+    Only accessible by admin and master_admin roles.
+    """
+    role = current_user.get("role", "user")
+    if role not in ("admin", "company_admin", "master_admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Only administrators can download security reports.",
+        )
+
+    company_id = current_user.get("company_id")
+    company_ids = [company_id] if company_id else None
+
+    result = _audit_engine.run_full_audit(company_ids=company_ids)
+    report_md = _audit_engine.generate_report(result)
+
+    return Response(
+        content=report_md,
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": "attachment; filename=tenant_isolation_report.md",
+        },
+    )
