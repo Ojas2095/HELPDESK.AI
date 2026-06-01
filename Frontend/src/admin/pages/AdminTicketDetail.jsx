@@ -74,6 +74,11 @@ const AdminTicketDetailSkeleton = () => (
     </div>
 );
 
+const safeDisplayText = (text, fallback = 'None') => {
+  if (text === null || text === undefined || text === '') return fallback;
+  return text;
+};
+
 const AdminTicketDetail = () => {
   const { ticket_id } = useParams();
   const navigate = useNavigate();

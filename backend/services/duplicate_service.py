@@ -10,6 +10,10 @@ import threading
 import tempfile
 import numpy as np
 from typing import Any
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 try:
     import torch
@@ -55,6 +59,8 @@ class DuplicateService:
 
     def _encode(self, text: str):
         """Encode text to an L2-normalized float32 numpy embedding."""
+        if not self.model:
+            return None
         emb = self.model.encode(text, convert_to_numpy=True, normalize_embeddings=True)
         return emb.astype(np.float32, copy=False)
 
@@ -258,10 +264,7 @@ class DuplicateService:
         self._embedding_matrix_dirty = False
 
     def add_ticket(self, ticket_id: str, text: str):
-        """Add a ticket to the in-memory store and persist to disk.
-
-        Thread-safe: lock prevents interleaved appends to _tickets.
-        """
+        """Add a ticket to the in-memory store and persist to disk."""
         self.load()
         if not self.is_available():
             logger.warning("[DuplicateService] DEGRADED: Skipping embedding for ticket %s (model not available)", ticket_id)
@@ -289,66 +292,6 @@ class DuplicateService:
         values = [float(value) for value in embedding.tolist()]
         redis_cache.set_embedding(text, values)
         return values
-
-    def _build_result(
-        self,
-        *,
-        is_duplicate: bool,
-        duplicate_ticket_id: str | None,
-        similarity: float,
-    ) -> dict:
-        return {
-            "is_duplicate": is_duplicate,
-            "duplicate_ticket_id": duplicate_ticket_id,
-            "parent_ticket_id": duplicate_ticket_id,
-            "is_potential_duplicate": is_duplicate,
-            "similarity": round(similarity, 4),
-        }
-
-    def find_semantic_duplicate(
-        self,
-        text: str,
-        *,
-        threshold: float | None = None,
-        company_id: str | None = None,
-        supabase_client: Any | None = None,
-        match_count: int = 1,
-    ) -> dict:
-        """Find the best duplicate candidate using Supabase vector search, with local fallback."""
-        self.load()
-
-        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
-        embedding = self.generate_embedding(text)
-
-        if embedding and supabase_client and company_id:
-            try:
-                response = supabase_client.rpc(
-                    "match_tickets",
-                    {
-                        "query_vector": embedding,
-                        "match_threshold": float(active_threshold),
-                        "match_count": match_count,
-                        "tenant_company_id": company_id,
-                    },
-                ).execute()
-
-                rows = response.data or []
-                if rows:
-                    best_match = rows[0]
-                    similarity = float(best_match.get("similarity", 0.0))
-                    ticket_identifier = best_match.get("ticket_id") or best_match.get("id")
-                    return self._build_result(
-                        is_duplicate=similarity >= active_threshold,
-                        duplicate_ticket_id=str(ticket_identifier) if ticket_identifier is not None else None,
-                        similarity=similarity,
-                    )
-            except Exception as error:
-                print(f"[DuplicateService] Supabase vector search failed, falling back to local cache: {error}")
-
-        duplicate_result = self.check_duplicate(text, threshold=active_threshold)
-        duplicate_result["parent_ticket_id"] = duplicate_result.get("duplicate_ticket_id")
-        duplicate_result["is_potential_duplicate"] = duplicate_result.get("is_duplicate", False)
-        return duplicate_result
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
         """
@@ -430,11 +373,8 @@ class DuplicateService:
         # Stack stored embeddings into a single tensor for vectorized operations
         embeddings = [stored_emb for _, stored_emb, _ in tickets_snapshot]
         stacked_embeddings = torch.stack(embeddings)
-
-        # Compute cosine similarity between query and all stored embeddings in one operation
         similarity_matrix = util.cos_sim(query_embedding, stacked_embeddings)
 
-        # Find the index and score of the most similar ticket
         best_score_tensor, best_index_tensor = torch.max(similarity_matrix, dim=1)
         best_score = best_score_tensor.item()
         best_index = best_index_tensor.item()

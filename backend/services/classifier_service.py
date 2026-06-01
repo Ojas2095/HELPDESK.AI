@@ -37,6 +37,8 @@ try:
         CLASSIFIER_LATENCY,
         CLASSIFIER_REQUESTS,
         CLASSIFIER_TOKENS,
+        MODEL_PREDICTIONS_TOTAL,
+        MODEL_PREDICTION_LATENCY,
     )
     _METRICS_ENABLED = True
 except Exception:

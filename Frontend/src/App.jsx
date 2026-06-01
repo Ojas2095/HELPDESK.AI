@@ -5,12 +5,10 @@
 
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { PageSkeleton, MinimalSkeleton } from './components/ui/page-skeleton';
 import { NotFound } from './components/ui/not-found-2';
 import Toaster from './components/shared/Toaster';
 import BugReportWidget from './components/shared/BugReportWidget';
-import useRealtimeNotifications from './hooks/useRealtimeNotifications';
 import useAuthStore from './store/authStore';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import ShortcutsHelp from './components/shared/ShortcutsHelp';
@@ -330,6 +328,7 @@ export default function App() {
     initialize().catch(err => console.error('Auth init failed:', err)); 
   }, [initialize]);
 
+  // Handle docs subdomain if applicable
   const isDocsSubdomain = window.location.hostname.startsWith('docs.');
 
   if (isDocsSubdomain) {
@@ -356,7 +355,6 @@ export default function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <TitleUpdater />
         <ScrollToTop />
         <Toaster />
         <BugReportWidget />
@@ -374,7 +372,6 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <TitleUpdater />
       <ScrollToTop />
       <ErrorBoundary>
         <Suspense fallback={<PageSkeleton />}>
