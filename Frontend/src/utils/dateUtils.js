@@ -72,7 +72,7 @@ const normalizeDateString = (str) => {
  * @param {string|number|Date|null|undefined} dateStr - Raw date value.
  * @returns {Date|null} Parsed Date or null.
  */
-const parseDate = (dateStr) => {
+export const parseDate = (dateStr) => {
     if (!dateStr) return null;
 
     // Already a Date object

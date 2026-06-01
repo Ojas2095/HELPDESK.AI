@@ -78,6 +78,4 @@ export default defineConfig({
       "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     },
   },
-    sourcemap: 'hidden'
-  }
 })
