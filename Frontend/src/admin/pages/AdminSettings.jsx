@@ -10,11 +10,9 @@ import {
     Save,
     ShieldCheck,
     Lock,
-    Eye
+    Eye,
     Mail,
     Send,
-    Lock,
-    Eye
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
 import useAuthStore from '../../store/authStore';
@@ -486,67 +484,6 @@ const AdminSettings = () => {
                 </Card>
 
             </div>
-
-                {/* Security and Encryption Settings */}
-                <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
-                    <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-                        <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-3">
-                            <Lock size={18} className="text-emerald-400" /> Security and Encryption
-                        </h3>
-                    </div>
-                    <CardContent className="p-8 space-y-6">
-                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
-                            Protect sensitive data with AES-256-GCM payload encryption and automated PII redaction for all outgoing ticket logs and database backups.
-                        </p>
-                        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                            <div>
-                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                                    <Lock size={14} className="text-emerald-500" /> AES-256-GCM Encryption
-                                </h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                    Encrypt sensitive fields (email, description, raw_text) before database storage.
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => handleChange('enableEncryption', !settings.enableEncryption)}
-                                className={"w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 " + (settings.enableEncryption ? 'bg-emerald-500' : 'bg-slate-200')}
-                            >
-                                <div className={"absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md " + (settings.enableEncryption ? 'right-1' : 'left-1')}></div>
-                            </button>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                                    <Eye size={14} className="text-amber-500" /> PII Redaction
-                                </h4>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                    Automatically redact emails, phone numbers, SSNs, and API keys from ticket data before backup.
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => handleChange('enablePiiRedaction', !settings.enablePiiRedaction)}
-                                className={"w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 " + (settings.enablePiiRedaction ? 'bg-amber-500' : 'bg-slate-200')}
-                            >
-                                <div className={"absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md " + (settings.enablePiiRedaction ? 'right-1' : 'left-1')}></div>
-                            </button>
-                        </div>
-                        {settings.enableEncryption ? (
-                            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-                                <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-widest">
-                                    Encryption Active: Sensitive fields will be encrypted with AES-256-GCM before storage.
-                                    Ensure DB_ENCRYPTION_SECRET_KEY is set in your environment variables.
-                                </p>
-                            </div>
-                        ) : null}
-                        {settings.enablePiiRedaction ? (
-                            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
-                                <p className="text-[10px] text-amber-700 font-bold uppercase tracking-widest">
-                                    PII Redaction Active: Emails, phone numbers, SSNs, API keys, and credit card numbers will be replaced with [REDACTED] in backups.
-                                </p>
-                            </div>
-                        ) : null}
-                    </CardContent>
-                </Card>
 
             {/* SLA Rules Configuration */}
 <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
