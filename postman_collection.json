@@ -1,0 +1,1172 @@
+{
+  "info": {
+    "name": "HELPDESK.AI Backend API",
+    "description": "Comprehensive Postman collection for the HELPDESK.AI Backend — an AI-driven IT support ticket triage, classification, and auto-resolution service.\n\n## Authentication\nSupabase service-role authentication is performed server-side. Frontend clients should call these endpoints over HTTPS from the configured CORS origins.\n\n## Rate Limits\n- `/ai/analyze_ticket`: 10 requests/minute/IP\n- Other AI endpoints: standard rate limiting applies\n\n## Base URL\n- Local: `http://localhost:8000`\n- Staging: `https://staging-api.helpdesk.ai`\n- Production: `https://api.helpdesk.ai`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "hermes-agent"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "API base URL — switch between local, staging, and production"
+    },
+    {
+      "key": "ticketId",
+      "value": "example-ticket-id",
+      "type": "string",
+      "description": "Replace with an actual ticket ID from your database"
+    },
+    {
+      "key": "companyId",
+      "value": "example-company-id",
+      "type": "string",
+      "description": "Replace with an actual company/tenant ID"
+    },
+    {
+      "key": "metricsToken",
+      "value": "your-metrics-token",
+      "type": "string",
+      "description": "Bearer token for the /metrics endpoint"
+    }
+  ],
+  "item": [
+    {
+      "name": "System",
+      "description": "Service health, readiness, landing page, and monitoring endpoints.",
+      "item": [
+        {
+          "name": "API Landing Page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Returns an interactive HTML landing page with links to Swagger UI, ReDoc, health check, and API documentation."
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Returns a lightweight status payload showing whether core models (classifier, NER, embeddings) are loaded and the service is operational.\n\n**Response:**\n- `status`: \"healthy\" | \"degraded\"\n- `models_loaded`: boolean\n- `uptime_seconds`: number"
+          }
+        },
+        {
+          "name": "Readiness Probe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["ready"]
+            },
+            "description": "Kubernetes-compatible readiness probe. Returns `ready` only when all required subsystems (classifier, NER, Supabase connection) are initialized.\n\n**Response:**\n- `ready`: boolean\n- `checks`: object with per-subsystem status"
+          }
+        },
+        {
+          "name": "Cache Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cache/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["cache", "health"]
+            },
+            "description": "Reports Redis connectivity, hit/miss ratios, and cache configuration. Useful for debugging cache-related performance issues.\n\n**Response:**\n- `redis_connected`: boolean\n- `hit_rate`: float\n- `keys_count`: number"
+          }
+        },
+        {
+          "name": "WebSocket Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ws/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws", "stats"]
+            },
+            "description": "Returns WebSocket connection pool statistics for monitoring real-time ticket update subscriptions.\n\n**Response:**\n- `active_connections`: number\n- `total_messages_sent`: number"
+          }
+        },
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{metricsToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
+            },
+            "description": "Prometheus scrape endpoint — exposes HTTP request durations, AI inference latency, ticket processing counts, and system resource metrics. Requires a valid metrics token.\n\n**Auth:** Bearer token via `METRICS_TOKEN` env var."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Analysis",
+      "description": "Core NLP endpoints: ticket classification, troubleshooting, bug analysis, duplicate detection, and streaming analysis.",
+      "item": [
+        {
+          "name": "Full AI Ticket Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cannot login to dashboard\",\n  \"description\": \"When I try to login, I get a 500 error after entering my credentials. This started happening after the latest deployment.\",\n  \"company_id\": \"{{companyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze_ticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze_ticket"]
+            },
+            "description": "Main entry point for end-to-end ticket triage. Runs the full AI pipeline:\n1. OCR (if image attached)\n2. NER extraction\n3. Category classification\n4. Priority estimation\n5. Duplicate detection\n6. RAG knowledge base lookup\n7. SLA breach calculation\n\n**Rate Limit:** 10 requests/minute/IP\n\n**Request Body:**\n- `title` (required): Ticket title\n- `description` (required): Full ticket description\n- `company_id` (optional): Tenant scoping\n\n**Response:** TicketResponse with classification, priority, SLA estimate, similar tickets, and suggested resolution."
+          }
+        },
+        {
+          "name": "Quick AI Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"VPN not connecting\",\n  \"description\": \"The VPN client shows 'connection timeout' when trying to connect to the corporate network.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze"]
+            },
+            "description": "Lightweight AI analysis without full ticket lifecycle. Returns classification and priority without creating a ticket record or running duplicate detection.\n\n**Use case:** Quick triage preview before submitting a full ticket."
+          }
+        },
+        {
+          "name": "Streaming AI Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Email not syncing\",\n  \"description\": \"Outlook stopped syncing emails since yesterday morning. Restarting the app doesn't help.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze_stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze_stream"]
+            },
+            "description": "Server-Sent Events (SSE) streaming version of the AI analysis. Returns partial results as each pipeline stage completes, enabling real-time progress updates in the UI.\n\n**Response:** `text/event-stream` with JSON chunks for each stage."
+          }
+        },
+        {
+          "name": "AI Troubleshooting Wizard",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"{{ticketId}}\",\n  \"step\": 1,\n  \"user_response\": \"I already tried restarting the application\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/troubleshoot",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "troubleshoot"]
+            },
+            "description": "Dynamic multi-step troubleshooting wizard powered by Gemini. Each call returns the next diagnostic question or suggested fix based on the user's previous answers.\n\n**Request Body:**\n- `ticket_id`: Associated ticket\n- `step`: Current step number (1-based)\n- `user_response`: User's answer to the previous step\n\n**Response:** TroubleshootResponse with next question, suggested actions, and `should_end` flag."
+          }
+        },
+        {
+          "name": "Bug Report Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"App crashes on file upload\",\n  \"description\": \"When uploading files larger than 10MB, the application crashes with an OOM error.\",\n  \"repro_steps\": \"1. Go to upload page\\n2. Select a 15MB PDF\\n3. Click Upload\\n4. App crashes\",\n  \"environment\": \"Chrome 120, Windows 11\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze_bug",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze_bug"]
+            },
+            "description": "Analyzes a structured bug report (title, description, repro steps, environment) and returns severity assessment, root cause hypothesis, and suggested investigation areas.\n\n**Response:** BugReportAnalysisResponse with severity, category, root cause analysis, and recommended next steps."
+          }
+        },
+        {
+          "name": "Agent Scorecard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/agent_scorecard?company_id={{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "agent_scorecard"],
+              "query": [
+                {
+                  "key": "company_id",
+                  "value": "{{companyId}}",
+                  "description": "Filter scorecard by company/tenant"
+                }
+              ]
+            },
+            "description": "Returns AI model performance metrics: classification accuracy, average response time, error rate, and feedback scores. Used for monitoring model quality over time."
+          }
+        },
+        {
+          "name": "Log Admin Correction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"{{ticketId}}\",\n  \"ai_prediction\": \"Hardware Issue\",\n  \"correct_label\": \"Software Issue\",\n  \"notes\": \"AI misclassified due to ambiguous title\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/log_correction",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "log_correction"]
+            },
+            "description": "Log an admin correction when the AI prediction differs from the human decision. These corrections are used for continuous model improvement and retraining.\n\n**Auth:** Requires authenticated user with admin role."
+          }
+        },
+        {
+          "name": "Check Duplicate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cannot access email\",\n  \"description\": \"Email client shows connection error since this morning\",\n  \"company_id\": \"{{companyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/check_duplicate",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "check_duplicate"]
+            },
+            "description": "Checks if a ticket description matches any existing open tickets using cosine similarity on sentence embeddings. Returns similarity scores and matching ticket IDs."
+          }
+        },
+        {
+          "name": "Reindex Embeddings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_id\": \"{{companyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/reindex_embeddings",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "reindex_embeddings"]
+            },
+            "description": "Triggers a background reindex of all ticket embeddings for the given company. Use after bulk ticket imports or when duplicate detection quality degrades.\n\n**Auth:** Admin role required."
+          }
+        },
+        {
+          "name": "AI Analysis V2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Printer not working\",\n  \"description\": \"The HP LaserJet on floor 3 shows offline status even after power cycling.\",\n  \"company_id\": \"{{companyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze-v2",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze-v2"]
+            },
+            "description": "V2 analysis endpoint with improved classification model and enhanced duplicate detection. Returns the same TicketResponse format as v1 but with higher accuracy."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "description": "CRUD operations over support tickets (Supabase-backed). Includes search, bulk operations, ratings, and SLA tracking.",
+      "item": [
+        {
+          "name": "List Tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets?company_id={{companyId}}&status=open&limit=20&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"],
+              "query": [
+                {
+                  "key": "company_id",
+                  "value": "{{companyId}}",
+                  "description": "Filter by company/tenant"
+                },
+                {
+                  "key": "status",
+                  "value": "open",
+                  "description": "Filter by status: open, closed, pending, escalated"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Max results per page (default: 50)"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset"
+                }
+              ]
+            },
+            "description": "List tickets with optional filtering by company, status, priority, and date range. Supports pagination via limit/offset.\n\n**Auth:** Requires authenticated user."
+          }
+        },
+        {
+          "name": "Create Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"New monitor flickering\",\n  \"description\": \"The new Dell monitor I received keeps flickering every few minutes. Tried different cables.\",\n  \"company_id\": \"{{companyId}}\",\n  \"priority\": \"medium\",\n  \"category\": \"Hardware\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"]
+            },
+            "description": "Create a new support ticket. Runs the AI classification pipeline automatically if classification fields are not provided.\n\n**Request Body:**\n- `title` (required): Ticket title\n- `description` (required): Full description\n- `company_id` (required): Tenant ID\n- `priority` (optional): low, medium, high, critical\n- `category` (optional): Override AI classification\n\n**Auth:** Requires authenticated user."
+          }
+        },
+        {
+          "name": "Save Ticket (Draft)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Draft: investigating slow boot times\",\n  \"description\": \"Will add more details after running diagnostics\",\n  \"company_id\": \"{{companyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/save",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "save"]
+            },
+            "description": "Save a ticket as draft without triggering AI analysis. Useful for agents who want to create tickets incrementally.\n\n**Auth:** Requires authenticated user."
+          }
+        },
+        {
+          "name": "Get Ticket by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}"]
+            },
+            "description": "Retrieve a single ticket by ID. Returns full ticket details including AI classification, SLA status, and audit trail."
+          }
+        },
+        {
+          "name": "Update Ticket",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\",\n  \"assigned_to\": \"agent-smith\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}"]
+            },
+            "description": "Partially update a ticket. Only provided fields are modified. Automatically logs changes to the audit trail.\n\n**Auth:** Requires authenticated user."
+          }
+        },
+        {
+          "name": "Search Tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/search?q=email+not+working&company_id={{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "email not working",
+                  "description": "Search query (full-text search on title and description)"
+                },
+                {
+                  "key": "company_id",
+                  "value": "{{companyId}}",
+                  "description": "Scope search to company"
+                }
+              ]
+            },
+            "description": "Full-text search across ticket titles and descriptions. Returns relevance-ranked results."
+          }
+        },
+        {
+          "name": "Get SLA Estimate",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}/sla-estimate",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}", "sla-estimate"]
+            },
+            "description": "Returns the estimated SLA breach time for a ticket based on its priority level and creation time.\n\n**Response:**\n- `sla_breach_at`: ISO timestamp\n- `time_remaining`: human-readable duration\n- `priority`: effective priority level"
+          }
+        },
+        {
+          "name": "Get Ticket Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}/audit_logs?company_id={{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}", "audit_logs"],
+              "query": [
+                {
+                  "key": "company_id",
+                  "value": "{{companyId}}",
+                  "description": "Company scope (required for multi-tenant)"
+                }
+              ]
+            },
+            "description": "Returns a company-scoped chronological audit trail for a ticket. Shows all status changes, assignments, priority updates, and AI corrections."
+          }
+        },
+        {
+          "name": "Bulk Update Tickets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_ids\": [\"id1\", \"id2\", \"id3\"],\n  \"updates\": {\n    \"status\": \"closed\",\n    \"resolution\": \"Resolved by bulk action\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/bulk-update",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "bulk-update"]
+            },
+            "description": "Update multiple tickets in a single request. Useful for batch operations like closing resolved tickets or reassigning.\n\n**Auth:** Admin or master role required."
+          }
+        },
+        {
+          "name": "Bulk Delete Tickets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_ids\": [\"id1\", \"id2\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/bulk-delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "bulk-delete"]
+            },
+            "description": "Delete multiple tickets permanently. Requires admin or master role. Returns count of deleted tickets and any failed IDs.\n\n**Auth:** Admin or master role required."
+          }
+        },
+        {
+          "name": "Rate Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"{{ticketId}}\",\n  \"rating\": 4,\n  \"feedback\": \"Quick resolution, very helpful\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/rate",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "rate"]
+            },
+            "description": "Submit a 1-5 star satisfaction rating for a resolved ticket. Ratings are aggregated for CSAT reporting.\n\n**Auth:** Requires authenticated user."
+          }
+        },
+        {
+          "name": "Get Ticket Rating",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticketId}}/rating",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticketId}}", "rating"]
+            },
+            "description": "Retrieve the satisfaction rating for a specific ticket.\n\n**Response:**\n- `rating`: 1-5\n- `feedback`: optional text\n- `rated_at`: ISO timestamp"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SLA Management",
+      "description": "SLA tracking, breach detection, escalation management, and policy configuration.",
+      "item": [
+        {
+          "name": "SLA Stats Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sla/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["sla", "stats"]
+            },
+            "description": "Returns aggregate SLA statistics: total tickets, breach count, average resolution time, and compliance percentage.\n\n**Response:** SLAStatsResponse with breakdown by priority level."
+          }
+        },
+        {
+          "name": "SLA Tickets List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sla/tickets?status=breached&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["sla", "tickets"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "breached",
+                  "description": "Filter: breached, at_risk, on_track"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Max results"
+                }
+              ]
+            },
+            "description": "List tickets filtered by SLA status. Useful for dashboards showing at-risk and breached tickets."
+          }
+        },
+        {
+          "name": "Get Ticket SLA Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sla/tickets/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["sla", "tickets", "{{ticketId}}"]
+            },
+            "description": "Get detailed SLA information for a specific ticket including breach timeline, escalation history, and time remaining."
+          }
+        },
+        {
+          "name": "SLA Escalations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sla/escalations?limit=50&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["sla", "escalations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Max results"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset"
+                }
+              ]
+            },
+            "description": "List recent SLA escalations. Shows which tickets were auto-escalated due to approaching or breaching SLA deadlines."
+          }
+        },
+        {
+          "name": "SLA Policies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sla/policies",
+              "host": ["{{baseUrl}}"],
+              "path": ["sla", "policies"]
+            },
+            "description": "List all configured SLA policies with their priority mappings, response times, and resolution targets."
+          }
+        },
+        {
+          "name": "Manual SLA Check",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"{{ticketId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/sla/check",
+              "host": ["{{baseUrl}}"],
+              "path": ["sla", "check"]
+            },
+            "description": "Manually trigger an SLA compliance check for a specific ticket. Normally runs automatically via the scheduler."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Internal endpoints for CSAT reporting, knowledge gap analysis, auto-resolve settings, and security auditing.",
+      "item": [
+        {
+          "name": "CSAT Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/csat",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "csat"]
+            },
+            "description": "Customer Satisfaction (CSAT) report. Returns aggregated ratings, NPS score, and trend data.\n\n**Auth:** Admin role required."
+          }
+        },
+        {
+          "name": "Knowledge Gaps",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/knowledge-gaps",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "knowledge-gaps"]
+            },
+            "description": "Identifies topics where the AI has low confidence or frequent corrections. Useful for prioritizing knowledge base content creation.\n\n**Auth:** Admin role required."
+          }
+        },
+        {
+          "name": "Get Auto-Resolve Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/auto-resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "auto-resolve"]
+            },
+            "description": "Returns the current auto-resolve configuration: enabled status, confidence threshold, excluded categories, and max auto-resolves per day.\n\n**Auth:** Admin role required."
+          }
+        },
+        {
+          "name": "Security Audit Log",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/security/audit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "security", "audit"]
+            },
+            "description": "Returns the security audit log: authentication attempts, permission changes, data access events, and anomaly detections.\n\n**Auth:** Admin role required."
+          }
+        }
+      ]
+    },
+    {
+      "name": "System Settings",
+      "description": "Global system configuration endpoints.",
+      "item": [
+        {
+          "name": "Get System Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/system/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "settings"]
+            },
+            "description": "Retrieve global system settings: AI model configuration, rate limits, feature flags, and integration endpoints."
+          }
+        },
+        {
+          "name": "Update System Settings",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auto_resolve_enabled\": true,\n  \"auto_resolve_threshold\": 0.85,\n  \"max_auto_resolves_per_day\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/system/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["system", "settings"]
+            },
+            "description": "Update global system settings. Only provided fields are modified.\n\n**Auth:** Admin role required."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Translation",
+      "description": "Multi-language translation endpoints for tickets and text. Powered by the language pipeline service.",
+      "item": [
+        {
+          "name": "Translate Text",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"My computer won't start\",\n  \"target_language\": \"es\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/translation/translate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "translation", "translate"]
+            },
+            "description": "Translate arbitrary text to the target language.\n\n**Request Body:**\n- `text` (required): Source text\n- `target_language` (required): ISO 639-1 code (e.g., 'es', 'fr', 'de', 'ja')\n\n**Response:**\n- `translated_text`: Translated string\n- `source_language`: Detected source language\n- `confidence`: Detection confidence"
+          }
+        },
+        {
+          "name": "Translate Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"{{ticketId}}\",\n  \"target_language\": \"fr\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/translation/translate-ticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "translation", "translate-ticket"]
+            },
+            "description": "Translate an entire ticket (title + description + comments) to the target language. Preserves formatting and technical terms."
+          }
+        },
+        {
+          "name": "Detect Language",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Mein Computer startet nicht\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/translation/detect",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "translation", "detect"]
+            },
+            "description": "Detect the language of the input text.\n\n**Response:**\n- `language`: ISO 639-1 code\n- `confidence`: 0.0-1.0\n- `alternatives`: Other possible languages with scores"
+          }
+        },
+        {
+          "name": "Supported Languages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/translation/languages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "translation", "languages"]
+            },
+            "description": "List all supported translation languages with their ISO codes and display names."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Estimator",
+      "description": "Response time and SLA estimation endpoints.",
+      "item": [
+        {
+          "name": "Estimate Response Time",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"high\",\n  \"category\": \"Software\",\n  \"company_id\": \"{{companyId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/estimator/estimate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "estimator", "estimate"]
+            },
+            "description": "Estimate expected response and resolution times based on priority, category, and historical data.\n\n**Response:**\n- `estimated_response_time`: ISO duration\n- `estimated_resolution_time`: ISO duration\n- `confidence`: Estimation confidence based on historical data volume"
+          }
+        },
+        {
+          "name": "SLA Targets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/estimator/sla-targets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "estimator", "sla-targets"]
+            },
+            "description": "List configured SLA target times by priority level.\n\n**Response:** Map of priority → {response_time, resolution_time}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Voice",
+      "description": "Voice-to-ticket endpoints using speech-to-text transcription.",
+      "item": [
+        {
+          "name": "Transcribe Audio",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": [],
+                  "description": "Audio file (WAV, MP3, M4A, WEBM)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/voice/transcribe",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "voice", "transcribe"]
+            },
+            "description": "Transcribe an audio file to text using speech-to-text.\n\n**Request:** Multipart form with audio file\n**Response:**\n- `transcript`: Transcribed text\n- `language`: Detected language\n- `duration`: Audio duration in seconds"
+          }
+        },
+        {
+          "name": "Create Ticket from Voice",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": [],
+                  "description": "Audio file with the ticket description"
+                },
+                {
+                  "key": "company_id",
+                  "value": "{{companyId}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/voice/create-ticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "voice", "create-ticket"]
+            },
+            "description": "One-step voice-to-ticket: transcribes audio, extracts ticket details, and creates a ticket with AI classification.\n\n**Request:** Multipart form with audio file and company_id\n**Response:** Created ticket object"
+          }
+        },
+        {
+          "name": "Voice Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/voice/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "voice", "health"]
+            },
+            "description": "Check voice transcription service health and model availability."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weekly Digest",
+      "description": "Automated weekly digest emails with ticket summaries and trends.",
+      "item": [
+        {
+          "name": "Preview Digest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/digest/preview/{{companyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "digest", "preview", "{{companyId}}"]
+            },
+            "description": "Preview the weekly digest content for a company without sending the email. Returns ticket stats, trends, and highlights."
+          }
+        },
+        {
+          "name": "Send Digest Now",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/digest/send-now",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "digest", "send-now"]
+            },
+            "description": "Manually trigger the weekly digest email for the authenticated user's company.\n\n**Auth:** Requires authenticated user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Legacy Endpoints",
+      "description": "Original v0 endpoints preserved for backward compatibility. Prefer the /ai/ equivalents for new integrations.",
+      "item": [
+        {
+          "name": "Legacy Analyze",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"WiFi keeps disconnecting\",\n  \"description\": \"The WiFi drops every 10 minutes in the conference room\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analyze",
+              "host": ["{{baseUrl}}"],
+              "path": ["analyze"]
+            },
+            "description": "Legacy analysis endpoint. Use `/ai/analyze_ticket` instead for new integrations."
+          }
+        },
+        {
+          "name": "Legacy Analyze OCR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Error screenshot\",\n  \"description\": \"Attached screenshot shows blue screen error\",\n  \"image_url\": \"https://example.com/screenshot.png\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analyze-ocr",
+              "host": ["{{baseUrl}}"],
+              "path": ["analyze-ocr"]
+            },
+            "description": "Legacy OCR analysis endpoint. Extracts text from images and analyzes alongside the ticket text."
+          }
+        },
+        {
+          "name": "Legacy Similar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cannot connect to VPN\",\n  \"description\": \"VPN client shows authentication error\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/similar",
+              "host": ["{{baseUrl}}"],
+              "path": ["similar"]
+            },
+            "description": "Legacy similar ticket lookup. Use `/ai/check_duplicate` instead."
+          }
+        },
+        {
+          "name": "Legacy Gemini Resolve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Printer jam\",\n  \"description\": \"Paper jam in tray 2 of HP LaserJet\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/gemini-resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["gemini-resolve"]
+            },
+            "description": "Legacy Gemini-powered resolution suggestion. Use `/ai/troubleshoot` for the interactive wizard experience."
+          }
+        }
+      ]
+    }
+  ]
+}
