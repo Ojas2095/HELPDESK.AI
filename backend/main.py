@@ -564,14 +564,17 @@ async def get_tickets(
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
-    # Resolve caller's company for tenant isolation
+    # Resolve caller's company for tenant isolation (fail closed)
     user_id = user.get("id")
     user_metadata = user.get("user_metadata", {})
-    user_company_id = user_metadata.get("company_id") or company_id
+    user_company_id = user_metadata.get("company_id")
+    if not user_company_id:
+        raise HTTPException(status_code=403, detail="Access denied: caller has no company_id")
+    if company_id and company_id != user_company_id:
+        raise HTTPException(status_code=403, detail="Access denied: company_id mismatch")
 
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if user_company_id:
-        query = query.eq("company_id", user_company_id)
+    query = query.eq("company_id", user_company_id)
 
     res = query.execute()
     return res.data
@@ -615,26 +618,23 @@ async def save_ticket(
             logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
             raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
 
-        # Validate tenant consistency and authorization.
+        # Validate tenant consistency and authorization (fail closed).
         profile_company_id = profile.get("company_id")
-        if final_data.get("company_id"):
-            # User provided company_id: verify it matches their profile.
-            if profile_company_id and final_data["company_id"] != profile_company_id:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
-                logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
-                raise HTTPException(status_code=403, detail="User not authorized for this tenant")
-        elif profile_company_id:
+        if not profile_company_id:
+            raise HTTPException(status_code=400, detail="User has no tenant assignment")
+        if final_data.get("company_id") and final_data["company_id"] != profile_company_id:
+            user_hash = hashlib.sha256(str(auth_user_id).encode()).hexdigest()[:8]
+            logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
+            raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+        if not final_data.get("company_id"):
             # Backfill company_id from profile.
             final_data["company_id"] = profile_company_id
-        elif request_body.user_id:
-            # User has no tenant assignment.
-            raise HTTPException(status_code=400, detail="User has no tenant assignment")
 
         # Backfill company name if missing.
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
-        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        user_hash = hashlib.sha256(str(auth_user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
@@ -680,6 +680,8 @@ async def save_ticket(
             response["duplicate_index_warning"] = duplicate_index_warning
         return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -707,6 +709,9 @@ async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user
 @app.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_user)):
     """Save a new ticket into the system."""
+    # Bind ownership to authenticated user (prevent owner_id spoofing)
+    ticket.owner_id = user.get("id")
+
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
     if existing:
@@ -720,11 +725,22 @@ async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_u
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
 async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
+    ALLOWED_UPDATE_FIELDS = {"status", "viewed_at", "priority", "category", "assigned_to", "auto_resolve", "subject", "description"}
+    
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
+            # Authorization: verify caller owns the ticket or has elevated role
+            user_id = user.get("id") or user.get("user_id")
+            user_role = user.get("role", "")
+            if ticket.owner_id != user_id and user_role not in ("admin", "support"):
+                raise HTTPException(status_code=403, detail="Access denied: not ticket owner")
+            
+            # Whitelist update fields to prevent arbitrary overwrites
+            filtered_updates = {k: v for k, v in updates.items() if k in ALLOWED_UPDATE_FIELDS}
+            
             # Convert to dict, update, then back to model
             ticket_dict = ticket.dict()
-            ticket_dict.update(updates)
+            ticket_dict.update(filtered_updates)
             updated_ticket = TicketRecord(**ticket_dict)
             TICKETS_DB[i] = updated_ticket
             return updated_ticket
