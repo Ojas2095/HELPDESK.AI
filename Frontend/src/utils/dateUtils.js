@@ -26,15 +26,15 @@ const parseDate = (dateStr) => {
     if (/^\d+$/.test(str)) {
         const num = parseInt(str, 10);
         // If > 1e12, treat as milliseconds; otherwise seconds
-        const ms = num > 1e12 ? num : num * 1000;
+        const ms = num >= 1e12 ? num : num * 1000;
         const epochDate = new Date(ms);
         return isNaN(epochDate.getTime()) ? null : epochDate;
     }
 
     // Normalize common problematic formats for Safari
     let normalized = str
-        // Replace space between date and time with 'T' (Safari requires 'T')
-        .replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/, '$1T$2')
+        // Replace space between date and time with 'T' (Safari requires 'T'), preserve seconds/milliseconds
+        .replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}(:\d{2})?)/, '$1T$2')
         // Replace slashes with dashes (2024/01/01 -> 2024-01-01)
         .replace(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/, '$1-$2-$3')
         // Add leading zeros to month/day if needed (2024-1-1 -> 2024-01-01)
