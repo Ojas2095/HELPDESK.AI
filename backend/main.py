@@ -98,7 +98,10 @@ from backend.auth_cookie import router as auth_cookie_router, get_current_user  
 # ---------------------------------------------------------------------------
 
 HEARTBEAT_INTERVAL = 30  # seconds between ping broadcasts
-HEARTBEAT_TIMEOUT = 10   # seconds to wait for a pong before disconnect (reserved — not yet enforced; should track last_pong per connection)
+HEARTBEAT_TIMEOUT = 10   # seconds to wait for a pong before disconnect
+EVICT_INTERVAL = 60      # seconds between stale-connection sweep passes
+MAX_PER_ROOM = 50        # max connections per company room
+MAX_TOTAL = 500          # global connection cap
 
 
 class ConnectionManager:
@@ -113,13 +116,28 @@ class ConnectionManager:
         self._lock = asyncio.Lock()
         self._last_pong: dict[WebSocket, float] = {}
 
-    async def connect(self, company_id: str, ws: WebSocket) -> None:
-        """Accept a new WebSocket and register it under ``company_id``."""
+    async def connect(self, company_id: str, ws: WebSocket) -> bool:
+        """Accept a new WebSocket and register it under ``company_id``.
+
+        Returns False if global or per-room cap is reached.
+        """
         import time
+        # Check caps before accepting
+        async with self._lock:
+            total = sum(len(s) for s in self._connections.values())
+            if total >= MAX_TOTAL:
+                print(f"[WS] Global connection cap reached ({MAX_TOTAL})")
+                return False
+            room = self._connections.setdefault(company_id, set())
+            if len(room) >= MAX_PER_ROOM:
+                print(f"[WS] Room {company_id} cap reached ({MAX_PER_ROOM})")
+                return False
+
         await ws.accept()
         async with self._lock:
             self._connections.setdefault(company_id, set()).add(ws)
             self._last_pong[ws] = time.time()
+        return True
 
     async def disconnect(self, company_id: str, ws: WebSocket) -> None:
         """Remove a WebSocket from the pool."""
@@ -209,6 +227,43 @@ class ConnectionManager:
         """Total number of connected clients across all companies."""
         return sum(len(ws_set) for ws_set in self._connections.values())
 
+    async def eviction_sweep(self) -> int:
+        """Dedicated sweep that evicts connections whose last pong exceeds the timeout.
+
+        Returns the number of evicted connections.
+        """
+        import time
+        now = time.time()
+        stale: list[tuple[str, WebSocket]] = []
+
+        async with self._lock:
+            for cid, ws_set in self._connections.items():
+                for ws in list(ws_set):
+                    last = self._last_pong.get(ws, now)
+                    if now - last > (HEARTBEAT_INTERVAL + HEARTBEAT_TIMEOUT):
+                        stale.append((cid, ws))
+
+        evicted = 0
+        for cid, ws in stale:
+            await self.disconnect(cid, ws)
+            try:
+                await ws.close(code=1000, reason="Heartbeat timeout")
+            except Exception:
+                pass
+            evicted += 1
+
+        if evicted:
+            print(f"[WS] Eviction sweep: removed {evicted} stale connection(s)")
+        return evicted
+
+    def room_stats(self) -> dict:
+        """Return per-room and total connection counts for monitoring."""
+        return {
+            "total": self.active_count,
+            "rooms": {cid: len(ws_set) for cid, ws_set in self._connections.items()},
+            "room_count": len(self._connections),
+        }
+
 
 # Singleton — reused across lifespan and WebSocket route
 connection_manager = ConnectionManager()
@@ -229,6 +284,19 @@ async def _heartbeat_loop() -> None:
                 print(f"[WS] Heartbeat sent to {count} active connection(s)")
         except Exception as exc:
             print(f"[WS] Heartbeat error: {exc}")
+
+
+async def _eviction_loop() -> None:
+    """Background task: sweep for stale connections every ``EVICT_INTERVAL`` seconds.
+
+    Connections that missed their pong deadline are closed and removed.
+    """
+    while True:
+        await asyncio.sleep(EVICT_INTERVAL)
+        try:
+            await connection_manager.eviction_sweep()
+        except Exception as exc:
+            print(f"[WS] Eviction sweep error: {exc}")
 
 
 # ---------------------------------------------------------------------------
@@ -757,12 +825,21 @@ async def lifespan(app: FastAPI):
     heartbeat_task = asyncio.create_task(_heartbeat_loop())
     print("[Startup] WebSocket heartbeat loop started (interval=30s).")
 
+    # Start WebSocket connection pool eviction sweep
+    eviction_task = asyncio.create_task(_eviction_loop())
+    print("[Startup] WebSocket eviction sweep started (interval=60s).")
+
     yield
 
     # Cancel background tasks on shutdown
     heartbeat_task.cancel()
+    eviction_task.cancel()
     try:
         await heartbeat_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await eviction_task
     except asyncio.CancelledError:
         pass
     print("[Shutdown] Cleaning up ...")
@@ -1769,7 +1846,10 @@ async def websocket_endpoint(ws: WebSocket, company_id: str):
         return
 
     company_id = company_id.strip()
-    await connection_manager.connect(company_id, ws)
+    accepted = await connection_manager.connect(company_id, ws)
+    if not accepted:
+        await ws.close(code=4001, reason="Connection limit reached")
+        return
     print(f"[WS] Client connected — company_id={company_id}")
 
     try:
@@ -1794,6 +1874,12 @@ async def websocket_endpoint(ws: WebSocket, company_id: str):
     finally:
         await connection_manager.disconnect(company_id, ws)
         print(f"[WS] Client disconnected — company_id={company_id}")
+
+
+@app.get("/ws/stats")
+async def ws_stats():
+    """Return WebSocket connection pool statistics for monitoring."""
+    return connection_manager.room_stats()
 
 
 # TicketUpdate restricts PATCH payloads to the fields a caller is permitted to
