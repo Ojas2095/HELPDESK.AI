@@ -1517,6 +1517,7 @@ def _atomic_write_json(path: Path, data) -> None:
 
 
 @app.post("/ai/log_correction")
+@limiter.limit("30/minute")
 async def log_correction(raw_request: Request, user: dict = Depends(get_current_user)):
     """Log an admin correction when the AI prediction differs from the human decision."""
     role = (user.get("user_metadata") or {}).get("role", "") or (user.get("app_metadata") or {}).get("role", "")
@@ -3069,7 +3070,9 @@ async def trigger_sla_check(current_user: dict = Depends(get_current_user)):
 # ---------------------------------------------------------------------------
 
 @app.post("/ai/check_duplicate")
+@limiter.limit("20/minute")
 async def check_duplicate_endpoint(
+    request: Request,
     body: TicketRequest,
     company_id: str | None = None,
     current_user: dict = Depends(get_current_user),
@@ -3092,6 +3095,7 @@ async def check_duplicate_endpoint(
 
 
 @app.post("/ai/reindex_embeddings")
+@limiter.limit("2/minute")
 async def reindex_embeddings(current_user: dict = Depends(get_current_user)):
     """Re-generate vector embeddings for all tickets."""
     result = await semantic_dupe_service.reindex_all()
