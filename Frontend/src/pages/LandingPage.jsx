@@ -328,9 +328,14 @@ export default function LandingPage() {
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
-<nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="flex items-center justify-between h-20">
+            <nav className="sticky top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-16">
+                        {/* Logo */}
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+                            <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
+                            <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
+                        </div>
 
       {/* Logo */}
       <div
@@ -483,40 +488,8 @@ export default function LandingPage() {
 </nav>
 
             {/* ==================== HERO ==================== */}
-            {/* ==================== HERO ==================== */}
-<section className="relative overflow-hidden min-h-[calc(100vh-64px)] flex items-center">
-    
-    {/* Background */}
-    <div className="absolute inset-0 bg-gradient-to-b from-emerald-50 via-white to-white" />
-
-    <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-emerald-100/40 blur-[140px] rounded-full pointer-events-none" />
-
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-
-        <div className="grid lg:grid-cols-2 gap-20 items-center">
-
-            {/* LEFT SIDE */}
-            <div>
-
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-600 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-8">
-                    <Activity className="w-3 h-3" />
-                    <span>AI-Powered Helpdesk Automation · Made in India 🇮🇳</span>
-                </div>
-
-                <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-6">
-                    Your IT Helpdesk,
-                    <br />
-                    <span className="text-emerald-700">
-                        Fully Automated.
-                    </span>
-                </h1>
-
-                <p className="text-lg md:text-xl text-gray-500 max-w-xl leading-relaxed mb-10">
-                    Turn messy user complaints into structured,
-                    categorized, and prioritized support tickets —
-                    instantly. No manual triage.
-                    No missed urgencies.
-                </p>
+            <section className="relative pt-12 md:pt-20 pb-20 md:pb-32">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10" />
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-12">
 
