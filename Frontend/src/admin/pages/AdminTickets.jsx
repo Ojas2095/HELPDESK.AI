@@ -34,6 +34,34 @@ import SLABadge from "../components/SLABadge";
 import { formatTimelineDate } from "../../utils/dateUtils";
 import LanguageBadge from "../../components/shared/LanguageBadge";
 
+const AdminTicketsSkeleton = () => (
+    <div className="animate-pulse" role="status" aria-live="polite" aria-atomic="true">
+        <span className="sr-only">Loading tickets...</span>
+        {[...Array(6)].map((_, rowIndex) => (
+            <div key={rowIndex} className="grid grid-cols-[90px_180px_260px_120px_140px_120px_120px_100px_80px] gap-4 px-6 py-5 border-b border-slate-50 items-center">
+                <div className="h-4 bg-emerald-100 rounded-full" />
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-slate-100 rounded-lg" />
+                    <div className="space-y-2 flex-1">
+                        <div className="h-3 bg-slate-100 rounded-full" />
+                        <div className="h-2 bg-slate-100 rounded-full w-2/3" />
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <div className="h-3 bg-slate-100 rounded-full" />
+                    <div className="h-2 bg-slate-100 rounded-full w-1/2" />
+                </div>
+                <div className="h-7 bg-amber-100 rounded-xl" />
+                <div className="h-8 bg-slate-100 rounded-full" />
+                <div className="h-4 bg-emerald-100 rounded-full" />
+                <div className="h-7 bg-slate-100 rounded-xl" />
+                <div className="h-6 bg-slate-100 rounded-full" />
+                <div className="h-9 bg-slate-900/10 rounded-xl" />
+            </div>
+        ))}
+    </div>
+);
+
 const AdminTickets = () => {
     const navigate = useNavigate();
     const location = useLocation();
