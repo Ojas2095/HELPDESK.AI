@@ -685,7 +685,6 @@ function AdminSignup() {
                                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                                 </button>
                                             </div>
-                                            {/* Strength Meter */}
                                             {formData.password && (
                                                 <div className="mt-2 space-y-2">
                                                     <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-gray-400">

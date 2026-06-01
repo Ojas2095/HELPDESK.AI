@@ -11,6 +11,7 @@ import { createPersistedStore } from './persistenceMiddleware';
 import { supabase } from '../lib/supabaseClient';
 import { API_CONFIG } from '../config';
 import useTicketStore from './ticketStore';
+import { safePersistStorage } from './persistentStorage';
 
 const BACKEND_URL = API_CONFIG.BACKEND_URL;
 

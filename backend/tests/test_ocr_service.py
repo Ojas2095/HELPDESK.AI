@@ -49,6 +49,7 @@ def _b64(data: bytes) -> str:
 
 # ── Input validation ─────────────────────────────────────────────────────────
 
+@pytest.mark.anyio
 class TestOCRServiceInputValidation:
     """Basic input sanitisation."""
 

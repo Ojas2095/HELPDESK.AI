@@ -115,6 +115,11 @@ const AdminSettings = () => {
         setStatusMessage('Saving changes...');
     };
 
+    const digestEnabled = settings.digestEnabled || false;
+    const handleDigestToggle = () => {
+        handleChange('digestEnabled', !digestEnabled);
+    };
+
     const handleSaveSettings = useCallback(() => {
         saveCompanySettings(settings);
     }, [saveCompanySettings, settings]);
