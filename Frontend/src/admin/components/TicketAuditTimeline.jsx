@@ -3,7 +3,7 @@ import axios from 'axios';
 import { AlertTriangle, ArrowRight, History, Loader2, ShieldCheck, Sparkles, User } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { API_CONFIG } from '../../config';
-import { formatFullTimestamp } from '../../utils/dateUtils';
+import { formatFullTimestamp, safeParseDateForSort } from '../../utils/dateUtils';
 
 const ACTION_META = {
     TICKET_CREATED: {
@@ -136,7 +136,7 @@ const mergeLogs = (existing, incoming) => {
     [...existing, ...incoming].forEach((item) => {
         if (item?.id) map.set(item.id, item);
     });
-    return Array.from(map.values()).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    return Array.from(map.values()).sort((a, b) => safeParseDateForSort(a.created_at) - safeParseDateForSort(b.created_at));
 };
 
 const TicketAuditTimeline = ({ ticketId, companyId }) => {
