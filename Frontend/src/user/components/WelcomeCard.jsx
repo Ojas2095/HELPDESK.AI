@@ -1,86 +1,65 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { PlusCircle, ListTodo, Sparkles } from 'lucide-react';
 
-const WelcomeCard = ({ userName = "Ritesh" }) => {
-    const navigate = useNavigate();
+const WelcomeCard = ({ userName = 'Ritesh' }) => {
+  const navigate = useNavigate();
 
     return (
-        <div
+        <motion.div
             id="tour-welcome"
-            style={{
-                background: '#ffffff',
-                borderLeft: '2px solid #22a045',
-                borderRadius: '20px',
-                boxShadow: '0 2px 24px rgba(0,0,0,0.06)',
-                padding: '40px 48px',
-                position: 'relative',
-                overflow: 'hidden',
-            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full relative overflow-hidden bg-white dark:bg-slate-900 border-l-4 border-emerald-500 rounded-[2rem] shadow-sm dark:shadow-none p-8 sm:p-12 text-left"
         >
-            {/* Badge */}
-            <div style={{ marginBottom: '16px' }}>
-                <span style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    background: '#EDFAF3', color: '#16a34a', border: '1px solid #bbf7d0',
-                    borderRadius: '100px', fontSize: '11px', fontWeight: 600,
-                    letterSpacing: '0.08em', padding: '5px 14px',
-                }}>
-                    <Sparkles size={12} style={{ fill: '#16a34a' }} />
+            {/* Ambient Background Glow */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] pointer-events-none" />
+
+            {/* AI Status Badge */}
+            <div className="mb-6">
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 rounded-full text-[10px] font-black uppercase tracking-[0.15em]">
+                    <Sparkles size={12} className="fill-current" />
                     AI-Enhanced Support
                 </span>
             </div>
 
-            {/* Heading */}
-            <h2 style={{
-                fontFamily: 'Syne, sans-serif', fontSize: '34px', fontWeight: 800,
-                color: '#0f1f12', letterSpacing: '-0.025em', margin: '0 0 8px 0',
-            }}>
-                Welcome back, {userName}
+            {/* Dynamic Heading */}
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mb-3 tracking-tight font-syne italic">
+                Welcome back, <span className="text-emerald-500">{userName}</span>
             </h2>
 
-            {/* Description */}
-            <p style={{ color: '#6b7280', fontSize: '15px', maxWidth: '520px', margin: '0 0 28px 0', lineHeight: 1.6 }}>
-                Our AI assistant is ready to help you. Most issues are analyzed and resolved in under 5 minutes.
+            {/* Contextual Description */}
+            <p className="text-slate-500 dark:text-slate-400 text-base sm:text-lg font-medium leading-relaxed max-w-xl mb-10">
+                Our autonomous heuristics are primed for deployment. Most reported issues reach successful resolution nodes in under 300 seconds.
             </p>
 
-            {/* Buttons */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                <button
+            {/* Interactive Command Cluster */}
+            <div className="flex flex-wrap gap-4">
+                <motion.button
                     id="tour-create-ticket"
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => navigate('/create-ticket')}
-                    style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff',
-                        borderRadius: '12px', padding: '12px 24px', fontWeight: 600,
-                        fontSize: '14px', border: 'none', cursor: 'pointer',
-                        boxShadow: '0 4px 16px rgba(34,160,69,0.3)', transition: 'transform 0.2s',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    className="inline-flex items-center gap-2.5 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-sm uppercase tracking-wider transition-all shadow-xl shadow-emerald-600/20 border-none cursor-pointer"
                 >
                     <PlusCircle size={18} />
                     Report New Issue
-                </button>
-                <button
+                </motion.button>
+
+                <motion.button
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => navigate('/my-tickets')}
-                    style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '8px',
-                        background: '#fff', color: '#15803d',
-                        border: '1.5px solid #d1fae5', borderRadius: '12px',
-                        padding: '12px 24px', fontWeight: 600, fontSize: '14px',
-                        cursor: 'pointer', transition: 'background 0.2s',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                    className="inline-flex items-center gap-2.5 px-8 py-4 bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-2xl font-bold text-sm uppercase tracking-wider transition-all cursor-pointer shadow-sm"
                 >
                     <ListTodo size={18} />
                     View My Tickets
-                </button>
+                </motion.button>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
 export default WelcomeCard;
-
