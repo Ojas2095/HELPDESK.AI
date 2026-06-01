@@ -127,8 +127,16 @@ const AdminTickets = () => {
                 // Secondary check: If the FK alias fails, try a simpler select
                 console.warn("Retrying fetch without relationship aliases...");
                 const basicQuery = supabase.from('tickets').select('*, profiles(full_name, email)');
-                const { data: basicData, error: basicError } = await basicQuery
-                    .eq('company', profile?.company)
+                let retryQuery = basicQuery;
+                if (profile?.role === 'admin' && profile?.company) {
+                    retryQuery = retryQuery.eq('company', profile.company);
+                }
+                if (statusFilter !== 'All') retryQuery = retryQuery.eq('status', statusFilter.toLowerCase());
+                if (categoryFilter !== 'All') retryQuery = retryQuery.eq('category', categoryFilter);
+                if (priorityFilter !== 'All') retryQuery = retryQuery.eq('priority', priorityFilter.toLowerCase());
+                if (teamFilter !== 'All') retryQuery = retryQuery.eq('assigned_team', teamFilter);
+                if (searchQuery) retryQuery = retryQuery.or(`subject.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+                const { data: basicData, error: basicError } = await retryQuery
                     .order('created_at', { ascending: false })
                     .range(offset, offset + PAGE_SIZE - 1);
                 if (basicError) throw basicError;
