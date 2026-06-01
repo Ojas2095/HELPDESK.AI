@@ -1,20 +1,9 @@
-import torch
-"""
-Duplicate Detection Service
-Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
-
-Thread-safety: all mutable state is guarded by a threading.Lock to prevent
-TOCTOU race conditions in save_to_disk() and list mutation in add_ticket().
-"""
-
-import json
-import os
-from typing import Any
-
 try:
+    import torch
     from sentence_transformers import SentenceTransformer, util
     _HAS_SENTENCE = True
 except Exception:  # pragma: no cover - optional runtime dependency
+    torch = None
     SentenceTransformer = None
     util = None
     _HAS_SENTENCE = False

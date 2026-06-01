@@ -22,7 +22,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, Header
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
@@ -890,13 +890,13 @@ async def add_security_headers(request, call_next):
     return response
 
 # CORS — locked to production + local dev only
+# CORS configuracion restrictiva para produccion
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "https://helpdesk.ai,https://staging.helpdesk.ai,http://localhost:5173,http://localhost:3000").split(","),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
-)
 
 # Security Headers Middleware
 @app.middleware("http")
@@ -908,10 +908,6 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
-    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
-    return response
     response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
