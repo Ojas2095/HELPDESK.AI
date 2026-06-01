@@ -1206,6 +1206,18 @@ async def auth_logout(response: Response, request: Request):
     # Invalidate the Supabase session server-side before clearing cookies
     _logout_logger = logging.getLogger(__name__)
     token = extract_token(request)
+    if not token and supabase:
+        # Access token may have expired but refresh cookie could still be valid.
+        # Use it to obtain a fresh access JWT so we can revoke server-side.
+        raw_refresh = request.cookies.get(REFRESH_COOKIE)
+        if raw_refresh:
+            try:
+                refreshed = supabase.auth.refresh_session(refresh_token=raw_refresh)
+                session = getattr(refreshed, "session", None)
+                if session and getattr(session, "access_token", None):
+                    token = session.access_token
+            except Exception as exc:
+                _logout_logger.warning("Refresh session for logout revocation failed: %s", exc)
     if token and supabase:
         try:
             # Use admin API to revoke refresh tokens server-side
