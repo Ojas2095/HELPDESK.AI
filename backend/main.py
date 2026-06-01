@@ -696,12 +696,12 @@ async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    # Tenant isolation: verify ticket belongs to caller's company
+    # Tenant isolation: fail-closed — reject when caller has no company_id
     user_metadata = user.get("user_metadata", {})
     user_company_id = user_metadata.get("company_id")
     ticket_company_id = res.data.get("company_id")
-    if user_company_id and ticket_company_id and user_company_id != ticket_company_id:
-        raise HTTPException(status_code=403, detail="Access denied: ticket belongs to a different company")
+    if not user_company_id or (ticket_company_id and user_company_id != ticket_company_id):
+        raise HTTPException(status_code=403, detail="Access denied: ticket belongs to a different company or caller has no company_id")
 
     return res.data
 

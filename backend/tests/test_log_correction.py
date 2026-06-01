@@ -3,16 +3,15 @@ Tests for /ai/log_correction endpoint.
 Covers: authentication, rate limiting, async file I/O, race conditions.
 """
 import pytest
-import asyncio
 import tempfile
 import json
 from pathlib import Path
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 # Mock supabase before importing main
 with patch("main.supabase"):
-    from main import app
+    from main import app, get_current_user
 
 client = TestClient(app)
 
@@ -32,12 +31,20 @@ def mock_get_current_user():
     return MOCK_USER
 
 
+@pytest.fixture(autouse=True)
+def setup_dependency_override():
+    """Override FastAPI dependency for all tests."""
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
+
+
 class TestLogCorrection:
     """Tests for POST /ai/log_correction endpoint."""
 
-    @patch("main.get_current_user", side_effect=mock_get_current_user)
-    def test_log_correction_requires_auth(self, mock_auth):
+    def test_log_correction_requires_auth(self):
         """Test that /ai/log_correction requires authentication."""
+        app.dependency_overrides.pop(get_current_user, None)
         response = client.post("/ai/log_correction", json={
             "ticket_id": "TKT-001",
             "original_prediction": {"category": "billing"},
@@ -45,9 +52,8 @@ class TestLogCorrection:
         })
         assert response.status_code == 401
 
-    @patch("main.get_current_user", side_effect=mock_get_current_user)
     @patch("main.CORRECTIONS_LOG_PATH")
-    def test_log_correction_saves_entry(self, mock_path, mock_auth):
+    def test_log_correction_saves_entry(self, mock_path):
         """Test that correction is saved with authenticated user_id."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             json.dump([], f)
@@ -75,8 +81,7 @@ class TestLogCorrection:
         # Cleanup
         temp_path.unlink()
 
-    @patch("main.get_current_user", side_effect=mock_get_current_user)
-    def test_log_correction_no_change(self, mock_auth):
+    def test_log_correction_no_change(self):
         """Test that no log entry is created when predictions match."""
         response = client.post("/ai/log_correction", json={
             "ticket_id": "TKT-001",
