@@ -392,6 +392,30 @@ const useAuthStore = create(
             },
 
 
+            /**
+             * verifyServerRole — Always fetches fresh profile from DB.
+             * Never reads from persisted Zustand state (prevents localStorage spoofing).
+             *
+             * @param {string} userId — Supabase auth user ID
+             * @returns {boolean} true if the server role matches an allowed admin role
+             */
+            verifyServerRole: async (userId) => {
+                if (!userId) return false;
+                try {
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .select('role, status')
+                        .eq('id', userId)
+                        .single();
+
+                    if (error || !data) return false;
+                    const adminRoles = ['admin', 'super_admin', 'master_admin'];
+                    return adminRoles.includes(data.role) && data.status === 'active';
+                } catch (_) {
+                    return false;
+                }
+            },
+
             updateProfile: async (updates) => {
                 const { profile } = get();
                 if (!profile?.id) return;

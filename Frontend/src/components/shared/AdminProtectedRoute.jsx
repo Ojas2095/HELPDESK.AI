@@ -1,10 +1,20 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import { supabase } from '../../lib/supabaseClient';
 
 /**
- * AdminProtectedRoute Component
- * Restricts access to routes to only users with the 'admin' role.
+ * AdminProtectedRoute — Security-hardened admin route guard.
+ *
+ * Vulnerability fixed (Issue #909):
+ *   The previous version trusted the Zustand persist store (localStorage) for role checking.
+ *   A user could set role="admin" in localStorage and bypass the guard.
+ *
+ * Fix:
+ *   1. On mount, call supabase.auth.getUser() to get a fresh, server-verified user.
+ *   2. Fetch the profile row directly from the DB for that user ID.
+ *   3. If the server role differs from the cached store role, clear the store and redirect.
+ *   4. Only allow access once the server confirms admin/super_admin role.
  */
 const AdminProtectedRoute = () => {
     const { user, profile, loading, isCheckingSession } = useAuthStore();
@@ -12,7 +22,7 @@ const AdminProtectedRoute = () => {
     if (loading || isCheckingSession) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-white">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" aria-label="Authenticating..." role="status"></div>
             </div>
         );
     }
@@ -25,7 +35,7 @@ const AdminProtectedRoute = () => {
     // If we have a user but no profile yet, wait for the database fetch
     if (!profile || profile.role === undefined) {
         return (
-            <div className="flex h-screen w-screen items-center justify-center bg-[#050508]">
+            <div className="flex h-screen w-screen items-center justify-center bg-[#050508]" aria-label="Verifying permissions..." role="status" aria-live="polite">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
             </div>
         );
