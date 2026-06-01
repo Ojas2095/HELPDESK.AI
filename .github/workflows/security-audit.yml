@@ -2,9 +2,9 @@ name: Tenant Isolation Security Audit
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, gssoc ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, gssoc ]
 
 jobs:
   security-audit:
@@ -24,10 +24,6 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Install backend dependencies (skip torch/transformers if possible for speed, but they might be imported)
-        # To avoid heavy PyTorch download in CI, we enable degraded mode or load mocks.
-        # But since the tests import backend.main which imports services that load models,
-        # we set ALLOW_DEGRADED_STARTUP=1 so it starts successfully without downloading large weights.
         pip install -r backend/requirements.txt
         pip install pytest httpx pytest-cov
 
@@ -37,3 +33,10 @@ jobs:
         REQUIRE_SUPABASE: "false"
       run: |
         python -m pytest backend/tests/test_tenant_isolation.py -v
+
+    - name: Run Isolation Audit Engine Tests
+      env:
+        ALLOW_DEGRADED_STARTUP: "1"
+        REQUIRE_SUPABASE: "false"
+      run: |
+        python -m pytest backend/tests/security/ -v --ignore=backend/tests/security/__pycache__
