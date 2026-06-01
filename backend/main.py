@@ -944,6 +944,10 @@ app.include_router(estimator_router)
 from tag_router import router as tag_router
 app.include_router(tag_router)
 
+# Sentiment router (Issue #775)
+from sentiment_router import router as sentiment_router
+app.include_router(sentiment_router)
+
 
 # ---------------------------------------------------------------------------
 # Custom Swagger UI with branding
