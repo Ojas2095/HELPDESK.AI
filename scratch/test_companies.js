@@ -1,8 +1,13 @@
 const https = require('https');
 
 // Load credentials from environment variables
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://aejuenhqciagpntcqoir.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+
+if (!SUPABASE_URL) {
+  console.error('[ERROR] SUPABASE_URL not set. Export it or add to .env');
+  process.exit(1);
+}
 
 if (!SUPABASE_KEY) {
   console.error('[ERROR] SUPABASE_SERVICE_KEY not set. Export it or add to .env');

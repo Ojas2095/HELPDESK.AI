@@ -19,6 +19,9 @@ user_feedback_rows.csv
 # Mobile App
 MobileApp/.env
 
+# Backend
+backend/.env
+
 # Scratch files
 scratch/.env
 

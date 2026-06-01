@@ -879,72 +879,48 @@ async def analyze_only(request_body: TicketRequest):
             classification["auto_resolve"] = True
             classification["assigned_team"] = "Auto-Resolve AI"
             classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
-            print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
-    except Exception as e:
-        print(f"[RAG ERROR] {e}")
+    except Exception:
+        pass  # RAG search failure is non-fatal
 
-    # --- Reasoning ---
-    decision_factors = []
-    if classification["confidence"] > confidence_threshold:
-        decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
-    if entities:
-        decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
-    if dup_result["is_duplicate"]:
-        decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
-    if rag_match:
-        decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+# ---------------------------------------------------------------------------
+# CORS — locked to production + local dev only
+# ---------------------------------------------------------------------------
+origins = [
+    "https://helpdeskaiv1.vercel.app",
+    "https://helpdesk.ai",
+    "https://staging.helpdesk.ai",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
+)
 
-    reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
-    if (
-        enable_auto_resolve
-        and classification["confidence"] >= confidence_threshold
-        and classification["auto_resolve"]
-    ):
-        classification["auto_resolve"] = True
-    else:
-        classification["auto_resolve"] = False
-    if classification["auto_resolve"]:
-        reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
-    
-    timeline["routed"] = get_now_ist()
-    
-    # --- Gemini Summary ---
-    if gemini_service and gemini_service._initialized:
-        summary = gemini_service.get_summary(text)
-    
-    # Convert priority to SLA breached timestamp (for preview)
-    hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-    sla_hours = hours_map.get(classification["priority"], 72)
-    sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
-
-    return TicketResponse(
-        ticket_id=str(uuid.uuid4()), # Temporary ID
-        summary=summary,
-        category=classification["category"],
-        subcategory=classification["subcategory"],
-        priority=classification["priority"],
-        auto_resolve=classification["auto_resolve"],
-        assigned_team=classification["assigned_team"],
-        entities=[EntityInfo(**e) for e in entities],
-        duplicate_ticket=DuplicateInfo(**dup_result),
-        confidence=classification["confidence"],
-        needs_review=classification["confidence"] < confidence_threshold,
-        reasoning=reasoning,
-        decision_factors=decision_factors,
-        image_description=gemini_analysis["image_description"],
-        ocr_text=gemini_analysis["ocr_text"],
-        image_url=request_body.image_url,
-        highlights=entities, # Use entities as highlights for now
-        timeline=timeline,
-        env_metadata=env_metadata,
-        sla_breach_at=sla_breach_dt.isoformat() + "Z"
+# ---------------------------------------------------------------------------
+# Helmet Integration — custom middleware enforcing HTTP security headers
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https: wss: http://localhost:7860 ws://localhost:7860 http://127.0.0.1:7860 ws://127.0.0.1:7860;"
     )
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
-@app.post("/ai/analyze_stream")
-async def analyze_stream(request_body: TicketRequest):
-    """
-    REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
-    """
     import datetime
     def get_now_ist():
         return datetime.datetime.utcnow().isoformat() + "Z"
