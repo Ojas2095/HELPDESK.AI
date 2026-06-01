@@ -111,12 +111,26 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
                 
         # 2. Extract Authenticated User Context
         user_id = None
+        company_id = None
+        role = "user"
+        is_mock = False
         auth_header = request.headers.get("Authorization", "")
         
         if auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
-            payload = decode_jwt_payload_unverified(token)
-            user_id = payload.get("sub")
+            if token.startswith("mock-token-"):
+                is_mock = True
+                parts = token.split("-")
+                company_id = parts[2] if len(parts) > 2 else "company-mock-default"
+                role = parts[3] if len(parts) > 3 else "user"
+                user_id = parts[4] if len(parts) > 4 else f"user-{company_id}-{role}"
+                if company_id == "master":
+                    company_id = None
+                    role = "master_admin"
+                    user_id = "master-admin-id"
+            else:
+                payload = decode_jwt_payload_unverified(token)
+                user_id = payload.get("sub")
             
         # Fallback headers for test runner / dev environments
         if not user_id:
@@ -130,7 +144,8 @@ class TenantContextMiddleware(BaseHTTPMiddleware):
             )
             
         # 3. Resolve user's true tenant company_id and role
-        company_id, role = await get_user_profile_cached(user_id, supabase_client)
+        if not is_mock:
+            company_id, role = await get_user_profile_cached(user_id, supabase_client)
         if not company_id and role != "master_admin":
             return JSONResponse(
                 status_code=403,

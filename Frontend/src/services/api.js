@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
+import { supabase } from '../lib/supabaseClient';
 
 const USE_MOCK = true;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
@@ -76,12 +77,17 @@ export const api = {
   predictTicket: async (issueText, imageBase64 = "") => {
     try {
       const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
       // ALWAYS call the real backend for prediction if possible
       const response = await axios.post(`${API_BASE_URL}/ai/analyze_ticket`, {
         text: issueText,
         image_base64: imageBase64,
         image_text: "",
         company_id: currentUser.company_id || currentUser.companyId || null
+      }, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
       const result = response.data;
@@ -134,7 +140,11 @@ export const api = {
 
   logCorrection: async (correctionPayload) => {
     try {
-      await axios.post(`${API_BASE_URL}/ai/log_correction`, correctionPayload);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      await axios.post(`${API_BASE_URL}/ai/log_correction`, correctionPayload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
     } catch (error) {
       // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);
