@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Table, Card, Button, Tag, Space, Input } from "antd";
 import { DeleteOutlined, SearchOutlined } from "@ant-design/icons";
+import { sanitizeSearchQuery } from "../utils/sanitizeText";
 
 function History() {
   const [tickets, setTickets] = useState([]);
@@ -59,7 +60,7 @@ function History() {
       fixed: "left",
       width: 150,
       render: (text) => <span className="font-mono font-semibold">{text}</span>,
-      filteredValue: searchText ? [searchText] : null,
+      filteredValue: searchText ? [sanitizeSearchQuery(searchText)] : null,
       onFilter: (value, record) =>
         record.Ticket_ID.toLowerCase().includes(value.toLowerCase()) ||
         record.Category.toLowerCase().includes(value.toLowerCase()) ||
