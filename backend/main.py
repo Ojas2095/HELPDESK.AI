@@ -914,11 +914,12 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     return response
-    allow_origins=[
-        "https://helpdeskaiv1.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:3000",
-    ]
+
+origins = [
+    "https://helpdeskaiv1.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
 
 app.add_middleware(
     CORSMiddleware,

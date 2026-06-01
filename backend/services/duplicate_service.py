@@ -1,4 +1,7 @@
-import torch
+try:
+    import torch
+except Exception:  # pragma: no cover - optional CI dependency
+    torch = None
 """
 Duplicate Detection Service
 Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
@@ -9,7 +12,13 @@ TOCTOU race conditions in save_to_disk() and list mutation in add_ticket().
 
 import json
 import os
+import threading
 from typing import Any
+
+try:
+    import numpy as np
+except Exception:
+    np = None
 
 try:
     from sentence_transformers import SentenceTransformer, util
