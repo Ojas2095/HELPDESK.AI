@@ -5,6 +5,8 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
+from typing import Any
+
 from sentence_transformers import SentenceTransformer, util
 
 SIMILARITY_THRESHOLD = 0.70
@@ -96,6 +98,75 @@ class DuplicateService:
         embedding = self.model.encode(text, convert_to_tensor=True)
         self._tickets.append((ticket_id, embedding, text))
         self.save_to_disk(ticket_id, text)
+
+    def generate_embedding(self, text: str) -> list[float] | None:
+        """Generate a 384-d embedding for the provided ticket text."""
+        self.load()
+        if not self.is_available():
+            return None
+
+        embedding = self.model.encode(text, convert_to_tensor=False, normalize_embeddings=True)
+        return [float(value) for value in embedding.tolist()]
+
+    def _build_result(
+        self,
+        *,
+        is_duplicate: bool,
+        duplicate_ticket_id: str | None,
+        similarity: float,
+    ) -> dict:
+        return {
+            "is_duplicate": is_duplicate,
+            "duplicate_ticket_id": duplicate_ticket_id,
+            "parent_ticket_id": duplicate_ticket_id,
+            "is_potential_duplicate": is_duplicate,
+            "similarity": round(similarity, 4),
+        }
+
+    def find_semantic_duplicate(
+        self,
+        text: str,
+        *,
+        threshold: float | None = None,
+        company_id: str | None = None,
+        supabase_client: Any | None = None,
+        match_count: int = 1,
+    ) -> dict:
+        """Find the best duplicate candidate using Supabase vector search, with local fallback."""
+        self.load()
+
+        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
+        embedding = self.generate_embedding(text)
+
+        if embedding and supabase_client and company_id:
+            try:
+                response = supabase_client.rpc(
+                    "match_tickets",
+                    {
+                        "query_vector": embedding,
+                        "match_threshold": float(active_threshold),
+                        "match_count": match_count,
+                        "tenant_company_id": company_id,
+                    },
+                ).execute()
+
+                rows = response.data or []
+                if rows:
+                    best_match = rows[0]
+                    similarity = float(best_match.get("similarity", 0.0))
+                    ticket_identifier = best_match.get("ticket_id") or best_match.get("id")
+                    return self._build_result(
+                        is_duplicate=similarity >= active_threshold,
+                        duplicate_ticket_id=str(ticket_identifier) if ticket_identifier is not None else None,
+                        similarity=similarity,
+                    )
+            except Exception as error:
+                print(f"[DuplicateService] Supabase vector search failed, falling back to local cache: {error}")
+
+        duplicate_result = self.check_duplicate(text, threshold=active_threshold)
+        duplicate_result["parent_ticket_id"] = duplicate_result.get("duplicate_ticket_id")
+        duplicate_result["is_potential_duplicate"] = duplicate_result.get("is_duplicate", False)
+        return duplicate_result
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
         """

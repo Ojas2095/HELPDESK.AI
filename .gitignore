@@ -29,3 +29,8 @@ dist/
 docs/helpdesk*.pdf
 docs/logs/
 *.log
+
+# Scratch and local cache
+scratch/
+.npm-cache/
+

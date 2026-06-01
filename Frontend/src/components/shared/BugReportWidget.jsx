@@ -417,7 +417,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.98 }}
                             transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl relative z-50 my-auto border border-slate-100 flex flex-col max-h-[90vh]"
+                            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl relative z-50 my-auto border border-slate-100 dark:border-gray-700 flex flex-col max-h-[90vh]"
                         >
                             {/* Header */}
                             <div className="flex items-center justify-between p-5 border-b border-slate-100 shrink-0">
@@ -425,7 +425,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                     <div className="p-2 bg-[#13ec80]/10 rounded-lg">
                                         <Bug className="w-6 h-6" />
                                     </div>
-                                    <h2 className="text-xl font-bold text-slate-800">Report a Bug</h2>
+                                    <h2 className="text-xl font-bold text-slate-800 dark:text-white">Report a Bug</h2>
                                 </div>
                                 <button
                                     onClick={handleClose}
@@ -650,7 +650,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                             </div>
 
                             {/* Footer */}
-                            <div className="p-5 border-t border-slate-100 bg-slate-50 rounded-b-2xl shrink-0 flex justify-end gap-3">
+                            <div className="p-5 border-t border-slate-100 dark:border-gray-700 bg-slate-50 dark:bg-gray-900 rounded-b-2xl shrink-0 flex justify-end gap-3">
                                 <button
                                     type="button"
                                     onClick={handleClose}

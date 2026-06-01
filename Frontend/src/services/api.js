@@ -8,6 +8,12 @@ const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const getSlaBreachAt = (priority = 'Low') => {
+  const hoursMap = { Critical: 2, High: 8, Medium: 24, Low: 72 };
+  const slaHours = hoursMap[priority] || 72;
+  return new Date(Date.now() + slaHours * 60 * 60 * 1000).toISOString();
+};
+
 // Safe helper to get data from storage or default
 const getStorage = (key, defaultData) => {
   try {
@@ -103,7 +109,10 @@ export const api = {
           reasoning: result.reasoning,
           decision_factors: result.decision_factors,
           image_description: result.image_description,
-          ocr_text: result.ocr_text
+          ocr_text: result.ocr_text,
+          is_potential_duplicate: result.is_potential_duplicate || false,
+          parent_ticket_id: result.parent_ticket_id || result.duplicate_ticket?.duplicate_ticket_id || null,
+          sla_breach_at: result.sla_breach_at || getSlaBreachAt(result.priority)
         }
       };
     } catch (error) {
@@ -120,7 +129,10 @@ export const api = {
           routing_confidence: 0.5,
           duplicate_probability: 0.0,
           summary: issueText.substring(0, 50) + "...",
-          entities: []
+          entities: [],
+          is_potential_duplicate: false,
+          parent_ticket_id: null,
+          sla_breach_at: getSlaBreachAt("Medium")
         }
       };
     }

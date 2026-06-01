@@ -7,6 +7,7 @@ import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucid
 
 function Login() {
   const [email, setEmail] = useState("");
+  const isDark = document.documentElement.classList.contains('dark');
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -107,7 +108,9 @@ function Login() {
       <div
         className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden"
         style={{
-          background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)',
+          background: document.documentElement.classList.contains('dark') 
+            ? 'linear-gradient(160deg, #0f2a1a 0%, #1a3a25 60%, #0d2b1a 100%)'
+            : 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)',
         }}
       >
         {/* Radial glow */}
@@ -133,7 +136,7 @@ function Login() {
               fontFamily: "'Syne', sans-serif",
               fontSize: '48px',
               fontWeight: 800,
-              color: '#0f1f12',
+              color: isDark ? '#ffffff' : '#0f1f12',
               letterSpacing: '-0.03em',
               lineHeight: 1.1,
               marginBottom: '24px',
@@ -144,7 +147,7 @@ function Login() {
           </h1>
 
           {/* Subtext */}
-          <p style={{ color: '#374151', fontSize: '16px', lineHeight: 1.7, marginBottom: '32px' }}>
+          <p style={{ color: isDark ? '#d1fae5' : '#374151', fontSize: '16px', lineHeight: 1.7, marginBottom: '32px' }}>
             Join thousands of IT teams using HelpDesk.ai to categorize, route, and resolve tickets instantly.
           </p>
 
@@ -180,7 +183,7 @@ function Login() {
       {/* ── Right Panel ── */}
       <div
         className="flex w-full lg:w-1/2 items-center justify-center p-6 relative"
-        style={{ background: '#ffffff', borderLeft: '1px solid #f0fdf4' }}
+        style={{ background: document.documentElement.classList.contains('dark') ? '#111827' : '#ffffff', borderLeft: '1px solid #f0fdf4' }}
       >
         {/* Back Button */}
         <Link
@@ -204,7 +207,7 @@ function Login() {
                 fontFamily: "'Syne', sans-serif",
                 fontSize: '28px',
                 fontWeight: 800,
-                color: '#0f1f12',
+                color: isDark ? '#ffffff' : '#0f1f12',
                 letterSpacing: '-0.02em',
                 marginBottom: '8px',
               }}

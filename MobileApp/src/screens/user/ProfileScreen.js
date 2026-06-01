@@ -16,6 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { useFocusEffect } from '@react-navigation/native';
 import { useNotification } from '../../components/NotificationProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = () => {
   const { success, error: notifyError } = useNotification();
@@ -75,6 +76,43 @@ const ProfileScreen = () => {
     }, [fetchAll])
   );
 
+  const handleAvatarPress = () => {
+    Alert.alert(
+      'Profile Photo',
+      'Choose an option to update your profile photo',
+      [
+        { text: 'Upload New Photo', onPress: uploadAvatar },
+        { 
+          text: 'Remove Photo', 
+          onPress: removeAvatar, 
+          style: 'destructive' 
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const removeAvatar = async () => {
+    setUploading(true);
+    try {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ profile_picture: null })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile({ ...profile, profile_picture: null });
+      success('Success', 'Profile picture removed!');
+      fetchAll();
+    } catch (e) {
+      console.error('Avatar Removal Error:', e);
+      notifyError('Failed to Remove', e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const uploadAvatar = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -114,12 +152,12 @@ const ProfileScreen = () => {
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ profile_picture: publicUrl })
         .eq('id', user.id);
 
       if (updateError) throw updateError;
 
-      setProfile({ ...profile, avatar_url: publicUrl });
+      setProfile({ ...profile, profile_picture: publicUrl });
       success('Success', 'Profile picture updated!');
       fetchAll(); // Refresh everything
     } catch (e) {
@@ -186,8 +224,19 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await supabase.auth.signOut();
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Forcefully wipe all Supabase session keys from AsyncStorage first to trigger instant navigation resetting
+      const keys = await AsyncStorage.getAllKeys();
+      const supabaseKeys = keys.filter(k => k.startsWith('sb-') || k.includes('supabase'));
+      for (const key of supabaseKeys) {
+        await AsyncStorage.removeItem(key);
+      }
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn("Logout error, forcing full wipe:", e);
+      await AsyncStorage.clear();
+    }
   };
 
   if (loading) {
@@ -220,9 +269,9 @@ const ProfileScreen = () => {
 
         {/* Profile Card */}
         <View style={styles.profileCard}>
-          <TouchableOpacity style={styles.avatarContainer} onPress={uploadAvatar} disabled={uploading}>
-            {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+          <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress} disabled={uploading}>
+            {profile?.profile_picture ? (
+              <Image source={{ uri: profile.profile_picture }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>{initials}</Text>

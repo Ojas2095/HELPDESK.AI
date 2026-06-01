@@ -19,8 +19,9 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request, Response
+from fastapi import FastAPI, Depends, Header, HTTPException, Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,6 +35,14 @@ from dotenv import load_dotenv
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
+
+# Apply database encryption for PII fields
+try:
+    from backend.auth.crypto import apply_db_encryption_patch
+    apply_db_encryption_patch()
+except Exception as e:
+    print(f"[WARNING] Database encryption patch initialization failed: {e}")
+
 
 # Initialize Supabase Client (Service Role for backend bypass)
 try:
@@ -61,6 +70,14 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.sla_service import (
+    calculate_sla_breach_at,
+    calculate_sla_response_at,
+    classify_sla_status,
+    load as load_sla_service,
+    run_sla_escalation_loop,
+)
+from backend.services.spam_detector_service import analyze_spam_phishing
 
 
 # ---------------------------------------------------------------------------
@@ -83,12 +100,39 @@ def get_system_settings(company_id: str) -> dict:
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
+
+
+def get_duplicate_threshold(company_id: str | None, fallback: float = 0.85) -> float:
+    if not company_id:
+        return fallback
+    settings = get_system_settings(company_id)
+    try:
+        return float(settings.get("duplicate_sensitivity", fallback))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def detect_semantic_duplicate(text: str, *, company_id: str | None, threshold: float) -> dict:
+    try:
+        return duplicate_service.find_semantic_duplicate(
+            text,
+            threshold=threshold,
+            company_id=company_id,
+            supabase_client=supabase,
+        )
+    except Exception as error:
+        print(f"[WARNING] Duplicate detection fallback activated: {error}")
+        duplicate_result = duplicate_service.check_duplicate(text, threshold=threshold)
+        duplicate_result["parent_ticket_id"] = duplicate_result.get("duplicate_ticket_id")
+        duplicate_result["is_potential_duplicate"] = duplicate_result.get("is_duplicate", False)
+        return duplicate_result
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
+    company_id: str | None = None
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
@@ -108,18 +152,27 @@ class TicketSaveRequest(BaseModel):
     image_url: str | None = None
     company: str | None = None
     company_id: str | None = None
+    description_vector: list[float] | None = None
+    is_potential_duplicate: bool = False
+    parent_ticket_id: str | None = None
+    sla_response_due_at: str | None = None
     sla_breach_at: str
-    metadata: dict
+    sla_status: str | None = None
+    escalation_level: int = 0
+    metadata: dict = {}
     entities: list = []
     solution_steps: list = []
     ocr_text: str = ""
     needs_review: bool = False
-    routing_confidence: float
+    routing_confidence: float = 0.0
+
 
 
 class DuplicateInfo(BaseModel):
     is_duplicate: bool
     duplicate_ticket_id: str | None = None
+    parent_ticket_id: str | None = None
+    is_potential_duplicate: bool = False
     similarity: float = 0.0
 
 
@@ -141,6 +194,8 @@ class TicketResponse(BaseModel):
     entities: list[EntityInfo]
     duplicate_ticket: DuplicateInfo
     confidence: float
+    is_potential_duplicate: bool = False
+    parent_ticket_id: str | None = None
     needs_review: bool = False
     reasoning: str = ""
     decision_factors: list[str] = []
@@ -151,6 +206,7 @@ class TicketResponse(BaseModel):
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
+    spam_analysis: dict | None = None
     version: str = "2.1.0-Neural-Diagnostic"
 
 
@@ -223,11 +279,11 @@ async def lifespan(app: FastAPI):
     print("[Startup] Loading AI models ...")
     try:
         classifier_service.load()
-    except FileNotFoundError as e:
+    except Exception as e:
         print(f"[WARNING] Classifier not loaded: {e}")
     try:
         ner_service.load()
-    except FileNotFoundError as e:
+    except Exception as e:
         print(f"[WARNING] NER not loaded: {e}")
     try:
         duplicate_service.load()
@@ -257,8 +313,30 @@ async def lifespan(app: FastAPI):
 
     if strict_mode and not classifier_loaded_flag:
         raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
-    yield
-    print("[Shutdown] Cleaning up ...")
+
+    sla_task = None
+    try:
+        if supabase and os.environ.get("SLA_ESCALATION_ENABLED", "true").lower() == "true":
+            notification_router = None
+            try:
+                from backend.services.notification_routing import load as load_notification_router
+                notification_router = load_notification_router()
+            except Exception as e:
+                print(f"[WARNING] Notification router not loaded for SLA service: {e}")
+            sla_service = load_sla_service(supabase, notification_router)
+            interval = int(os.environ.get("SLA_ESCALATION_INTERVAL_SECONDS", "300"))
+            sla_task = asyncio.create_task(run_sla_escalation_loop(sla_service, interval_seconds=interval))
+            print(f"[Startup] SLA escalation loop enabled ({interval}s interval).")
+
+        yield
+    finally:
+        if sla_task:
+            sla_task.cancel()
+            try:
+                await sla_task
+            except asyncio.CancelledError:
+                pass
+        print("[Shutdown] Cleaning up ...")
 
 
 # ---------------------------------------------------------------------------
@@ -373,6 +451,17 @@ async def root():
     </body>
     </html>
     """
+
+
+async def verify_metrics_token(x_metrics_token: str | None = Header(default=None)):
+    expected_token = os.environ.get("METRICS_TOKEN")
+    if expected_token and x_metrics_token != expected_token:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+@app.get("/metrics", dependencies=[Depends(verify_metrics_token)])
+def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -583,7 +672,6 @@ async def search_tickets(
 
     # Enforce company verification
     security_manager.verify_tenant_access(company_id, current_user)
-
     try:
         result = supabase.rpc(
             "search_tickets",
@@ -641,6 +729,25 @@ async def save_ticket(
                 profile = profile_res.data or {}
                 if not profile:
                     raise HTTPException(status_code=404, detail="User profile not found")
+                
+                # SELF-HEALING: If company_id is null in database but company name exists, resolve it!
+                if not profile.get("company_id") and profile.get("company"):
+                    try:
+                        comp_name = profile.get("company").strip()
+                        comp_res = (
+                            supabase.table("companies")
+                            .select("id")
+                            .ilike("name", comp_name)
+                            .execute()
+                        )
+                        if comp_res.data:
+                            resolved_company_id = comp_res.data[0]["id"]
+                            # Backfill the profile table in real-time
+                            supabase.table("profiles").update({"company_id": resolved_company_id}).eq("id", request_body.user_id).execute()
+                            profile["company_id"] = resolved_company_id
+                            logger.info(f"[SELF-HEALING] Backfilled company_id={resolved_company_id} for user={request_body.user_id}")
+                    except Exception as healing_err:
+                        logger.warning(f"[SELF-HEALING WARNING] Failed to backfill company_id: {healing_err}")
             except HTTPException:
                 raise
             except Exception as profile_error:
@@ -667,11 +774,65 @@ async def save_ticket(
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
+        priority = final_data.get("priority")
+        if not final_data.get("sla_response_due_at"):
+            final_data["sla_response_due_at"] = calculate_sla_response_at(priority).isoformat().replace("+00:00", "Z")
+        if not final_data.get("sla_breach_at"):
+            final_data["sla_breach_at"] = calculate_sla_breach_at(priority).isoformat().replace("+00:00", "Z")
+        final_data["sla_status"] = final_data.get("sla_status") or classify_sla_status(final_data.get("sla_breach_at"))
+        final_data["escalation_level"] = int(final_data.get("escalation_level") or 0)
+
+        import hashlib
         user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
+        duplicate_text = (request_body.description or "").strip() or (request_body.subject or "").strip()
+        duplicate_threshold = get_duplicate_threshold(final_data.get("company_id"), 0.85)
+        duplicate_result = {
+            "is_duplicate": False,
+            "duplicate_ticket_id": None,
+            "parent_ticket_id": None,
+            "is_potential_duplicate": False,
+            "similarity": 0.0,
+        }
 
-        res = supabase.table("tickets").insert(final_data).execute()
+        if duplicate_text:
+            duplicate_result = detect_semantic_duplicate(
+                duplicate_text,
+                company_id=final_data.get("company_id"),
+                threshold=duplicate_threshold,
+            )
+            final_data["description_vector"] = duplicate_service.generate_embedding(duplicate_text)
+        else:
+            final_data["description_vector"] = None
+
+        final_data["is_potential_duplicate"] = duplicate_result.get("is_potential_duplicate", False)
+        final_data["parent_ticket_id"] = duplicate_result.get("parent_ticket_id")
+
+        # --- Sanitize payload to only include valid Supabase DB columns ---
+        # Extra AI telemetry and non-existent schema fields are merged into the metadata JSONB column
+        # to avoid 400/500 errors from unknown column names in the insert call.
+        VALID_TICKET_COLUMNS = {
+            "user_id", "subject", "description", "category", "subcategory",
+            "priority", "assigned_team", "status", "auto_resolve", "is_duplicate",
+            "confidence", "image_url", "company", "company_id", "sla_breach_at", "metadata",
+        }
+        # Merge any extra telemetry and SLA/duplicate fields into metadata before filtering
+        existing_metadata = final_data.get("metadata") or {}
+        extra_keys = (
+            "entities", "solution_steps", "ocr_text", "needs_review", "routing_confidence",
+            "is_potential_duplicate", "parent_ticket_id", "sla_response_due_at", "sla_status", "escalation_level",
+            "spam_analysis"
+        )
+        for extra_key in extra_keys:
+            if extra_key in final_data and final_data[extra_key] not in (None, "", [], {}):
+                existing_metadata[extra_key] = final_data[extra_key]
+        final_data["metadata"] = existing_metadata
+
+        # Strip keys not accepted by the DB schema
+        insert_data = {k: v for k, v in final_data.items() if k in VALID_TICKET_COLUMNS}
+
+        res = supabase.table("tickets").insert(insert_data).execute()
         
         if not res.data:
             raise Exception("Failed to insert ticket into database.")
@@ -680,9 +841,6 @@ async def save_ticket(
 
         duplicate_indexed = True
         duplicate_index_warning = None
-        description_text = (request_body.description or "").strip()
-        subject_text = (request_body.subject or "").strip()
-        duplicate_text = description_text or subject_text
         if duplicate_text:
             try:
                 duplicate_service.add_ticket(str(ticket_id), duplicate_text)
@@ -708,7 +866,13 @@ async def save_ticket(
             "message": msg
         }).execute()
         
-        response = {"status": "success", "ticket_id": ticket_id, "duplicate_indexed": duplicate_indexed}
+        response = {
+            "status": "success",
+            "ticket_id": ticket_id,
+            "duplicate_indexed": duplicate_indexed,
+            "is_potential_duplicate": final_data["is_potential_duplicate"],
+            "parent_ticket_id": final_data["parent_ticket_id"],
+        }
         if duplicate_index_warning:
             response["duplicate_index_warning"] = duplicate_index_warning
         return response
@@ -968,7 +1132,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     text = request_body.text
 
-    settings = get_system_settings(request_body.company)
+    settings = get_system_settings(request_body.company_id)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -1009,6 +1173,46 @@ async def analyze_only(request_body: TicketRequest):
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
+
+    # --- Vague Input Guard ---
+    # If the text is extremely short or a generic term, skip AI classification and
+    # return a safe low-priority "General Inquiry" to prevent hallucinated critical categories.
+    import re as _re
+    VAGUE_KEYWORDS = {
+        "demo", "test", "hi", "hello", "check", "try", "ping", "ok", "okay",
+        "issue", "problem", "error", "bug", "help", "hey", "asdf", "xyz",
+        "foo", "bar", "nothing", "something", "stuff",
+    }
+    _stripped = text.strip().lower()
+    _word_count = len(_stripped.split())
+    _is_vague = (len(_stripped) < 15) or (_word_count == 1 and _stripped in VAGUE_KEYWORDS)
+    if _is_vague:
+        import datetime as _dt, uuid as _uuid
+        _sla_breach = calculate_sla_breach_at("Low")
+        print(f"[AI] Vague input detected: '{text}'. Returning safe General Inquiry classification.")
+        return TicketResponse(
+            ticket_id=str(_uuid.uuid4()),
+            summary=f"General inquiry: {text}",
+            category="General",
+            subcategory="General Inquiry",
+            priority="Low",
+            auto_resolve=False,
+            assigned_team="IT Support",
+            entities=[],
+            duplicate_ticket=DuplicateInfo(is_duplicate=False),
+            confidence=0.1,
+            needs_review=True,
+            reasoning="Input was too brief for accurate classification. Please provide more context.",
+            decision_factors=["Input is too short or generic for AI classification."],
+            image_description="",
+            ocr_text="",
+            highlights=[],
+            timeline={"received": _dt.datetime.utcnow().isoformat() + "Z"},
+            env_metadata={},
+            is_potential_duplicate=False,
+            parent_ticket_id=None,
+            sla_breach_at=_sla_breach.isoformat().replace("+00:00", "Z"),
+        )
     
     # --- Context & Environment ---
     import datetime
@@ -1038,6 +1242,9 @@ async def analyze_only(request_body: TicketRequest):
             print(f"[VISION ERROR] {e}")
 
     summary = text[:100] + ("…" if len(text) > 100 else "") 
+
+    # --- Spam & Phishing Detection Layer ---
+    spam_result = analyze_spam_phishing(text, gemini_analysis.get("ocr_text", ""))
 
     # --- Classification ---
     try:
@@ -1071,6 +1278,20 @@ async def analyze_only(request_body: TicketRequest):
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
         }
 
+    # Apply Spam overrides if spam/phishing is detected
+    if spam_result["is_spam"]:
+        classification["category"] = "Spam"
+        if spam_result["risk_level"] == "high":
+            classification["subcategory"] = "Suspicious Phishing"
+        elif spam_result["risk_level"] == "medium":
+            classification["subcategory"] = "Spam Inquiry"
+        else:
+            classification["subcategory"] = "Low-Risk Spam"
+        classification["priority"] = "Low"
+        classification["assigned_team"] = "Security Unit"
+        classification["auto_resolve"] = False
+        classification["confidence"] = max(classification["confidence"], 0.95)
+
     timeline["ai_analyzed"] = get_now_ist()
     timeline["triaged"] = get_now_ist()
 
@@ -1083,10 +1304,21 @@ async def analyze_only(request_body: TicketRequest):
     timeline["metadata_harvested"] = get_now_ist()
 
     # --- Duplicate detection ---
+    duplicate_threshold = get_duplicate_threshold(request_body.company_id, duplicate_sensitivity)
     try:
-        dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+        dup_result = detect_semantic_duplicate(
+            text,
+            company_id=request_body.company_id,
+            threshold=duplicate_threshold,
+        )
     except Exception:
-        dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+        dup_result = {
+            "is_duplicate": False,
+            "duplicate_ticket_id": None,
+            "parent_ticket_id": None,
+            "is_potential_duplicate": False,
+            "similarity": 0.0,
+        }
 
     # --- RAG Knowledge Base Check ---
     rag_match = None
@@ -1102,26 +1334,30 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Reasoning ---
     decision_factors = []
-    if classification["confidence"] > confidence_threshold:
-        decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
-    if entities:
-        decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
-    if dup_result["is_duplicate"]:
-        decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
-    if rag_match:
-        decision_factors.append(f"Found solution article: '{rag_match['title']}'")
-
-    reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
-    if (
-        enable_auto_resolve
-        and classification["confidence"] >= confidence_threshold
-        and classification["auto_resolve"]
-    ):
-        classification["auto_resolve"] = True
+    if spam_result["is_spam"]:
+        decision_factors.append(f"Spam/Phishing detected (Risk: {spam_result['risk_level'].upper()})")
+        reasoning = f"Flagged as potential spam/phishing. Reasons: {', '.join(spam_result['reasons'])}"
     else:
-        classification["auto_resolve"] = False
-    if classification["auto_resolve"]:
-        reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
+        if classification["confidence"] > confidence_threshold:
+            decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
+        if entities:
+            decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
+        if dup_result["is_duplicate"]:
+            decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
+        if rag_match:
+            decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+
+        reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
+        if (
+            enable_auto_resolve
+            and classification["confidence"] >= confidence_threshold
+            and classification["auto_resolve"]
+        ):
+            classification["auto_resolve"] = True
+        else:
+            classification["auto_resolve"] = False
+        if classification["auto_resolve"]:
+            reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
     
     timeline["routed"] = get_now_ist()
     
@@ -1129,10 +1365,8 @@ async def analyze_only(request_body: TicketRequest):
     if gemini_service and gemini_service._initialized:
         summary = gemini_service.get_summary(text)
     
-    # Convert priority to SLA breached timestamp (for preview)
-    hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-    sla_hours = hours_map.get(classification["priority"], 72)
-    sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+    # Convert priority to the SLA resolution target timestamp for preview.
+    sla_breach_dt = calculate_sla_breach_at(classification["priority"])
 
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
@@ -1154,7 +1388,10 @@ async def analyze_only(request_body: TicketRequest):
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
-        sla_breach_at=sla_breach_dt.isoformat() + "Z"
+        spam_analysis=spam_result,
+        is_potential_duplicate=dup_result.get("is_potential_duplicate", False),
+        parent_ticket_id=dup_result.get("parent_ticket_id"),
+        sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z")
     )
 
 @app.post("/ai/analyze_stream")
@@ -1174,7 +1411,7 @@ async def analyze_stream(request_body: TicketRequest):
             "api_endpoint": "/ai/analyze_stream"
         }
         timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company)
+        settings = get_system_settings(request_body.company_id)
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
         enable_auto_resolve = settings["enable_auto_resolve"]
@@ -1239,9 +1476,20 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+            duplicate_threshold = get_duplicate_threshold(request_body.company_id, duplicate_sensitivity)
+            dup_result = detect_semantic_duplicate(
+                text,
+                company_id=request_body.company_id,
+                threshold=duplicate_threshold,
+            )
         except Exception:
-            dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+            dup_result = {
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "parent_ticket_id": None,
+                "is_potential_duplicate": False,
+                "similarity": 0.0,
+            }
 
         # 5. RAG / Solutions
         yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
@@ -1277,9 +1525,7 @@ async def analyze_stream(request_body: TicketRequest):
         if gemini_service and gemini_service._initialized:
             summary = gemini_service.get_summary(text)
         
-        hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-        sla_hours = hours_map.get(classification["priority"], 72)
-        sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+        sla_breach_dt = calculate_sla_breach_at(classification["priority"])
 
         ticket_response_dict = {
             "ticket_id": str(uuid.uuid4()),
@@ -1301,7 +1547,9 @@ async def analyze_stream(request_body: TicketRequest):
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+            "is_potential_duplicate": dup_result.get("is_potential_duplicate", False),
+            "parent_ticket_id": dup_result.get("parent_ticket_id"),
+            "sla_breach_at": sla_breach_dt.isoformat().replace("+00:00", "Z")
         }
 
         # 6. Final Result

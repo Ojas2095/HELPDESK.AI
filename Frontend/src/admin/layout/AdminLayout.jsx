@@ -33,7 +33,7 @@ const AdminLayout = () => {
                 />
 
                 {/* Operational Workspace */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
+                <main id="admin-main-content" className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
                     {/* Centered Payload Container */}
                     <div className="max-w-[1280px] w-full mx-auto px-6 md:px-10 py-8 md:py-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                         <Outlet />
