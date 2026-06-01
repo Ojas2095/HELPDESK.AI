@@ -1300,6 +1300,144 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 
 
 # ---------------------------------------------------------------------------
+# Agent Performance Scorecard endpoint
+# ---------------------------------------------------------------------------
+
+@app.get("/ai/agent_scorecard")
+async def agent_scorecard(company_id: str | None = None):
+    """
+    Build a real-time performance scorecard for every support agent
+    (grouped by assigned_team) within a company, then request personalised
+    AI coaching insights from Gemini for each one.
+
+    Query params:
+        company_id: filter tickets to a specific tenant (optional)
+
+    Returns a list of agent scorecard objects sorted by performance score.
+    """
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection not initialised")
+
+    try:
+        query = supabase.table("tickets").select(
+            "id, assigned_team, status, priority, created_at, updated_at, "
+            "sla_breach_at, auto_resolve, category, subcategory"
+        ).order("created_at", desc=False)
+
+        if company_id:
+            query = query.eq("company_id", company_id)
+
+        res = query.execute()
+        tickets = res.data or []
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch tickets: {exc}")
+
+    if not tickets:
+        return {"scorecards": [], "generated_at": datetime.datetime.utcnow().isoformat() + "Z"}
+
+    # Group tickets by assigned_team (treated as the agent dimension)
+    from collections import defaultdict, Counter
+
+    team_buckets: dict[str, list] = defaultdict(list)
+    for t in tickets:
+        team = (t.get("assigned_team") or "Unassigned").strip()
+        team_buckets[team].append(t)
+
+    scorecards = []
+
+    for team_name, team_tickets in team_buckets.items():
+        total = len(team_tickets)
+        resolved = sum(
+            1 for t in team_tickets if (t.get("status") or "").lower().startswith("resolv")
+        )
+        open_count = total - resolved
+        critical = sum(1 for t in team_tickets if (t.get("priority") or "").lower() == "critical")
+        auto_resolved = sum(1 for t in team_tickets if t.get("auto_resolve"))
+
+        # Average resolution time in hours (only for resolved tickets with both timestamps)
+        resolution_times: list[float] = []
+        for t in team_tickets:
+            if (t.get("status") or "").lower().startswith("resolv") and t.get("created_at") and t.get("updated_at"):
+                try:
+                    created = datetime.datetime.fromisoformat(t["created_at"].replace("Z", "+00:00"))
+                    updated = datetime.datetime.fromisoformat(t["updated_at"].replace("Z", "+00:00"))
+                    hours = (updated - created).total_seconds() / 3600
+                    if hours >= 0:
+                        resolution_times.append(hours)
+                except Exception:
+                    pass
+
+        avg_resolution_hours = (
+            round(sum(resolution_times) / len(resolution_times), 2)
+            if resolution_times
+            else 0.0
+        )
+
+        # SLA breach rate
+        sla_breached = 0
+        now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+        for t in team_tickets:
+            breach_at = t.get("sla_breach_at")
+            if breach_at:
+                try:
+                    breach_dt = datetime.datetime.fromisoformat(breach_at.replace("Z", "+00:00"))
+                    ticket_open = not (t.get("status") or "").lower().startswith("resolv")
+                    if ticket_open and breach_dt < now_utc:
+                        sla_breached += 1
+                except Exception:
+                    pass
+
+        sla_breach_rate = round((sla_breached / total) * 100, 2) if total else 0.0
+        auto_resolved_rate = round((auto_resolved / total) * 100, 2) if total else 0.0
+
+        cat_counter = Counter(t.get("category") or "Unknown" for t in team_tickets)
+        sub_counter = Counter(t.get("subcategory") or "Unknown" for t in team_tickets)
+        top_categories = [c for c, _ in cat_counter.most_common(3)]
+        common_subcategories = [s for s, _ in sub_counter.most_common(3)]
+
+        metrics = {
+            "total_tickets": total,
+            "resolved_tickets": resolved,
+            "open_tickets": open_count,
+            "critical_tickets": critical,
+            "avg_resolution_hours": avg_resolution_hours,
+            "sla_breach_rate": sla_breach_rate,
+            "auto_resolved_rate": auto_resolved_rate,
+            "top_categories": top_categories,
+            "common_subcategories": common_subcategories,
+        }
+
+        # Request Gemini coaching (graceful fallback when Gemini unavailable)
+        coaching: dict = {
+            "performance_score": 0,
+            "strengths": [],
+            "improvement_areas": [],
+            "coaching_tip": "AI coaching requires Gemini to be configured.",
+            "recommended_training": [],
+        }
+        if gemini_service and gemini_service._initialized:
+            try:
+                coaching = gemini_service.get_agent_coaching(team_name, metrics)
+            except Exception as coaching_exc:
+                print(f"[Scorecard] Gemini coaching failed for {team_name}: {coaching_exc}")
+
+        scorecards.append({
+            "agent_team": team_name,
+            "metrics": metrics,
+            "coaching": coaching,
+        })
+
+    # Sort descending by performance score so top performers appear first
+    scorecards.sort(key=lambda s: s["coaching"]["performance_score"], reverse=True)
+
+    return {
+        "scorecards": scorecards,
+        "total_agents": len(scorecards),
+        "generated_at": datetime.datetime.utcnow().isoformat() + "Z",
+    }
+
+
+# ---------------------------------------------------------------------------
 # Admin Correction Logging endpoint
 # ---------------------------------------------------------------------------
 def extract_token(request: Request) -> str | None:

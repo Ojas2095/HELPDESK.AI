@@ -220,6 +220,98 @@ class GeminiService:
                 "is_final": False
             }
 
+    def get_agent_coaching(self, agent_name: str, metrics: dict) -> dict:
+        """
+        Generate AI-powered coaching insights for a support agent based on their
+        resolved ticket metrics.
+
+        Args:
+            agent_name: Display name of the agent (used in the prompt only).
+            metrics: Dict with keys:
+                total_tickets, resolved_tickets, open_tickets, critical_tickets,
+                avg_resolution_hours, sla_breach_rate, auto_resolved_rate,
+                top_categories (list of str), common_subcategories (list of str)
+
+        Returns:
+            {
+                "performance_score": int (0-100),
+                "strengths": list[str],
+                "improvement_areas": list[str],
+                "coaching_tip": str,
+                "recommended_training": list[str]
+            }
+        """
+        if not self._initialized:
+            return {
+                "performance_score": 0,
+                "strengths": [],
+                "improvement_areas": [],
+                "coaching_tip": "AI coaching unavailable — Gemini API key not configured.",
+                "recommended_training": [],
+            }
+
+        try:
+            top_cats = ", ".join(metrics.get("top_categories", [])[:3]) or "N/A"
+            common_subs = ", ".join(metrics.get("common_subcategories", [])[:3]) or "N/A"
+
+            prompt = (
+                f"You are an IT support team performance coach. Analyse the following metrics "
+                f"for support agent '{agent_name}' and provide actionable, specific coaching.\n\n"
+                f"Metrics:\n"
+                f"- Total tickets handled: {metrics.get('total_tickets', 0)}\n"
+                f"- Resolved: {metrics.get('resolved_tickets', 0)}\n"
+                f"- Still open: {metrics.get('open_tickets', 0)}\n"
+                f"- Critical priority tickets: {metrics.get('critical_tickets', 0)}\n"
+                f"- Average resolution time: {metrics.get('avg_resolution_hours', 0):.1f} hours\n"
+                f"- SLA breach rate: {metrics.get('sla_breach_rate', 0):.1f}%\n"
+                f"- Auto-resolved rate: {metrics.get('auto_resolved_rate', 0):.1f}%\n"
+                f"- Top issue categories: {top_cats}\n"
+                f"- Most frequent subcategories: {common_subs}\n\n"
+                "Respond ONLY in the following structured format (no extra text):\n"
+                "SCORE: <integer 0-100 reflecting overall performance>\n"
+                "STRENGTHS: <strength1> | <strength2> | <strength3>\n"
+                "IMPROVEMENTS: <area1> | <area2> | <area3>\n"
+                "TIP: <single actionable coaching tip, max 2 sentences>\n"
+                "TRAINING: <module1> | <module2> | <module3>"
+            )
+
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+            )
+            text = response.text.strip()
+
+            def _extract(label: str) -> str:
+                m = re.search(rf"{label}:\s*(.*)", text, re.IGNORECASE)
+                return m.group(1).strip() if m else ""
+
+            def _split(raw: str) -> list[str]:
+                return [p.strip() for p in raw.split("|") if p.strip()]
+
+            score_raw = _extract("SCORE")
+            try:
+                score = max(0, min(100, int(score_raw)))
+            except (ValueError, TypeError):
+                score = 50
+
+            return {
+                "performance_score": score,
+                "strengths": _split(_extract("STRENGTHS")),
+                "improvement_areas": _split(_extract("IMPROVEMENTS")),
+                "coaching_tip": _extract("TIP"),
+                "recommended_training": _split(_extract("TRAINING")),
+            }
+
+        except Exception as exc:
+            print(f"[GeminiService] Agent coaching error: {exc}")
+            return {
+                "performance_score": 0,
+                "strengths": [],
+                "improvement_areas": [],
+                "coaching_tip": f"Coaching analysis failed: {exc}",
+                "recommended_training": [],
+            }
+
     def analyze_bug_report(self, bug_title: str, description: str, steps: str, errors: list) -> str:
         """
         Analyze a bug report and captured console errors to generate a Probable Cause.

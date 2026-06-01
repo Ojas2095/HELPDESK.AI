@@ -11,6 +11,7 @@ import {
     Activity,
     ChevronLeft,
     ChevronRight,
+    Trophy
     Clock
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
