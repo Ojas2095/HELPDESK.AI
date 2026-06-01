@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "prepare": "husky install",
     "format": "prettier --write .",
-    "test": "jest"
+    "test": "jest",
+    "test:dates": "node --test tests/*.test.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
