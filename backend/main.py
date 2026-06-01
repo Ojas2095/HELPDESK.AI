@@ -1985,6 +1985,106 @@ async def search_tickets(
         return filtered
 
 
+class BulkUpdateResponse(BaseModel):
+    updated_count: int
+    failed_ids: list[str] = []
+
+class BulkUpdateRequest(BaseModel):
+    ticket_ids: list[str]
+    status: str | None = None
+    priority: str | None = None
+    assigned_team: str | None = None
+
+@app.post("/tickets/bulk-update", response_model=BulkUpdateResponse, tags=["Tickets"])
+async def bulk_update_tickets(
+    request: BulkUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Perform bulk updates on multiple tickets. Requires admin or master role.
+    Supports updating status, priority, and assigned_team.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    if not request.ticket_ids:
+        raise HTTPException(status_code=400, detail="No ticket IDs provided")
+
+    profile = _get_authenticated_profile(current_user)
+    # Check if user is admin or master
+    role = str(profile.get("role") or "").lower()
+    if role not in ("admin", "company_admin") and not _is_master_ticket_reader(profile):
+        raise HTTPException(status_code=403, detail="Insufficient permissions for bulk operations")
+
+    company_scope = _ticket_company_scope(profile)
+
+    patch_data = {k: v for k, v in request.model_dump().items() if k != "ticket_ids" and v is not None}
+    if not patch_data:
+        raise HTTPException(status_code=400, detail="No update fields provided")
+
+    updated_count = 0
+    failed_ids = []
+
+    for tid in request.ticket_ids:
+        try:
+            # Verify ticket belongs to company
+            if company_scope:
+                check = supabase.table("tickets").select("company_id").eq("id", tid).single().execute()
+                if not check.data or check.data.get("company_id") != company_scope:
+                    failed_ids.append(tid)
+                    continue
+            
+            res = supabase.table("tickets").update(patch_data).eq("id", tid).execute()
+            if res.data:
+                updated_count += 1
+            else:
+                failed_ids.append(tid)
+        except Exception:
+            failed_ids.append(tid)
+
+    return BulkUpdateResponse(updated_count=updated_count, failed_ids=failed_ids)
+
+@app.post("/tickets/bulk-delete", tags=["Tickets"])
+async def bulk_delete_tickets(
+    ticket_ids: list[str],
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Bulk delete tickets. Requires admin or master role.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    profile = _get_authenticated_profile(current_user)
+    role = str(profile.get("role") or "").lower()
+    if role not in ("admin", "company_admin") and not _is_master_ticket_reader(profile):
+        raise HTTPException(status_code=403, detail="Insufficient permissions for bulk operations")
+
+    company_scope = _ticket_company_scope(profile)
+
+    deleted_count = 0
+    failed_ids = []
+
+    for tid in ticket_ids:
+        try:
+            # Verify ticket belongs to company
+            if company_scope:
+                check = supabase.table("tickets").select("company_id").eq("id", tid).single().execute()
+                if not check.data or check.data.get("company_id") != company_scope:
+                    failed_ids.append(tid)
+                    continue
+            
+            res = supabase.table("tickets").delete().eq("id", tid).execute()
+            if res.data:
+                deleted_count += 1
+            else:
+                failed_ids.append(tid)
+        except Exception:
+            failed_ids.append(tid)
+
+    return {"deleted_count": deleted_count, "failed_ids": failed_ids}
+
+
 
 
 
