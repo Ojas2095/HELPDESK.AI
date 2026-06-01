@@ -42,6 +42,12 @@
     --radius: 0.5rem;
   }
 
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
   body {
     @apply bg-[#f6f8f7] dark:bg-slate-950 text-slate-900 dark:text-slate-100;
   }
