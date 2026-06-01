@@ -85,7 +85,7 @@ async def get_current_user(request: Request) -> dict:
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid session: {exc}",
+            detail="Invalid session",
         ) from exc
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
@@ -118,7 +118,7 @@ async def auth_login(body: LoginBody, response: Response):
             {"email": str(body.email), "password": body.password}
         )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password") from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
@@ -150,7 +150,7 @@ async def auth_signup(body: SignupBody, response: Response):
             }
         )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Signup failed. Please try again.") from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)

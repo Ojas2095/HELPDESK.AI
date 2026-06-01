@@ -2581,7 +2581,7 @@ async def get_csat_scores(user: dict = Depends(get_current_user)):
 # ---------------------------------------------------------------------------
 @app.post("/ai/analyze_ticket", response_model=TicketResponse, tags=["AI Analysis"], summary="Full AI ticket analysis (rate-limited)")
 @limiter.limit("10/minute")
-async def analyze_ticket(request_body: TicketRequest, request: Request):
+async def analyze_ticket(request_body: TicketRequest, request: Request, current_user: dict = Depends(get_current_user)):
     """Main entry point for end-to-end ticket triage. Runs OCR (when an image
     is attached), classification, NER, duplicate check, and RAG lookup, then
     returns the consolidated ``TicketResponse``. Throttled to 10 requests per
@@ -2614,7 +2614,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
 
 @app.post("/ai/analyze")
 @limiter.limit("10/minute")
-async def analyze_only(request_body: TicketRequest, request: Request):
+async def analyze_only(request_body: TicketRequest, request: Request, current_user: dict = Depends(get_current_user)):
     """
     Centralized analysis logic used by `/ai/analyze`, `/ai/analyze_ticket`, and `/ai/analyze_stream`.
     Returns a serializable dict representing the ticket analysis result.
