@@ -15,6 +15,8 @@ import logging
 import hashlib
 from contextlib import asynccontextmanager
 
+logger = logging.getLogger(__name__)
+
 # Suppress harmless PyTorch CPU pin_memory warning
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
@@ -586,7 +588,6 @@ async def save_ticket(
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
-    logger = logging.getLogger(__name__)
     try:
         final_data = request_body.dict()
 
