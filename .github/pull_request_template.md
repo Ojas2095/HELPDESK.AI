@@ -1,35 +1,34 @@
-# 📌 Pull Request Description
+## Description
 
-## 🔗 Related Issue
+<!-- Briefly describe what this PR does -->
 
-Closes #
+## Related Issue
 
-## 📝 Description
+<!-- Link to the related issue -->
+Fixes #<!-- issue number -->
 
-Please include a summary of the changes and the related issue.
+## Type of Change
 
-## ✅ Type of Change
+- [ ] Bug fix (non-breaking change which fixes an issue)
+- [ ] New feature (non-breaking change which adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Documentation update
+- [ ] Configuration change
 
-* [ ] Bug fix
-* [ ] New feature
-* [ ] Documentation update
-* [x] Chore
-* [ ] UI/UX improvement
-* [ ] Other
+## Checklist
 
-## 🧪 Testing Done
+- [ ] My code follows the project's coding style
+- [ ] I have performed a self-review of my code
+- [ ] I have commented my code where necessary
+- [ ] I have updated the documentation accordingly
+- [ ] My changes generate no new warnings
+- [ ] I have added tests that prove my fix is effective or my feature works
+- [ ] New and existing unit tests pass locally with my changes
 
-* [ ] Tested locally
-* [ ] Existing functionality verified
-* [ ] No new warnings/errors introduced
+## Screenshots (if applicable)
 
-## 📸 Screenshots (if applicable)
+<!-- Add screenshots to show visual changes -->
 
-Add screenshots or proof here.
+## Additional Notes
 
-## ✔️ Checklist
-
-* [ ] My code follows the project guidelines
-* [ ] I reviewed my own changes
-* [ ] I linked the related issue
-* [ ] This PR targets the `gssoc` branch
+<!-- Any additional information that reviewers should know -->
