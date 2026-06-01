@@ -11,6 +11,7 @@ import {
     ShieldAlert,
     Clock,
     ChevronRight,
+    ChevronLeft,
     BarChart3,
     User,
     ArrowUpRight,
@@ -46,6 +47,11 @@ const AdminTickets = () => {
     const [teamFilter, setTeamFilter] = useState('All');
     const [agents, setAgents] = useState([]); // All staff/admins in the company
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalTickets, setTotalTickets] = useState(0);
+    const PAGE_SIZE = 50;
+
     const fetchInitialData = async () => {
         setLoading(true);
         try {
@@ -75,6 +81,24 @@ const AdminTickets = () => {
         try {
             const { profile } = useAuthStore.getState();
             
+            const offset = (currentPage - 1) * PAGE_SIZE;
+
+            // Count query for total
+            let countQuery = supabase
+                .from('tickets')
+                .select('id', { count: 'exact', head: true });
+            if (profile?.role === 'admin' && profile?.company) {
+                countQuery = countQuery.eq('company', profile.company);
+            }
+            if (statusFilter !== 'All') countQuery = countQuery.eq('status', statusFilter.toLowerCase());
+            if (categoryFilter !== 'All') countQuery = countQuery.eq('category', categoryFilter);
+            if (priorityFilter !== 'All') countQuery = countQuery.eq('priority', priorityFilter.toLowerCase());
+            if (teamFilter !== 'All') countQuery = countQuery.eq('assigned_team', teamFilter);
+
+            const { count } = await countQuery;
+            setTotalTickets(count || 0);
+
+            // Data query with pagination
             // Join with profiles for both user_id (creator) and assigned_agent_id (assignee)
             let query = supabase
                 .from('tickets')
@@ -93,13 +117,18 @@ const AdminTickets = () => {
             if (priorityFilter !== 'All') query = query.eq('priority', priorityFilter.toLowerCase());
             if (teamFilter !== 'All') query = query.eq('assigned_team', teamFilter);
 
-            let { data, error: sbError } = await query.order('created_at', { ascending: false });
+            let { data, error: sbError } = await query
+                .order('created_at', { ascending: false })
+                .range(offset, offset + PAGE_SIZE - 1);
 
             if (sbError) {
                 // Secondary check: If the FK alias fails, try a simpler select
                 console.warn("Retrying fetch without relationship aliases...");
                 const basicQuery = supabase.from('tickets').select('*, profiles(full_name, email)');
-                const { data: basicData, error: basicError } = await basicQuery.eq('company', profile?.company).order('created_at', { ascending: false });
+                const { data: basicData, error: basicError } = await basicQuery
+                    .eq('company', profile?.company)
+                    .order('created_at', { ascending: false })
+                    .range(offset, offset + PAGE_SIZE - 1);
                 if (basicError) throw basicError;
                 setTickets(basicData || []);
             } else {
@@ -145,6 +174,11 @@ const AdminTickets = () => {
             supabase.removeChannel(channel);
         };
      
+    }, [statusFilter, categoryFilter, priorityFilter, teamFilter, currentPage]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
     }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
 
     // Seed search from URL
@@ -466,6 +500,34 @@ const AdminTickets = () => {
                         </div>
                         <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">No Incidents Found</h3>
                         <p className="text-sm text-slate-500 font-medium max-w-xs mx-auto mt-2 italic">Refine your search parameters to view more data points.</p>
+                    </div>
+                )}
+
+                {/* Pagination Controls */}
+                {!loading && totalTickets > PAGE_SIZE && (
+                    <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-white">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, totalTickets)} of {totalTickets} tickets
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="text-sm font-black text-slate-900 px-3">
+                                {currentPage} / {Math.ceil(totalTickets / PAGE_SIZE)}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalTickets / PAGE_SIZE), p + 1))}
+                                disabled={currentPage >= Math.ceil(totalTickets / PAGE_SIZE)}
+                                className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -536,17 +536,39 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(
+    company_id: str | None = None,
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(50, ge=1, le=200, description="Items per page (max 200)"),
+):
+    """Fetch persistent tickets from Supabase with cursor-based pagination."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
+
+    offset = (page - 1) * page_size
+
+    # Build count query (same filters)
+    count_query = supabase.table("tickets").select("id", count="exact")
+    if company_id:
+        count_query = count_query.eq("company_id", company_id)
+    count_res = count_query.execute()
+    total = count_res.count if count_res.count is not None else len(count_res.data)
+
+    # Build data query
+    query = supabase.table("tickets").select("*").order("created_at", desc=True).range(offset, offset + page_size - 1)
     if company_id:
         query = query.eq("company_id", company_id)
-        
+
     res = query.execute()
-    return res.data
+    return {
+        "data": res.data,
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": max(1, -(-total // page_size)),  # ceil division
+        },
+    }
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
