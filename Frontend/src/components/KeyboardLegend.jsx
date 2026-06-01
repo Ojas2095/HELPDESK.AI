@@ -15,10 +15,18 @@ import { SHORTCUT_LIST } from '../hooks/useKeyboardShortcuts';
  */
 export default function KeyboardLegend({ isOpen, onClose }) {
   const overlayRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const previousFocusRef = useRef(null);
 
-  // Close on click outside
+  // Focus trap and keyboard handling
   useEffect(() => {
     if (!isOpen) return;
+
+    // Store previously focused element
+    previousFocusRef.current = document.activeElement;
+
+    // Focus close button when modal opens
+    closeButtonRef.current?.focus();
 
     function handleClickOutside(e) {
       if (overlayRef.current && e.target === overlayRef.current) {
@@ -26,8 +34,47 @@ export default function KeyboardLegend({ isOpen, onClose }) {
       }
     }
 
+    function handleKeyDown(e) {
+      // Close on Escape
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      // Trap Tab/Shift+Tab within modal
+      if (e.key === 'Tab') {
+        const focusableElements = overlayRef.current?.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusableElements || focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey) {
+          // Shift+Tab: if on first element, move to last
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          // Tab: if on last element, move to first
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+          }
+        }
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+      // Restore focus to previously focused element
+      previousFocusRef.current?.focus();
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -85,6 +132,7 @@ export default function KeyboardLegend({ isOpen, onClose }) {
             ⌨️ Keyboard Shortcuts
           </h2>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             aria-label="Close"
             style={{
