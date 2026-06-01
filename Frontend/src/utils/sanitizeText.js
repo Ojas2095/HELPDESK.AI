@@ -20,3 +20,12 @@ export function safeDisplayText(value, fallback = '') {
     const sanitized = sanitizeDisplayText(value, fallback);
     return sanitized || fallback;
 }
+
+// Escape regex special characters so user input can be safely used in
+// RegExp constructors or any pattern-matching context.
+const REGEX_SPECIAL_CHARS = /[.*+?^${}()|[\]\\]/g;
+
+export function sanitizeSearchQuery(query) {
+    if (query === null || query === undefined) return '';
+    return String(query).replace(REGEX_SPECIAL_CHARS, '\\$&');
+}
