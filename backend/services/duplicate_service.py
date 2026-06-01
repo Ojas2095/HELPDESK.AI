@@ -1,4 +1,9 @@
-import torch
+try:
+    import torch
+    _HAS_TORCH = True
+except ImportError:
+    torch = None
+    _HAS_TORCH = False
 """
 Duplicate Detection Service
 Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
@@ -307,7 +312,7 @@ class DuplicateService:
 
         query_embedding = self._encode(text)
 
-        import torch
+        if not _HAS_TORCH: raise ImportError("PyTorch runtime not available")
 
         # Stack stored embeddings into a single tensor for vectorized operations
         embeddings = [stored_emb for _, stored_emb, _ in self._tickets]
