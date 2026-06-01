@@ -10,15 +10,13 @@
  * @param {string} dateStr - Raw date string from database
  * @returns {Date|null} - Parsed Date object or null if invalid
  */
-const parseDate = (dateStr) => {
+export const parseDate = (dateStr) => {
     if (!dateStr) return null;
 
     // If already a Date object, return it
     if (dateStr instanceof Date) {
         return isNaN(dateStr.getTime()) ? null : dateStr;
     }
-    return dateStr;
-  }
 
     // Convert to string if needed
     const str = String(dateStr).trim();
@@ -84,21 +82,14 @@ export const formatTimelineDate = (dateStr) => {
     const date = parseDate(dateStr);
     if (!date) return 'Invalid Date';
 
-export const formatTimelineDate = (dateStr) => {
-  const normalized = normalizeDateString(dateStr);
-  if (!normalized) return null;
-
-  const date = new Date(normalized);
-  if (isNaN(date.getTime())) return 'Invalid Date';
-
-  return date.toLocaleString(undefined, {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+    return date.toLocaleString(undefined, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+    });
 };
 
 /**
@@ -108,13 +99,14 @@ export const formatTimelineDate = (dateStr) => {
  * @returns {string}
  */
 export const getTimeZoneAbbr = () => {
-  try {
-    return (
-      new Intl.DateTimeFormat('en-US', {
-        timeZoneName: 'short',
-      })
-        .formatToParts(new Date())
-        .find(part => part.type === 'timeZoneName')?.value || 'UTC';
+    try {
+        return (
+            new Intl.DateTimeFormat('en-US', {
+                timeZoneName: 'short',
+            })
+                .formatToParts(new Date())
+                .find(part => part.type === 'timeZoneName')?.value || 'UTC'
+        );
     } catch (_e) {
         return 'UTC';
     }
@@ -128,9 +120,9 @@ export const getTimeZoneAbbr = () => {
  * @returns {string}
  */
 export const formatFullTimestamp = (dateStr) => {
-  const formatted = formatTimelineDate(dateStr);
-  if (!formatted) return 'Processing...';
-  return `${formatted} (${getTimeZoneAbbr()})`;
+    const formatted = formatTimelineDate(dateStr);
+    if (formatted === 'Invalid Date') return 'Processing...';
+    return `${formatted} (${getTimeZoneAbbr()})`;
 };
 
 /**
