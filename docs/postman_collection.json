@@ -1,0 +1,286 @@
+{
+  "info": {
+    "_postman_id": "helpdesk-ai-api-v1",
+    "name": "HELPDESK.AI API",
+    "description": "Complete API collection for the HELPDESK.AI backend. Base URL: https://your-backend.onrender.com",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:7860", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health & Readiness",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health",
+            "description": "Returns liveness status and model loading flags."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\"status\":\"ok\",\"classifier_loaded\":true,\"ner_loaded\":true}"
+            }
+          ]
+        },
+        {
+          "name": "GET /ready",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/ready",
+            "description": "Returns readiness status with per-service checks."
+          },
+          "response": [
+            {
+              "name": "200 Ready",
+              "status": "OK",
+              "code": 200,
+              "body": "{\"status\":\"ready\",\"checks\":{\"api\":true,\"classifier_loaded\":true,\"ner_loaded\":true}}"
+            },
+            {
+              "name": "503 Not Ready",
+              "status": "Service Unavailable",
+              "code": 503,
+              "body": "{\"status\":\"not_ready\",\"checks\":{\"classifier_loaded\":false}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AI Analysis",
+      "item": [
+        {
+          "name": "POST /ai/analyze_ticket",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/analyze_ticket",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\":\"My VPN keeps disconnecting every 10 minutes. I cannot access internal resources.\",\"user_id\":\"user-uuid-here\",\"company\":\"company-uuid-here\",\"confidence_threshold\":0.2,\"duplicate_sensitivity\":0.85}"
+            },
+            "description": "Main AI ticket analysis endpoint. Rate limited: 10 req/min per IP."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /ai/analyze",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/analyze",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\":\"Printer is not responding. Error code 0x80004005.\",\"company\":\"company-uuid\"}"
+            },
+            "description": "Analysis-only endpoint (does not persist to DB). Rate limited: 10 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /ai/analyze_stream",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/analyze_stream",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\":\"Application crash on startup after Windows update\"}"
+            },
+            "description": "Streaming SSE response for real-time analysis feedback. Rate limited: 10 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /ai/agent_scorecard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/ai/agent_scorecard?company_id=your-company-uuid",
+              "query": [{ "key": "company_id", "value": "your-company-uuid" }]
+            },
+            "description": "Returns AI agent performance scorecard metrics."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /ai/troubleshoot",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/troubleshoot",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\":\"My WiFi keeps dropping\",\"category\":\"Network\",\"history\":[]}"
+            },
+            "description": "Dynamic troubleshooting steps via Gemini AI. Rate limited: 10 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /ai/analyze_bug",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/ai/analyze_bug",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"bug_title\":\"NullPointerException on login\",\"description\":\"App crashes when user clicks login with empty password field\",\"steps_to_reproduce\":\"1. Open app\\n2. Leave password blank\\n3. Click login\",\"console_errors\":[\"TypeError: Cannot read properties of null (reading 'value')\"]}"
+            },
+            "description": "Bug report analysis using Gemini AI. Rate limited: 10 req/min."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "POST /tickets/save",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/tickets/save",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"user_id\":\"user-uuid\",\"subject\":\"VPN Connection Issue\",\"description\":\"Cannot connect to VPN after recent update\",\"category\":\"Network\",\"subcategory\":\"VPN Connection\",\"priority\":\"High\",\"assigned_team\":\"Network Support\",\"status\":\"open\",\"auto_resolve\":false,\"is_duplicate\":false,\"confidence\":0.92,\"sla_breach_at\":\"2024-01-16T10:00:00Z\",\"metadata\":{},\"routing_confidence\":0.88}"
+            },
+            "description": "Persist a confirmed ticket to Supabase. Rate limited: 30 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /tickets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tickets?company_id=your-company-uuid",
+              "query": [{ "key": "company_id", "value": "your-company-uuid" }]
+            },
+            "description": "List all tickets for a company. Rate limited: 30 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /tickets/:id",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/tickets/your-ticket-uuid",
+            "description": "Fetch a single ticket by ID. Rate limited: 30 req/min."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"admin@company.com\",\"password\":\"your-password\"}"
+            },
+            "description": "Login and receive httpOnly session cookies. Rate limited: 5 req/min (brute-force protection)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\"user\":{\"id\":\"uuid\",\"email\":\"admin@company.com\"},\"message\":\"Login successful\"}"
+            },
+            {
+              "name": "401 Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\"detail\":\"Invalid credentials\"}"
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/signup",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/signup",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"newuser@company.com\",\"password\":\"secure-password\",\"full_name\":\"New User\",\"role\":\"admin\",\"company\":\"My Company\"}"
+            },
+            "description": "Register a new user. Rate limited: 5 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/logout",
+            "description": "Clear session cookies."
+          },
+          "response": [
+            { "name": "200 OK", "status": "OK", "code": 200, "body": "{\"ok\":true}" }
+          ]
+        },
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "description": "Returns current authenticated user. Accepts Bearer token or cookie."
+          },
+          "response": [
+            { "name": "200 OK", "status": "OK", "code": 200, "body": "{\"user\":{\"id\":\"uuid\",\"email\":\"user@company.com\"}}" },
+            { "name": "401 Unauthorized", "status": "Unauthorized", "code": 401, "body": "{\"detail\":\"Not authenticated\"}" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "GET /admin/settings/auto-resolve",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/settings/auto-resolve?company_id=your-company-uuid",
+              "query": [{ "key": "company_id", "value": "your-company-uuid" }]
+            },
+            "description": "Returns the current auto-resolve / auto-close setting for a company."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cache",
+      "item": [
+        {
+          "name": "GET /cache/health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/cache/health",
+            "description": "Returns cache service health status."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

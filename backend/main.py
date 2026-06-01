@@ -25,6 +25,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
@@ -267,6 +268,8 @@ app = FastAPI(
     description="Ticket classification, entity extraction, and duplicate detection",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url=None,   # Disable default Swagger to serve custom dark-themed version
+    redoc_url=None,
 )
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
@@ -286,6 +289,64 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Custom dark-themed Swagger UI (Issue #910)
+# ---------------------------------------------------------------------------
+_SWAGGER_DARK_CSS = """
+<style>
+  body, .swagger-ui { background-color: #0f1f12 !important; color: #e2e8f0 !important; font-family: 'Inter', sans-serif; }
+  .swagger-ui .topbar { background-color: #0b1a0d !important; border-bottom: 1px solid #1e3a21 !important; }
+  .swagger-ui .topbar .download-url-wrapper .select-label select { background: #1a2e1c; color: #e2e8f0; border: 1px solid #2d5230; }
+  .swagger-ui .info .title { color: #10b981 !important; }
+  .swagger-ui .info h2 { color: #a7f3d0 !important; }
+  .swagger-ui .scheme-container { background: #0f1f12 !important; box-shadow: none !important; border-bottom: 1px solid #1e3a21 !important; }
+  .swagger-ui .opblock { background: #152218 !important; border: 1px solid #1e3a21 !important; border-radius: 8px !important; margin-bottom: 8px; }
+  .swagger-ui .opblock.opblock-post { border-left: 4px solid #10b981 !important; }
+  .swagger-ui .opblock.opblock-get { border-left: 4px solid #3b82f6 !important; }
+  .swagger-ui .opblock.opblock-delete { border-left: 4px solid #ef4444 !important; }
+  .swagger-ui .opblock.opblock-patch { border-left: 4px solid #f59e0b !important; }
+  .swagger-ui .opblock-summary { background: transparent !important; }
+  .swagger-ui .opblock-summary-method { background: #10b981 !important; border-radius: 4px !important; }
+  .swagger-ui .opblock-summary-path, .swagger-ui .opblock-summary-description { color: #d1fae5 !important; }
+  .swagger-ui .opblock-body pre { background: #0b1a0d !important; color: #a7f3d0 !important; border: 1px solid #1e3a21; border-radius: 6px; }
+  .swagger-ui textarea, .swagger-ui input[type=text], .swagger-ui input[type=email], .swagger-ui input[type=password] {
+    background: #1a2e1c !important; color: #e2e8f0 !important; border: 1px solid #2d5230 !important; border-radius: 4px;
+  }
+  .swagger-ui .btn { background: #10b981 !important; color: #fff !important; border: none !important; border-radius: 6px !important; }
+  .swagger-ui .btn:hover { background: #059669 !important; }
+  .swagger-ui .btn.cancel { background: #374151 !important; }
+  .swagger-ui section.models { background: #0f1f12 !important; border: 1px solid #1e3a21 !important; border-radius: 8px; }
+  .swagger-ui section.models h4 { color: #10b981 !important; }
+  .swagger-ui .model-title { color: #a7f3d0 !important; }
+  .swagger-ui table tbody tr td { color: #cbd5e1 !important; border-bottom: 1px solid #1e3a21; }
+  .swagger-ui .parameter__name { color: #34d399 !important; }
+  .swagger-ui .parameter__type { color: #60a5fa !important; }
+  .swagger-ui .response-col_status { color: #10b981 !important; }
+  .swagger-ui a { color: #34d399 !important; }
+  .swagger-ui .tag-header { color: #10b981 !important; border-bottom: 1px solid #1e3a21 !important; }
+  .swagger-ui .expand-methods svg, .swagger-ui .expand-operation svg { fill: #10b981 !important; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0f1f12; }
+  ::-webkit-scrollbar-thumb { background: #1e3a21; border-radius: 3px; }
+</style>
+"""
+
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui():
+    """Serve Swagger UI with the HELPDESK.AI dark emerald theme."""
+    swagger_html = get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=f"{app.title} — API Docs",
+        swagger_favicon_url="https://helpdeskaiv1.vercel.app/favicon.ico",
+    )
+    # Inject dark CSS just before </head>
+    dark_html = swagger_html.body.decode("utf-8").replace(
+        "</head>",
+        _SWAGGER_DARK_CSS + "</head>",
+    )
+    return HTMLResponse(content=dark_html)
 
 
 # ---------------------------------------------------------------------------
