@@ -446,7 +446,7 @@ const AdminTicketDetail = () => {
                                         <ImageIcon size={14} color="#16a34a" /> VISUAL EVIDENCE
                                     </p>
                                     <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid #f0fdf4', background: '#f8faf9', cursor: 'zoom-in' }} onClick={() => window.open(imageUrl, '_blank')}>
-                                        <img src={imageUrl} alt="Telemetry Evidence" style={{ width: '100%', objectFit: 'contain', maxHeight: '500px' }} />
+                                        <img src={imageUrl} alt="Telemetry Evidence" style={{ width: '100%', objectFit: 'contain', maxHeight: '500px' }} loading="lazy" />
                                     </div>
                                 </div>
                             )}

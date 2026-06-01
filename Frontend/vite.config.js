@@ -142,15 +142,21 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
-    // Split vendor chunks for better caching (pairs with lazy routing in issue #638)
+    // Split vendor chunks for better caching (pairs with lazy routing)
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['framer-motion', '@supabase/supabase-js'],
         },
+        // Content-hash filenames for long-term caching
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
       },
     },
+    // Warn on chunks > 500KB
+    chunkSizeWarningLimit: 500,
   },
   server: {
     // Inject security headers in dev server responses

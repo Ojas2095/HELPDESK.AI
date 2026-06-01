@@ -585,7 +585,7 @@ const AdminTickets = () => {
                                     <td className="px-6 py-6">
                                         <div className="flex items-center gap-3">
                                             {ticket.creator?.profile_picture || ticket.profiles?.profile_picture ? (
-                                                <img src={ticket.creator?.profile_picture || ticket.profiles?.profile_picture} alt={ticket.creator?.full_name || ticket.profiles?.full_name || 'User'} className="w-8 h-8 rounded-lg object-cover border border-slate-100 shadow-sm" />
+                                                <img src={ticket.creator?.profile_picture || ticket.profiles?.profile_picture} alt={ticket.creator?.full_name || ticket.profiles?.full_name || 'User'} className="w-8 h-8 rounded-lg object-cover border border-slate-100 shadow-sm" loading="lazy" />
                                             ) : (
                                                 <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs border border-emerald-100/50">
                                                     {(ticket.creator?.full_name || ticket.profiles?.full_name || 'System').charAt(0).toUpperCase()}
