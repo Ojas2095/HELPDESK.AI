@@ -178,3 +178,136 @@ class TestNotificationRoutingDatabaseAndCache:
             assert settings_first == {"email_notifications": True}
             assert settings_second == {"email_notifications": True}
             mock_fetch.assert_called_once_with("company-123")
+
+    def test_invalidate_cache_removes_cached_entry(self):
+        """Test that invalidate_cache removes the cached settings for a company"""
+        svc = NotificationRoutingMiddleware()
+
+        with patch.object(svc, '_fetch_system_settings') as mock_fetch:
+            mock_fetch.return_value = {"email_notifications": True}
+
+            # Populate cache
+            svc.get_system_settings("company-123")
+            assert "company-123" in svc._settings_cache
+
+            # Invalidate
+            svc.invalidate_cache("company-123")
+            assert "company-123" not in svc._settings_cache
+
+    def test_invalidate_cache_triggers_refetch_on_next_call(self):
+        """Test that after invalidation, the next get_system_settings call hits the DB again"""
+        svc = NotificationRoutingMiddleware()
+
+        with patch.object(svc, '_fetch_system_settings') as mock_fetch:
+            mock_fetch.return_value = {"email_notifications": True}
+
+            # Populate cache
+            svc.get_system_settings("company-123")
+            assert mock_fetch.call_count == 1
+
+            # Invalidate
+            svc.invalidate_cache("company-123")
+
+            # Next call should refetch
+            svc.get_system_settings("company-123")
+            assert mock_fetch.call_count == 2
+
+    def test_invalidate_cache_noop_for_unknown_company(self):
+        """Test that invalidating a non-cached company does not raise an error"""
+        svc = NotificationRoutingMiddleware()
+        # Should not raise
+        svc.invalidate_cache("nonexistent-company")
+
+    def test_settings_cached_per_company(self):
+        """Test that different companies have independent caches"""
+        svc = NotificationRoutingMiddleware()
+
+        with patch.object(svc, '_fetch_system_settings') as mock_fetch:
+            mock_fetch.side_effect = [
+                {"email_notifications": True},
+                {"email_notifications": False}
+            ]
+
+            settings_a = svc.get_system_settings("company-A")
+            settings_b = svc.get_system_settings("company-B")
+
+            assert settings_a["email_notifications"] is True
+            assert settings_b["email_notifications"] is False
+            assert mock_fetch.call_count == 2
+
+    def test_fetch_system_settings_with_missing_fields(self):
+        """Test that _fetch_system_settings defaults missing fields gracefully"""
+        svc = NotificationRoutingMiddleware()
+
+        mock_execute = MagicMock()
+        mock_execute.data = {"email_notifications": False}  # Missing admin_alerts, digest_frequency
+
+        mock_single = MagicMock()
+        mock_single.execute.return_value = mock_execute
+
+        mock_eq = MagicMock()
+        mock_eq.single.return_value = mock_single
+
+        mock_select = MagicMock()
+        mock_select.eq.return_value = mock_eq
+
+        svc.supabase = MagicMock()
+        svc.supabase.table.return_value.select.return_value = mock_select
+
+        settings = svc._fetch_system_settings("company-123")
+        assert settings["email_notifications"] is False
+        assert settings["admin_alerts"] is True  # Default
+        assert settings["digest_frequency"] == "daily"  # Default
+
+
+class TestNotificationRoutingAdditionalEmailGating:
+    """Additional email notification gating tests"""
+
+    def test_daily_digest_when_frequency_is_daily(self):
+        """Test that daily digest is sent when frequency is 'daily'"""
+        svc = NotificationRoutingMiddleware()
+        settings = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        with patch.object(svc, 'get_system_settings', return_value=settings):
+            result = svc.should_send_email_notification("company-123", NotificationType.DAILY_DIGEST)
+            assert result is True
+
+    def test_ticket_alert_bypasses_digest_frequency_check(self):
+        """Test that non-digest notifications (e.g. TICKET_ALERT) are not gated by digest_frequency"""
+        svc = NotificationRoutingMiddleware()
+        settings = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "disabled"
+        }
+        with patch.object(svc, 'get_system_settings', return_value=settings):
+            result = svc.should_send_email_notification("company-123", NotificationType.TICKET_ALERT)
+            assert result is True
+
+    def test_weekly_digest_with_weekly_frequency(self):
+        """Test that weekly digest is allowed when frequency is 'weekly'"""
+        svc = NotificationRoutingMiddleware()
+        settings = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "weekly"
+        }
+        with patch.object(svc, 'get_system_settings', return_value=settings):
+            result = svc.should_send_email_notification("company-123", NotificationType.WEEKLY_DIGEST)
+            assert result is True
+
+    def test_email_disabled_overrides_everything(self):
+        """Test that email_notifications=False blocks all notification types"""
+        svc = NotificationRoutingMiddleware()
+        settings = {
+            "email_notifications": False,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        with patch.object(svc, 'get_system_settings', return_value=settings):
+            for ntype in NotificationType:
+                result = svc.should_send_email_notification("company-123", ntype)
+                assert result is False, f"Expected False for {ntype.value} when email_notifications=False"
