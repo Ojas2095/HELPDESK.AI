@@ -31,7 +31,7 @@ import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
-import UserScorecard from "../components/UserScorecard";
+import AgentScorecard from "../../components/AgentScorecard";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -423,7 +423,11 @@ const Profile = () => {
                             transition={{ delay: 0.25 }}
                             className="md:col-span-3"
                         >
-                            <UserScorecard />
+                            <AgentScorecard
+                                agentId={user?.id}
+                                companyId={profile?.company_id}
+                                agentName={profile?.full_name || "You"}
+                            />
                         </motion.div>
 
                         {/* Settings Section */}
