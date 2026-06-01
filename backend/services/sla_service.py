@@ -16,7 +16,7 @@ from typing import Any, Callable, Optional
 
 from fastapi import BackgroundTasks
 
-from backend.sla_checker import dispatch_slack_alert
+from backend.sla_checker import dispatch_slack_alert, dispatch_teams_alert
 
 try:
     from dotenv import load_dotenv
@@ -104,6 +104,15 @@ def is_terminal_status(status: str | None) -> bool:
     return str(status or "").strip().lower() in TERMINAL_STATUSES
 
 
+ESCALATION_TEAM_MAP = {
+    "IAM Team": ["Directory Services Lead", "SecOps Chief"],
+    "Network Support": ["Network Ops Command", "Net Infrastructure Director"],
+    "Application Support": ["Senior App Engineers", "Core platform Tech Lead"],
+    "Hardware Support": ["Hardware Ops Lead", "IT Infrastructure Director"],
+    "General Support": ["Support Manager", "IT Operations Director"],
+}
+
+
 class SlaEscalationService:
     """Background service for enforcing ticket SLA breach state."""
 
@@ -186,13 +195,27 @@ class SlaEscalationService:
         escalation_level = int(ticket.get("escalation_level") or 0) + 1
         timestamp = now.isoformat().replace("+00:00", "Z")
 
+        current_team = ticket.get("assigned_team") or "General Support"
+        new_team = current_team
+        if current_team in ESCALATION_TEAM_MAP:
+            teams_list = ESCALATION_TEAM_MAP[current_team]
+            idx = min(escalation_level - 1, len(teams_list) - 1)
+            new_team = teams_list[idx]
+        else:
+            new_team = "Support Manager"
+
         self.supabase.table("tickets").update(
             {
                 "sla_status": "BREACHED",
                 "escalation_level": escalation_level,
+                "assigned_team": new_team,
                 "updated_at": timestamp,
             }
         ).eq("id", ticket_id).execute()
+
+        # Update the local dict copy so that audit logs and alerts reference the newly assigned escalated team.
+        ticket["assigned_team"] = new_team
+        ticket["escalation_level"] = escalation_level
 
         self._insert_audit_log(ticket, escalation_level, timestamp)
         self._emit_system_message(ticket, escalation_level, timestamp)
@@ -227,9 +250,18 @@ class SlaEscalationService:
                 assignee,
                 breach_time,
             )
+            background_tasks.add_task(
+                dispatch_teams_alert,
+                ticket_id,
+                subject,
+                category,
+                assignee,
+                breach_time,
+            )
             return
 
         dispatch_slack_alert(ticket_id, subject, category, assignee, breach_time)
+        dispatch_teams_alert(ticket_id, subject, category, assignee, breach_time)
 
     def _insert_audit_log(self, ticket: dict[str, Any], escalation_level: int, timestamp: str) -> None:
         ticket_id = str(ticket.get("id"))

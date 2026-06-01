@@ -115,6 +115,41 @@ def dispatch_slack_alert(
     _post_json(webhook_url, payload)
 
     return None
+
+
+def dispatch_teams_alert(
+    ticket_id: str,
+    subject: str,
+    category: str,
+    assignee: str,
+    breach_time: datetime,
+) -> None:
+    webhook_url = (os.environ.get("TEAMS_WEBHOOK_URL") or "").strip()
+    if not webhook_url:
+        return None
+
+    payload = {
+        "@type": "MessageCard",
+        "@context": "http://schema.org/extensions",
+        "themeColor": "FF0000",
+        "summary": "SLA Breach Alert",
+        "title": "🚨 SLA Breach Alert",
+        "sections": [
+            {
+                "facts": [
+                    {"name": "Ticket Reference", "value": _format_ticket_reference(ticket_id)},
+                    {"name": "Subject", "value": subject or "Untitled ticket"},
+                    {"name": "Category", "value": category or "Uncategorized"},
+                    {"name": "Assigned To", "value": assignee or "Unassigned"},
+                    {"name": "Breach Time", "value": _format_breach_time(breach_time)},
+                ],
+                "markdown": True,
+            }
+        ],
+    }
+
+    _post_json(webhook_url, payload)
+    return None
 """
 SLA Background Checker — Periodic worker that evaluates ticket SLAs
 and dispatches multi-channel escalation notifications.
@@ -236,7 +271,7 @@ def background_checker_loop(interval_minutes: int = 5, dry_run: bool = False):
 
 
 def _dispatch_slack_alerts(escalated: list) -> None:
-    """Send Slack alerts for escalated tickets (best-effort)."""
+    """Send Slack and Teams alerts for escalated tickets (best-effort)."""
     try:
         from backend.services.slack_notifier import notify_sla_breach
 
@@ -249,6 +284,26 @@ def _dispatch_slack_alerts(escalated: list) -> None:
         logger.debug("slack_notifier module not available — skipping Slack alerts")
     except Exception as e:
         logger.warning("Slack alert dispatch error: %s", e)
+
+    # Dispatch Teams Webhook Alerts
+    try:
+        for ticket in escalated:
+            try:
+                ticket_id = str(ticket.get("id") or "")
+                subject = str(ticket.get("subject") or "Untitled ticket")
+                category = str(ticket.get("priority") or "Uncategorized")
+                assignee = str(ticket.get("assigned_team") or "Unassigned")
+                
+                # Fetch breach time (sla_breach_at)
+                breach_at_str = ticket.get("sla_breach_at")
+                from backend.services.sla_service import parse_sla_datetime
+                breach_time = parse_sla_datetime(breach_at_str) or datetime.now(timezone.utc)
+                
+                dispatch_teams_alert(ticket_id, subject, category, assignee, breach_time)
+            except Exception as e:
+                logger.warning("Teams notification failed for ticket %s: %s", ticket.get("id"), e)
+    except Exception as e:
+        logger.warning("Teams alert dispatch error: %s", e)
 
 async def sla_checker_loop_async(
     supabase,

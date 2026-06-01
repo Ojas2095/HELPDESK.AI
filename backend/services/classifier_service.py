@@ -5,6 +5,7 @@ Priority and other fields are derived from the category mapping.
 """
 
 import os
+import time
 import json
 import time
 try:

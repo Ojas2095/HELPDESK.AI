@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import unittest
 from datetime import datetime, timezone
 
@@ -144,6 +145,44 @@ class SlaServiceTest(unittest.TestCase):
         self.assertEqual(tables["audit_logs"][0]["event_type"], "sla_breached")
         self.assertEqual(tables["audit_logs"][0]["ticket_id"], "ticket-1")
         self.assertIn("SLA breached", tables["ticket_messages"][0]["message"])
+
+    @patch("backend.services.sla_service.dispatch_slack_alert")
+    @patch("backend.services.sla_service.dispatch_teams_alert")
+    def test_automated_rerouting_and_webhook_alerts(self, mock_dispatch_teams, mock_dispatch_slack):
+        """Verify that tickets are automatically rerouted to correct escalation teams and alerts are dispatched."""
+        now = datetime(2026, 5, 22, 7, 0, tzinfo=timezone.utc)
+        tables = {
+            "tickets": [
+                {
+                    "id": "ticket-reroute-1",
+                    "company_id": "company-1",
+                    "status": "open",
+                    "priority": "critical",
+                    "subject": "Authentication latency",
+                    "assigned_team": "IAM Team",  # Level 1
+                    "sla_breach_at": "2026-05-22T06:50:00Z",
+                    "sla_status": "ACTIVE",
+                    "escalation_level": 0,
+                }
+            ],
+            "audit_logs": [],
+            "ticket_messages": [],
+        }
+        service = SlaEscalationService(FakeSupabase(tables), now_fn=lambda: now)
+        stats = service.run_once()
+
+        self.assertEqual(stats["breached_count"], 1)
+        # Verify status is breached
+        self.assertEqual(tables["tickets"][0]["sla_status"], "BREACHED")
+        # Verify escalation level incremented to 1
+        self.assertEqual(tables["tickets"][0]["escalation_level"], 1)
+        # Verify the team was AUTOMATICALLY REROUTED to Level 2 ("Directory Services Lead")
+        self.assertEqual(tables["tickets"][0]["assigned_team"], "Directory Services Lead")
+        
+        # Verify webhook dispatches were called
+        mock_dispatch_slack.assert_called_once()
+        mock_dispatch_teams.assert_called_once()
+
 
 
 if __name__ == "__main__":
