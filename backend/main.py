@@ -475,15 +475,16 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
+async def log_correction(raw_request: Request, user: dict = Depends(get_current_user)):
     """Log an admin correction when the AI prediction differs from the human decision."""
+    _correction_logger = logging.getLogger(__name__)
     try:
         body = await raw_request.json()
     except Exception as e:
-        print(f"[CORRECTION ERROR] Could not parse request body: {e}")
+        _correction_logger.warning("Could not parse request body: %s", e)
         return {"status": "error", "message": "Invalid JSON body"}
 
-    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
+    _correction_logger.info("Correction received — payload keys: %s", list(body.keys()))
 
     ticket_id = str(body.get("ticket_id", "unknown"))
     original_text = str(body.get("original_text", ""))
@@ -521,14 +522,19 @@ async def log_correction(raw_request: Request):
 
         logs.append(entry)
 
+        # Cap log size to prevent unbounded growth
+        MAX_LOG_ENTRIES = int(os.environ.get("CORRECTIONS_LOG_MAX", "10000"))
+        if len(logs) > MAX_LOG_ENTRIES:
+            logs = logs[-MAX_LOG_ENTRIES:]
+
         with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
             json.dump(logs, f, indent=2)
 
-        print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
+        _correction_logger.info("Correction saved — ticket: %s | changed: %s", ticket_id, changed_fields)
         return {"status": "saved", "changed_fields": changed_fields}
 
     except Exception as e:
-        print(f"[CORRECTION ERROR] Could not save: {e}")
+        _correction_logger.error("Could not save correction: %s", e)
         return {"status": "error", "message": str(e)}
 
 
