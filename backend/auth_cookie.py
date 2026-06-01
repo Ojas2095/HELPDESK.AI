@@ -82,7 +82,7 @@ async def get_current_user(request: Request) -> dict:
     try:
         client = _anon_supabase()
         result = client.auth.get_user(token)
-    except Exception as exc:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid session",
@@ -123,7 +123,7 @@ async def auth_login(body: LoginBody, response: Response):
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
     if not session or not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     _set_session_cookies(response, session)
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)

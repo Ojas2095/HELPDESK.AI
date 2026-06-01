@@ -2610,7 +2610,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request, current_
 
     # Pass OCR-enriched text downstream so the analyze_only endpoint uses it.
     enriched = request_body.model_copy(update={"text": text, "image_text": local_ocr_text})
-    return await analyze_only(enriched, request)
+    return await analyze_only(enriched, request, user)
 
 @app.post("/ai/analyze")
 @limiter.limit("10/minute")
