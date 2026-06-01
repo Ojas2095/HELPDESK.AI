@@ -15,6 +15,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
 
+from backend.utils.date_utils import parse_iso_string
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -167,8 +168,10 @@ class AutoCloseService:
                                 logger.warning(f"Ticket {ticket['id']} missing updated_at, skipping")
                                 continue
 
-                            # Parse ISO format timestamp
-                            updated_at = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00"))
+                            # Parse ISO format timestamp using shared normalization
+                            updated_at = parse_iso_string(updated_at_str)
+                            if not updated_at:
+                                raise ValueError(f"Unable to parse timestamp: {updated_at_str}")
 
                             if updated_at < cutoff_date:
                                 self._close_ticket(ticket["id"], company_id, stats)

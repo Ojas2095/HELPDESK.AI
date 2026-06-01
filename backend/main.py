@@ -30,6 +30,13 @@ import asyncio
 from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from backend.utils.date_utils import (
+    format_utc_iso,
+    normalize_iso_string,
+    normalize_date_for_output,
+    normalize_record_dates,
+    normalize_records
+)
 
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent / '.env'
@@ -509,27 +516,16 @@ async def log_correction(raw_request: Request):
         "corrected_prediction": corrected_prediction,
         "changed_fields": changed_fields,
         "confidence": confidence,
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+        "timestamp": format_utc_iso()
     }
 
-    try:
-        if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
-            with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-        else:
-            logs = []
+    logs.append(entry)
 
-        logs.append(entry)
+    with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
+        json.dump(logs, f, indent=2)
 
-        with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
-            json.dump(logs, f, indent=2)
-
-        print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
-        return {"status": "saved", "changed_fields": changed_fields}
-
-    except Exception as e:
-        print(f"[CORRECTION ERROR] Could not save: {e}")
-        return {"status": "error", "message": str(e)}
+    print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
+    return {"status": "saved", "changed_fields": changed_fields}
 
 
 # ---------------------------------------------------------------------------
@@ -546,7 +542,7 @@ async def get_tickets(company_id: str | None = None):
         query = query.eq("company_id", company_id)
         
     res = query.execute()
-    return res.data
+    return normalize_records(res.data or [])
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
@@ -560,6 +556,9 @@ async def save_ticket(request_body: TicketSaveRequest):
     logger = logging.getLogger(__name__)
     try:
         final_data = request_body.dict()
+        for key in ("created_at", "updated_at", "resolved_at", "closed_at", "sla_breach_at", "timestamp"):
+            if key in final_data:
+                final_data[key] = normalize_date_for_output(final_data[key])
 
         # Resolve tenant linkage from user profile with authorization validation.
         profile = {}
@@ -660,7 +659,7 @@ async def get_ticket_by_id(ticket_id: str):
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return res.data
+    return normalize_record_dates(res.data)
 
 
 @app.post("/tickets", response_model=TicketRecord)
@@ -745,17 +744,13 @@ async def analyze_only(request_body: TicketRequest):
     enable_auto_resolve = settings["enable_auto_resolve"]
     
     # --- Context & Environment ---
-    import datetime
-    def get_now_ist():
-        return datetime.datetime.utcnow().isoformat() + "Z"
-
     env_metadata = {
-        "timestamp": get_now_ist(),
+        "timestamp": format_utc_iso(),
         "model_version": "3.0.0-PRO",
         "api_endpoint": "/ai/analyze"
     }
     
-    timeline = {"received": get_now_ist()}
+    timeline = {"received": format_utc_iso()}
 
     # --- Vision Logic (OCR Awareness) ---
     gemini_analysis = {
@@ -805,8 +800,8 @@ async def analyze_only(request_body: TicketRequest):
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
         }
 
-    timeline["ai_analyzed"] = get_now_ist()
-    timeline["triaged"] = get_now_ist()
+    timeline["ai_analyzed"] = format_utc_iso()
+    timeline["triaged"] = format_utc_iso()
 
     # --- NER ---
     try:
@@ -814,7 +809,7 @@ async def analyze_only(request_body: TicketRequest):
     except Exception:
         entities = []
     
-    timeline["metadata_harvested"] = get_now_ist()
+    timeline["metadata_harvested"] = format_utc_iso()
 
     # --- Duplicate detection ---
     try:
@@ -857,7 +852,7 @@ async def analyze_only(request_body: TicketRequest):
     if classification["auto_resolve"]:
         reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
     
-    timeline["routed"] = get_now_ist()
+    timeline["routed"] = format_utc_iso()
     
     # --- Gemini Summary ---
     if gemini_service and gemini_service._initialized:
@@ -888,7 +883,7 @@ async def analyze_only(request_body: TicketRequest):
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
-        sla_breach_at=sla_breach_dt.isoformat() + "Z"
+        sla_breach_at=format_utc_iso(sla_breach_dt)
     )
 
 @app.post("/ai/analyze_stream")
@@ -897,17 +892,15 @@ async def analyze_stream(request_body: TicketRequest):
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
     """
     import datetime
-    def get_now_ist():
-        return datetime.datetime.utcnow().isoformat() + "Z"
 
     async def event_generator():
         text = request_body.text
         env_metadata = {
-            "timestamp": get_now_ist(),
+            "timestamp": format_utc_iso(),
             "model_version": "3.0.0-PRO",
             "api_endpoint": "/ai/analyze_stream"
         }
-        timeline = {"received": get_now_ist()} 
+        timeline = {"received": format_utc_iso()}
         settings = get_system_settings(request_body.company)
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
@@ -934,7 +927,7 @@ async def analyze_stream(request_body: TicketRequest):
             entities = ner_service.extract_entities(text)
         except Exception:
             entities = []
-        timeline["metadata_harvested"] = get_now_ist()
+        timeline["metadata_harvested"] = format_utc_iso()
 
         # 3. Classification
         yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
@@ -966,8 +959,8 @@ async def analyze_stream(request_body: TicketRequest):
                 "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
                 "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
             }
-        timeline["ai_analyzed"] = get_now_ist()
-        timeline["triaged"] = get_now_ist()
+        timeline["ai_analyzed"] = format_utc_iso()
+        timeline["triaged"] = format_utc_iso()
 
         # 4. Duplicates
         yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
@@ -1006,7 +999,7 @@ async def analyze_stream(request_body: TicketRequest):
         if classification["auto_resolve"]:
             reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
         
-        timeline["routed"] = get_now_ist()
+        timeline["routed"] = format_utc_iso()
 
         if gemini_service and gemini_service._initialized:
             summary = gemini_service.get_summary(text)
@@ -1035,7 +1028,7 @@ async def analyze_stream(request_body: TicketRequest):
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+            "sla_breach_at": format_utc_iso(sla_breach_dt)
         }
 
         # 6. Final Result
