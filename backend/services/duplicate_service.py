@@ -1,4 +1,5 @@
 import json
+import logging
 try:
     import numpy as np
     _HAS_NUMPY = True
@@ -98,14 +99,7 @@ class DuplicateService:
             self._loaded = True
 
             if os.path.exists(self.storage_file):
-                print(f"[DuplicateService] Syncing ticket history from {self.storage_file}...")
-                try:
-                    with open(self.storage_file, "r") as f:
-                        data = json.load(f)
-                    for item in data:
-                        text = item["text"]
-                        embedding = self._encode_with_cache(text)
-                        self._tickets.append((item["ticket_id"], embedding, text))
+                re_encoded = 0
                 print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
                 try:
                     with open(self.storage_file, "r") as f:
@@ -196,7 +190,8 @@ class DuplicateService:
         Computes (or retrieves from Redis cache) the embedding, adds it to
         the in-memory store, persists to disk, and invalidates stale
         duplicate-result cache entries so future checks reflect this new ticket.
-        """Append a new ticket to the JSON storage atomically.
+
+        Append a new ticket to the JSON storage atomically.
 
         Uses a lock to prevent TOCTOU race conditions where concurrent reads
         could overwrite each other's writes. Writes to a temp file first, then
@@ -339,8 +334,6 @@ class DuplicateService:
 
         # Use provided threshold or default to global constant
         active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
-
-        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
         use_default_threshold = threshold is None
 
         # Try the result cache only when using the default threshold so we
@@ -351,8 +344,6 @@ class DuplicateService:
                 logger.debug("[DuplicateService] Duplicate-result cache HIT")
                 return cached_result
 
-        if not self._tickets:
-            result = {
         # Take a snapshot of tickets under lock to avoid mutation during iteration
         with self._lock:
             tickets_snapshot = list(self._tickets)

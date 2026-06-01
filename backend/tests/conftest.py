@@ -156,6 +156,23 @@ def _make_stub_module(name, attrs):
 
 def _install_optional_ml_stubs():
     # Provide import-safe stand-ins for optional ML modules used by backend.main.
+    # Mock supabase if not installed (needed by auto_close_service, etc.)
+    if "supabase" not in sys.modules:
+        import types as _types
+        _mock_supabase = _types.ModuleType("supabase")
+        _mock_supabase.create_client = MagicMock()
+        sys.modules["supabase"] = _mock_supabase
+
+    # Mock numpy if not installed (needed by duplicate_service, etc.)
+    if "numpy" not in sys.modules:
+        import types as _types
+        _mock_numpy = _types.ModuleType("numpy")
+        _mock_numpy.float32 = "float32"
+        _mock_numpy.ndarray = type("ndarray", (), {})
+        _mock_numpy.array = MagicMock()
+        _mock_numpy.vstack = MagicMock()
+        sys.modules["numpy"] = _mock_numpy
+
     class _BaseStub:
         def __init__(self):
             self._loaded = True
@@ -306,6 +323,8 @@ def mock_ai_services(request):
         "test_metrics_service.py",
         "test_audit_service.py",
         "test_correction_log_async.py",
+        "test_auto_close_service.py",
+        "test_duplicate_service.py",
     }:
         yield
         return
