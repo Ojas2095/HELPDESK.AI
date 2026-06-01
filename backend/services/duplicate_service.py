@@ -354,6 +354,12 @@ class DuplicateService:
         ticket individually.  This reduces the similarity computation from
         O(n) individual tensor operations to a single O(1) matrix multiply.
 
+        Uses vectorized cosine similarity: all stored embeddings are stacked
+        into a single 2D tensor and compared against the query embedding in
+        one batched matrix operation, rather than looping over each stored
+        ticket individually.  This reduces the similarity computation from
+        O(n) individual tensor operations to a single O(1) matrix multiply.
+
         Args:
             text:      The ticket text to check.
             threshold: Optional override for the similarity threshold.
