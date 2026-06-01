@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, Settings, LogOut, UserCircle, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';
@@ -23,9 +23,6 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsProfileOpen(false);
             }
-            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
-                setIsResultsOpen(false);
-            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -35,8 +32,6 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
         await logout();
         navigate('/login');
     };
-
-    const showResultsPanel = isResultsOpen && trimmedQuery.length > 0;
 
     return (
         <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-30 px-6 md:px-10 flex items-center justify-between">

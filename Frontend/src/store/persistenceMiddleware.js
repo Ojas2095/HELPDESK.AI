@@ -30,8 +30,9 @@ const createSafeStorage = (storageType = 'localStorage') => {
         },
 
         setItem: (name, value) => {
+            let serialized = '';
             try {
-                const serialized = JSON.stringify(value);
+                serialized = JSON.stringify(value);
                 storage.setItem(name, serialized);
             } catch (error) {
                 if (error.name === 'QuotaExceededError') {
