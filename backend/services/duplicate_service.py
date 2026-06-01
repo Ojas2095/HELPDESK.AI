@@ -34,6 +34,10 @@ class DuplicateService:
         # Lock for thread-safe access to _tickets and storage_file
         self._lock = threading.Lock()
 
+        # --- Thread-safety additions (Issue #906) ---
+        self._lock = threading.Lock()
+        self._indexing: bool = False
+
     def is_available(self) -> bool:
         """Check if the model is available for duplicate detection."""
         return self._loaded and not self._load_failed
@@ -50,7 +54,8 @@ class DuplicateService:
             self._embedding_matrix = None
 
     def load(self):
-        """Load the sentence-transformer model and saved tickets."""
+        """Load the sentence-transformer model and saved tickets. Thread-safe and idempotent."""
+        # Fast path: already loaded — no lock needed for the bool check
         if self._loaded or self._load_failed:
             return
 
@@ -173,6 +178,8 @@ class DuplicateService:
         if not self.is_available():
             print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
+
+        # Compute embedding outside the lock (CPU-bound, can run concurrently)
         embedding = self.model.encode(text, convert_to_tensor=True)
         with self._lock:
             self._tickets.append((ticket_id, embedding, text))
@@ -266,7 +273,7 @@ class DuplicateService:
         O(n) individual tensor operations to a single O(1) matrix multiply.
 
         Args:
-            text: The ticket text to check.
+            text:      The ticket text to check.
             threshold: Optional override for the similarity threshold.
 
         Returns:
@@ -277,7 +284,7 @@ class DuplicateService:
             }
         """
         self.load()
-        
+
         # If model is not available, return no duplicate found
         if not self.is_available() or torch is None:
             print("[DuplicateService] DEGRADED: Duplicate check skipped (model or torch not available)")
@@ -286,7 +293,7 @@ class DuplicateService:
                 "duplicate_ticket_id": None,
                 "similarity": 0.0,
             }
-        
+
         # Use provided threshold or default to global constant
         active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
 
