@@ -38,8 +38,8 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
     const displayTickets = limit ? tickets.slice(0, limit) : tickets;
 
     if (isLoading) return (
-        <div className="py-24 text-center">
-            <div style={{ width: 40, height: 40, border: '3px solid #16a34a', borderTopColor: 'transparent', borderRadius: '50%' }} className="animate-spin mx-auto mb-4"></div>
+        <div className="py-24 text-center" role="status" aria-live="polite" aria-busy="true" aria-label="Loading tickets">
+            <div style={{ width: 40, height: 40, border: '3px solid #16a34a', borderTopColor: 'transparent', borderRadius: '50%' }} className="animate-spin mx-auto mb-4" aria-hidden="true"></div>
             <p style={{ color: '#9ca3af', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Synchronizing System Data...</p>
         </div>
     );
@@ -55,17 +55,21 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
     );
 
     return (
-        <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full border-collapse">
+        <div className="overflow-x-auto custom-scrollbar" role="region" aria-label="Tickets data table">
+            {/* Live region for status announcements */}
+            <div aria-live="polite" aria-atomic="true" role="status" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}>
+                {`${displayTickets.length} tickets displayed`}
+            </div>
+            <table className="w-full border-collapse" role="table" aria-label="Support tickets" aria-rowcount={displayTickets.length}>
                 <thead>
-                    <tr style={{ background: '#f8faf9', borderBottom: '1px solid #f0fdf4' }}>
+                    <tr role="row" style={{ background: '#f8faf9', borderBottom: '1px solid #f0fdf4' }}>
                         {['Ticket ID', 'Ticket Info', 'Category', 'Priority', 'Assigned Team', 'Status'].map((h, i) => (
-                            <th key={i} style={{ padding: '14px 24px', textAlign: 'left', fontSize: '10px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
+                            <th key={i} role="columnheader" scope="col" style={{ padding: '14px 24px', textAlign: 'left', fontSize: '10px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
                         ))}
                     </tr>
                 </thead>
-                <tbody>
-                    {displayTickets.map((ticket) => {
+                <tbody role="rowgroup">
+                    {displayTickets.map((ticket, rowIdx) => {
                         const effectiveCategory = ticket.correction?.corrected_category || ticket.category;
                         const effectiveSubcategory = ticket.correction?.corrected_subcategory || ticket.subcategory;
                         const effectivePriority = ticket.correction?.corrected_priority || ticket.priority;
@@ -88,15 +92,26 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                         const initial = userName.charAt(0).toUpperCase();
                         const profilePic = userProfile?.profile_picture;
 
+                        const ticketLabel = `Ticket ${tid}: ${subject}, Priority ${effectivePriority}, Status ${ticket.status || 'Open'}`;
                         return (
                             <tr
                                 key={ticket.ticket_id || ticket.id}
+                                role="row"
+                                aria-rowindex={rowIdx + 1}
+                                aria-label={ticketLabel}
+                                tabIndex={0}
                                 onClick={() => navigate(`/admin/ticket/${ticket.ticket_id || ticket.id}`)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        navigate(`/admin/ticket/${ticket.ticket_id || ticket.id}`);
+                                    }
+                                }}
                                 className="cursor-pointer group transition-colors hover:bg-[#f0fdf4]"
                                 style={{ borderBottom: '1px solid #f9fafb' }}
                             >
                                 {/* Request Identity */}
-                                <td style={{ padding: '14px 24px' }}>
+                                <td role="cell" style={{ padding: '14px 24px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                         <div className="flex items-center gap-2">
                                             <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#16a34a' }}>#{truncId}</span>
@@ -112,7 +127,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 </td>
 
                                 {/* Incident Context - FIXED */}
-                                <td style={{ padding: '14px 24px' }}>
+                                <td role="cell" style={{ padding: '14px 24px' }}>
                                     <div className="flex items-center gap-3">
                                         {profilePic ? (
                                             <img
@@ -137,7 +152,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 </td>
 
                                 {/* Category with colored dot */}
-                                <td style={{ padding: '14px 24px' }}>
+                                <td role="cell" style={{ padding: '14px 24px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, color: '#475569', letterSpacing: '0.06em', textTransform: 'uppercase', width: 'fit-content' }}>
                                             <span style={{ width: 4, height: 4, borderRadius: '50%', background: categoryDotColors[effectiveCategory] || '#6b7280', display: 'inline-block' }}></span>
@@ -148,7 +163,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 </td>
 
                                 {/* Risk Factor */}
-                                <td style={{ padding: '14px 24px' }}>
+                                <td role="cell" style={{ padding: '14px 24px' }}>
                                     <span style={{
                                         ...getPriorityStyle(effectivePriority),
                                         padding: '3px 12px', borderRadius: '100px', fontSize: '11px',
@@ -159,7 +174,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 </td>
 
                                 {/* Assigned Ops */}
-                                <td style={{ padding: '14px 24px' }}>
+                                <td role="cell" style={{ padding: '14px 24px' }}>
                                     <div className="flex items-center gap-2">
                                         <div style={{ width: 28, height: 28, background: '#f0fdf4', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #d1fae5' }}>
                                             <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a' }}>{effectiveTeam?.charAt(0)}</span>
@@ -169,7 +184,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 </td>
 
                                 {/* Status */}
-                                <td style={{ padding: '14px 24px' }}>
+                                <td role="cell" style={{ padding: '14px 24px' }}>
                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '100px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: statusSt.bg, color: statusSt.text, border: `1px solid ${statusSt.border}` }}>
                                         <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: ticket.status?.includes('Resolv') ? 0.4 : 1 }}></span>
                                         {ticket.status?.replace('by Human Support', '').trim()}
