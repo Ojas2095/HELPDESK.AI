@@ -682,8 +682,19 @@ async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
+    # Verify the ticket exists and the caller owns it
+    existing = supabase.table("tickets").select("id, owner_id").eq("id", ticket_id).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket_owner = existing.data[0].get("owner_id")
+    user_id = user.get("id")
+    user_role = user.get("user_metadata", {}).get("role", "")
+    if ticket_owner and ticket_owner != user_id and user_role != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to update this ticket")
+
     # Remove fields that shouldn't be updated directly
-    protected_fields = {"id", "ticket_id", "created_at", "company_id"}
+    protected_fields = {"id", "ticket_id", "created_at", "company_id", "owner_id"}
     sanitized = {k: v for k, v in updates.items() if k not in protected_fields}
 
     if not sanitized:
