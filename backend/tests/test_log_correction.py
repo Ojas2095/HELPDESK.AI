@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 # Mock supabase before importing main (stays active for module lifetime)
 _patcher = patch("main.supabase")
 _patcher.start()
-from main import app, get_current_user  # noqa: E402
+from main import app, get_current_user, CORRECTIONS_LOG_PATH  # noqa: E402
 
 client = TestClient(app)
 
@@ -56,34 +56,33 @@ class TestLogCorrection:
         })
         assert response.status_code == 401
 
-    @patch("main.CORRECTIONS_LOG_PATH")
-    def test_log_correction_saves_entry(self, mock_path):
+    def test_log_correction_saves_entry(self):
         """Test that correction is saved with authenticated user_id."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             json.dump([], f)
             temp_path = Path(f.name)
 
-        mock_path.exists.return_value = True
-        mock_path.stat.return_value.st_size = 2
-        mock_path.__str__ = lambda x: str(temp_path)
+        # Patch CORRECTIONS_LOG_PATH with a real Path object so open() works
+        with patch("main.CORRECTIONS_LOG_PATH", temp_path):
+            response = client.post("/ai/log_correction", json={
+                "ticket_id": "TKT-001",
+                "original_prediction": {"category": "billing"},
+                "corrected_prediction": {"category": "technical"}
+            }, headers={"Authorization": "Bearer test-token"})
 
-        response = client.post("/ai/log_correction", json={
-            "ticket_id": "TKT-001",
-            "original_prediction": {"category": "billing"},
-            "corrected_prediction": {"category": "technical"}
-        }, headers={"Authorization": "Bearer test-token"})
+            assert response.status_code == 200
+            assert response.json()["status"] == "saved"
 
-        assert response.status_code == 200
-        assert response.json()["status"] == "saved"
-
-        # Verify user_id is logged
-        with open(temp_path) as f:
-            logs = json.load(f)
-        assert len(logs) == 1
-        assert logs[0]["user_id"] == "test-user-id-123"
+            # Verify user_id is logged
+            with open(temp_path) as f:
+                logs = json.load(f)
+            assert len(logs) == 1
+            assert logs[0]["user_id"] == "test-user-id-123"
 
         # Cleanup
-        temp_path.unlink()
+        temp_path.unlink(missing_ok=True)
+        lock_file = Path(str(temp_path) + ".lock")
+        lock_file.unlink(missing_ok=True)
 
     def test_log_correction_no_change(self):
         """Test that no log entry is created when predictions match."""
