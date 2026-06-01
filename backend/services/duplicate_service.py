@@ -309,8 +309,10 @@ class DuplicateService:
 
         import torch
 
-        # Stack stored embeddings into a single tensor for vectorized operations
-        embeddings = [stored_emb for _, stored_emb, _ in self._tickets]
+        # Use the snapshot consistently to avoid TOCTOU race conditions.
+        # Previously this accessed self._tickets directly, which could be
+        # mutated by another thread between the snapshot and this line.
+        embeddings = [stored_emb for _, stored_emb, _ in tickets_snapshot]
         stacked_embeddings = torch.stack(embeddings)
 
         # Compute cosine similarity between query and all stored embeddings in one operation
@@ -320,7 +322,7 @@ class DuplicateService:
         best_score_tensor, best_index_tensor = torch.max(similarity_matrix, dim=1)
         best_score = best_score_tensor.item()
         best_index = best_index_tensor.item()
-        best_id = self._tickets[best_index][0]
+        best_id = tickets_snapshot[best_index][0]
 
         is_dup = best_score >= active_threshold
 
