@@ -1,3 +1,10 @@
+import json
+import os
+import threading
+import tempfile
+import numpy as np
+from typing import Any
+
 try:
     import torch
     from sentence_transformers import SentenceTransformer, util
@@ -272,8 +279,8 @@ class DuplicateService:
         self.load()
         
         # If model is not available, return no duplicate found
-        if not self.is_available():
-            print("[DuplicateService] DEGRADED: Duplicate check skipped (model not available)")
+        if not self.is_available() or torch is None:
+            print("[DuplicateService] DEGRADED: Duplicate check skipped (model or torch not available)")
             return {
                 "is_duplicate": False,
                 "duplicate_ticket_id": None,
@@ -296,10 +303,8 @@ class DuplicateService:
 
         query_embedding = self._encode(text)
 
-        import torch
-
         # Stack stored embeddings into a single tensor for vectorized operations
-        embeddings = [stored_emb for _, stored_emb, _ in self._tickets]
+        embeddings = [stored_emb for _, stored_emb, _ in tickets_snapshot]
         stacked_embeddings = torch.stack(embeddings)
 
         # Compute cosine similarity between query and all stored embeddings in one operation
@@ -309,7 +314,7 @@ class DuplicateService:
         best_score_tensor, best_index_tensor = torch.max(similarity_matrix, dim=1)
         best_score = best_score_tensor.item()
         best_index = best_index_tensor.item()
-        best_id = self._tickets[best_index][0]
+        best_id = tickets_snapshot[best_index][0]
 
         is_dup = best_score >= active_threshold
 
