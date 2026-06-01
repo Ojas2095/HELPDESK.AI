@@ -306,6 +306,17 @@ def mock_ai_services(request):
         "test_metrics_service.py",
         "test_audit_service.py",
         "test_correction_log_async.py",
+        # Refreshed unit-test suites — import the service directly, not via main
+        "test_classifier_service_refreshed.py",
+        "test_supabase_utils_refreshed.py",
+        "test_healthcheck_refreshed.py",
+        "test_data_loading_refreshed.py",
+        "test_ticket_models_refreshed.py",
+        "test_rag_service_refreshed.py",
+        "test_auto_close_service_refreshed.py",
+        "test_duplicate_service_refreshed.py",
+        "test_ner_service_refreshed.py",
+        "test_notification_routing_refreshed.py",
     }:
         yield
         return
