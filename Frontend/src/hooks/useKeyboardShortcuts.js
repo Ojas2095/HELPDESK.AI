@@ -76,8 +76,7 @@ export function useKeyboardShortcuts({
   const focusSearch = useCallback(() => {
     const searchInput =
       document.querySelector('input[type="search"]') ||
-      document.querySelector('input[placeholder*="search" i]') ||
-      document.querySelector('input[placeholder*="Search" i]');
+      document.querySelector('input[placeholder*="search" i]');
     if (searchInput) {
       searchInput.focus();
       searchInput.select();
