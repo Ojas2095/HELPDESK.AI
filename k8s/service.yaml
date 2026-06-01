@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: helpdesk-ai-backend-svc
+  namespace: helpdesk
+  labels:
+    app: helpdesk-ai-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: helpdesk-ai-backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 7860
+      protocol: TCP
