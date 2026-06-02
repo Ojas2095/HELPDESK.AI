@@ -1,22 +1,24 @@
 """
-Translation Service — Python backend utility wrapping the MyMemory Translation API.
-Supports language detection, batch translation, fallback on error, and locale heuristics.
+Translation helpers for locale detection, MyMemory API fallback, and ticket translation.
 """
 
-import re
+from __future__ import annotations
+
 import logging
 from typing import Optional
 from functools import lru_cache
 
 try:
     import requests as _requests_lib
-except ImportError:
-    _requests_lib = None  # type: ignore
+except ImportError:  # pragma: no cover - exercised only when requests is absent
+    _requests_lib = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
 MYMEMORY_URL = "https://api.mymemory.translated.net/get"
-DEFAULT_TIMEOUT = 10  # seconds
+DEFAULT_TIMEOUT = 10
+MAX_CACHE_SIZE = 1000
+MAX_TEXT_LENGTH = 5000
 
 # BCP-47 language tag regex
 _LANG_TAG_RE = re.compile(r"^[a-zA-Z]{2,3}(?:-[a-zA-Z]{2,8})*$")
@@ -111,6 +113,7 @@ def detect_language(text: str) -> Optional[str]:
     """Detect the language of the given text using langdetect."""
     try:
         from langdetect import detect
+
         if not text or len(text.strip()) < 3:
             return None
         lang = detect(text)
@@ -176,9 +179,7 @@ def translate_text(
 
         response.raise_for_status()
         data = response.json()
-
-        status = data.get("responseStatus")
-        if status == 200:
+        if data.get("responseStatus") == 200:
             translated = data["responseData"]["translatedText"]
             return {
                 "translated": translated,
@@ -229,37 +230,25 @@ def batch_translate(
 
 
 def translate_ticket(ticket_data: dict, target_lang: str = "en") -> dict:
-    """
-    Translate ticket content (subject, description, messages) to target language.
-
-    Args:
-        ticket_data: dict with 'subject', 'description', and optional 'messages'
-        target_lang: target language code
-
-    Returns:
-        dict with translated fields and metadata
-    """
+    """Translate ticket subject, description, and messages."""
     result = {
         "original_language": None,
         "target_language": target_lang,
         "translations": {},
     }
 
-    # Translate subject
     if "subject" in ticket_data:
         subject_result = translate_text(ticket_data["subject"], target_lang=target_lang)
         result["translations"]["subject"] = subject_result
         if not result["original_language"]:
             result["original_language"] = subject_result["source_lang"]
 
-    # Translate description
     if "description" in ticket_data:
         desc_result = translate_text(ticket_data["description"], target_lang=target_lang)
         result["translations"]["description"] = desc_result
         if not result["original_language"]:
-            result["original_language"] = desc_result["source_lang"]
+            result["original_language"] = description_result["source_lang"]
 
-    # Translate messages
     if "messages" in ticket_data:
         translated_messages = []
         for msg in ticket_data["messages"]:
