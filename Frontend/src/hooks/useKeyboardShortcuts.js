@@ -39,12 +39,12 @@ const DEFAULT_SHORTCUTS = {
  * Human-readable shortcuts legend for UI display.
  */
 export const SHORTCUTS_LEGEND = [
-    { key: 'G + D', label: 'Dashboard' },
-    { key: 'G + T', label: 'My Tickets' },
-    { key: 'G + N', label: 'Create Ticket' },
-    { key: 'G + P', label: 'Profile' },
-    { key: 'Ctrl + K', label: 'Search' },
-    { key: 'Esc', label: 'Close Modal' },
+    { combo: 'G + D', description: 'Dashboard' },
+    { combo: 'G + T', description: 'My Tickets' },
+    { combo: 'G + N', description: 'Create Ticket' },
+    { combo: 'G + P', description: 'Profile' },
+    { combo: 'Ctrl + K', description: 'Search' },
+    { combo: 'Esc', description: 'Close Modal' },
 ];
 
 /**
@@ -188,6 +188,8 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
     return {
         shortcuts,
         pendingKey,
+        showHelp,
+        setShowHelp,
     };
 };
 
