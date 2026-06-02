@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 /**
@@ -34,9 +34,27 @@ const SHORTCUT_LABELS = {
     '6': 'Settings',
 };
 
+/**
+ * Check if the active element is an editable field where shortcuts should NOT fire.
+ * Covers: input, textarea, select, and contenteditable elements.
+ */
+const isEditableElement = (el) => {
+    if (!el) return false;
+    const tag = el.tagName?.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+    if (el.isContentEditable || el.getAttribute?.('contenteditable') === 'true') return true;
+    return false;
+};
+
 const useKeyboardShortcuts = () => {
     const navigate = useNavigate();
     const [helpOpen, setHelpOpen] = useState(false);
+    const helpOpenRef = useRef(helpOpen);
+
+    // Keep ref in sync so the stable event handler always reads the latest value
+    useEffect(() => {
+        helpOpenRef.current = helpOpen;
+    }, [helpOpen]);
 
     const toggleHelp = useCallback(() => setHelpOpen(prev => !prev), []);
     const closeHelp = useCallback(() => setHelpOpen(false), []);
@@ -48,9 +66,8 @@ const useKeyboardShortcuts = () => {
             // Navigation: Ctrl/Cmd + 1-6
             if (mod && ROUTES[e.key]) {
                 e.preventDefault();
-                // Don't navigate if inside input/textarea
-                const tag = document.activeElement?.tagName?.toLowerCase();
-                if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+                // Don't navigate if inside input/textarea/select/contenteditable
+                if (isEditableElement(document.activeElement)) return;
                 navigate(ROUTES[e.key]);
                 return;
             }
@@ -65,17 +82,17 @@ const useKeyboardShortcuts = () => {
                 return;
             }
 
-            // Close help on Escape
-            if (e.key === 'Escape' && helpOpen) {
+            // Close help on Escape (read latest helpOpen from ref to avoid stale closure)
+            if (e.key === 'Escape' && helpOpenRef.current) {
                 closeHelp();
             }
         };
 
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-    }, [navigate, toggleHelp, closeHelp, helpOpen]);
+    }, [navigate, toggleHelp, closeHelp]);
 
     return { helpOpen, closeHelp, toggleHelp, shortcuts: SHORTCUT_LABELS };
-};
+}
 
 export default useKeyboardShortcuts;
