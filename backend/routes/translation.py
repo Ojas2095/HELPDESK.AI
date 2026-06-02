@@ -11,10 +11,10 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional
 
 from backend.services.translation_service import (
-    translate_text,
-    translate_ticket,
     detect_language,
     get_supported_languages,
+    translate_text,
+    translate_ticket,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class TranslateTicketRequest(BaseModel):
 
 
 class DetectLanguageRequest(BaseModel):
-    text: str = Field(..., min_length=1)
+    text: str = Field(..., min_length=1, max_length=5000)
 
 
 # --- Response Models ---
@@ -154,7 +154,7 @@ async def translate_ticket_endpoint(request: TranslateTicketRequest):
         len(request.messages) if request.messages else 0,
     )
     try:
-        ticket_data = {}
+        ticket_data: dict[str, Any] = {}
         if request.subject:
             ticket_data["subject"] = request.subject
         if request.description:
