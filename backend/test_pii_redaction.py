@@ -48,7 +48,7 @@ class TestRedactAPIKeys:
         assert "sk-abc" not in result
 
     def test_github_pat(self):
-        result = redact_pii("Token: ghp_abcdefghijklmnopqrstuvwxyz1234567890")
+        result = redact_pii("Token: ghp_FAKEFAKEFAKEFAKEFAKEFAKEFAKEfake")
         assert "ghp_" not in result
 
     def test_aws_key(self):
@@ -60,7 +60,7 @@ class TestRedactAPIKeys:
         assert "sbp_" not in result
 
     def test_jwt_token(self):
-        result = redact_pii("JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U")
+        result = redact_pii("JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmYWtlIjoidGVzdCJ9.fakesignature")
         assert "eyJhbGci" not in result
 
 
