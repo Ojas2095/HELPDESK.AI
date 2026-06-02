@@ -48,8 +48,14 @@ export default defineConfig({
           vendor: ['react', 'react-dom', 'react-router-dom'],
           ui: ['framer-motion', '@supabase/supabase-js'],
         },
+        // Content-hash filenames for long-term caching
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: 'assets/[ext]/[name]-[hash].[ext]',
       },
     },
+    // Warn on chunks > 500KB
+    chunkSizeWarningLimit: 500,
   },
 
   server: {
