@@ -119,6 +119,7 @@ from backend.services.spam_service import SpamService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
 from backend.sla_predictor import get_sla_estimate
+from backend.sanitization import get_security_headers
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 
 
@@ -1795,6 +1796,7 @@ async def log_correction(raw_request: Request, user: dict = Depends(get_current_
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 MASTER_TICKET_ROLES = {"master_admin", "super_admin", "superadmin", "owner"}
+TENANT_ADMIN_ROLES = {"admin", "company_admin", "super_admin"}
 
 
 def _get_auth_user_id(user: dict) -> str:
@@ -1818,9 +1820,30 @@ def _get_authenticated_profile(user: dict) -> dict:
     return res.data
 
 
+def _profile_role(profile: dict) -> str:
+    return str(profile.get("role") or "").lower()
+
+
 def _is_master_ticket_reader(profile: dict) -> bool:
-    role = str(profile.get("role") or "").lower()
-    return role in MASTER_TICKET_ROLES
+    return _profile_role(profile) in MASTER_TICKET_ROLES
+
+
+def _is_tenant_admin(profile: dict) -> bool:
+    return _is_master_ticket_reader(profile) or _profile_role(profile) in TENANT_ADMIN_ROLES
+
+
+def _require_tenant_admin_profile(user: dict) -> dict:
+    profile = _get_authenticated_profile(user)
+    if not _is_tenant_admin(profile):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return profile
+
+
+def _require_platform_admin_profile(user: dict) -> dict:
+    profile = _get_authenticated_profile(user)
+    if not _is_master_ticket_reader(profile):
+        raise HTTPException(status_code=403, detail="Platform admin access required")
+    return profile
 
 
 def _ticket_company_scope(profile: dict, requested_company_id: str | None = None) -> str | None:
@@ -3096,15 +3119,55 @@ class SLAStatsResponse(BaseModel):
     by_priority: dict = {}
 
 
+def _aggregate_sla_stats(tickets: list[dict]) -> dict:
+    total = len(tickets)
+    active_tickets = [
+        ticket for ticket in tickets
+        if not any(status_key in (ticket.get("status") or "").lower() for status_key in ["resolv", "closed"])
+    ]
+
+    counts = {
+        "total": total,
+        "active": len(active_tickets),
+        "breached": sum(1 for ticket in tickets if ticket.get("sla_status") == "breached"),
+        "warning": sum(1 for ticket in tickets if ticket.get("sla_status") == "warning"),
+        "met": sum(1 for ticket in tickets if ticket.get("sla_status") == "met"),
+        "by_priority": {},
+        "breach_rate": 0,
+    }
+
+    if total > 0:
+        counts["breach_rate"] = round(counts["breached"] / total * 100, 1)
+
+    for priority in ["critical", "high", "medium", "low"]:
+        priority_tickets = [ticket for ticket in active_tickets if (ticket.get("priority") or "").lower() == priority]
+        counts["by_priority"][priority] = {
+            "total": len(priority_tickets),
+            "breached": sum(1 for ticket in priority_tickets if ticket.get("sla_status") == "breached"),
+            "warning": sum(1 for ticket in priority_tickets if ticket.get("sla_status") == "warning"),
+        }
+
+    return counts
+
+
 @app.get("/sla/stats", response_model=SLAStatsResponse)
-async def sla_stats(current_user: dict = Depends(get_current_user)):
-    """Get aggregated SLA dashboard statistics across all tickets."""
+async def sla_stats(company_id: str | None = None, current_user: dict = Depends(get_current_user)):
+    """Get aggregated SLA dashboard statistics for the caller's tenant."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
-    stats = await sla_engine.get_dashboard_stats()
-    if "error" in stats:
-        raise HTTPException(status_code=500, detail=stats["error"])
-    return stats
+
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
+    try:
+        query = supabase.table("tickets").select("id, company_id, priority, sla_status, status, escalation_level")
+        if company_scope:
+            query = query.eq("company_id", company_scope)
+        res = query.execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return _aggregate_sla_stats(res.data or [])
 
 
 class SLATicketInfo(BaseModel):
@@ -3178,20 +3241,40 @@ class EscalationLogEntry(BaseModel):
 
 
 @app.get("/sla/escalations")
-async def sla_escalations(limit: int = 50, offset: int = 0, current_user: dict = Depends(get_current_user)):
+async def sla_escalations(
+    limit: int = 50,
+    offset: int = 0,
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
     """Fetch escalation log history."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
 
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
     try:
-        res = (
+        logs = (
             supabase.table("escalation_logs")
             .select("*")
             .order("triggered_at", desc=True)
-            .range(offset, offset + limit - 1)
             .execute()
-        )
-        return {"escalations": res.data or [], "total": len(res.data or [])}
+        ).data or []
+
+        if company_scope:
+            ticket_rows = (
+                supabase.table("tickets")
+                .select("id")
+                .eq("company_id", company_scope)
+                .execute()
+            ).data or []
+            allowed_ticket_ids = {str(ticket.get("id")) for ticket in ticket_rows if ticket.get("id") is not None}
+            logs = [log for log in logs if str(log.get("ticket_id")) in allowed_ticket_ids]
+
+        total = len(logs)
+        page = logs[offset:offset + limit]
+        return {"escalations": page, "total": total}
     except Exception as e:
         # Table might not exist yet
         print(f"[SLA] Escalation logs query failed: {e}")
@@ -3211,6 +3294,8 @@ class SLAPolicyInfo(BaseModel):
 @app.get("/sla/policies")
 async def sla_policies(current_user: dict = Depends(get_current_user)):
     """Get configured SLA policies."""
+    _require_tenant_admin_profile(current_user)
+
     if not supabase:
         # Return defaults from code
         policies = []
@@ -3239,7 +3324,8 @@ async def trigger_sla_check(current_user: dict = Depends(get_current_user)):
     """Manually trigger an SLA evaluation cycle (admin)."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
-    
+
+    _require_platform_admin_profile(current_user)
     asyncio.create_task(sla_engine.check_all_active_tickets())
     return {"status": "triggered", "message": "SLA check cycle started in background"}
 
@@ -3280,6 +3366,7 @@ async def check_duplicate_endpoint(
 @limiter.limit("2/minute")
 async def reindex_embeddings(current_user: dict = Depends(get_current_user)):
     """Re-generate vector embeddings for all tickets."""
+    _require_platform_admin_profile(current_user)
     result = await semantic_dupe_service.reindex_all()
     return result
 
@@ -3354,18 +3441,45 @@ async def convert_ticket_to_kb(ticket_id: str, current_user: dict = Depends(get_
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _format_system_settings_payload(rows: list[dict]) -> dict:
+    if not rows:
+        return {}
+
+    first_row = rows[0]
+    if "key" in first_row:
+        return {
+            str(row["key"]): row.get("value")
+            for row in rows
+            if row.get("key")
+        }
+
+    hidden_fields = {"id", "company_id", "created_at", "updated_at"}
+    return {
+        key: value
+        for key, value in first_row.items()
+        if key not in hidden_fields
+    }
+
+
 @app.get("/system/settings")
-async def get_system_settings_endpoint(current_user: dict = Depends(get_current_user)):
-    """Fetch all system settings."""
+async def get_system_settings_endpoint(
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """Fetch the current tenant's system settings."""
     _logger = logging.getLogger(__name__)
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
+
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
     try:
-        res = supabase.table("system_settings").select("*").execute()
-        settings = {}
-        for row in res.data or []:
-            settings[row["key"]] = row["value"]
-        return settings
+        query = supabase.table("system_settings").select("*")
+        if company_scope:
+            query = query.eq("company_id", company_scope)
+        res = query.execute()
+        return _format_system_settings_payload(res.data or [])
     except Exception as e:
         _logger.warning(f"[SETTINGS] Query failed: {e}")
         return {}
@@ -3373,20 +3487,29 @@ async def get_system_settings_endpoint(current_user: dict = Depends(get_current_
 
 @app.patch("/system/settings")
 async def update_system_settings(body: dict, current_user: dict = Depends(get_current_user)):
-    """Update a specific system setting."""
+    """Update system settings for the current tenant."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
-    key = body.get("key")
-    value = body.get("value")
-    if not key or value is None:
-        raise HTTPException(status_code=400, detail="key and value required")
+
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, body.get("company_id"))
+
+    update_fields = {
+        key: value
+        for key, value in body.items()
+        if key not in {"company_id", "id", "created_at", "updated_at"}
+    }
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No settings provided")
+
+    payload = {
+        "company_id": company_scope,
+        **update_fields,
+        "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
+    }
     try:
-        supabase.table("system_settings").upsert({
-            "key": key,
-            "value": value,
-            "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
-        }).execute()
-        return {"status": "updated", "key": key}
+        supabase.table("system_settings").upsert(payload).execute()
+        return {"status": "updated", "company_id": company_scope}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
