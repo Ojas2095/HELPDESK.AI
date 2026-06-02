@@ -98,6 +98,8 @@ except Exception as e:
 
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "https://helpdeskaiv1.vercel.app").rstrip("/")
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from backend.auth.tenant_middleware import security_manager
@@ -1308,7 +1310,7 @@ async def root():
                 </a>
                 
                 <!-- Frontend Button -->
-                <a href="https://helpdeskaiv1.vercel.app/" target="_blank" class="btn-hover block w-full bg-slate-800/80 border border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/80 rounded-xl p-5 group">
+                <a href="{FRONTEND_BASE_URL}/" target="_blank" class="btn-hover block w-full bg-slate-800/80 border border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/80 rounded-xl p-5 group">
                     <h3 class="font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">Client Web Portal</h3>
                     <p class="text-slate-400 text-sm text-center md:text-left">Access the React/Vite dashboard</p>
                 </a>
@@ -1884,12 +1886,12 @@ def trigger_webhook_for_new_ticket(company_id: str, ticket: dict) -> None:
             assigned_team = ticket.get("assigned_team") or "Unassigned"
             
             payload = {
-                "text": f"🚨 *New {priority.upper()} Ticket Alert*: {ticket_ref} - {subject}\nPriority: {priority.upper()}\nLink: https://helpdeskaiv1.vercel.app/tickets/{ticket_id}",
+                "text": f"🚨 *New {priority.upper()} Ticket Alert*: {ticket_ref} - {subject}\nPriority: {priority.upper()}\nLink: {FRONTEND_BASE_URL}/tickets/{ticket_id}",
                 "attachments": [
                     {
                         "color": "#FF0000" if priority == "critical" else "#FFA500",
                         "title": f"New Ticket: {ticket_ref}",
-                        "title_link": f"https://helpdeskaiv1.vercel.app/tickets/{ticket_id}",
+                        "title_link": f"{FRONTEND_BASE_URL}/tickets/{ticket_id}",
                         "fields": [
                             {"title": "Subject", "value": subject, "short": True},
                             {"title": "Priority", "value": priority.upper(), "short": True},

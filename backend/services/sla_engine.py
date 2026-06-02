@@ -19,6 +19,8 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "https://helpdeskaiv1.vercel.app").rstrip("/")
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -369,7 +371,7 @@ class SLAEngine:
             "status": result["sla_status"],
             "escalation_level": result["escalation_level"],
             "remaining_seconds": result["remaining_seconds"],
-            "ticket_url": f"https://helpdeskaiv1.vercel.app/admin/ticket/{ticket['id']}",
+            "ticket_url": f"{FRONTEND_BASE_URL}/admin/ticket/{ticket['id']}",
             "assigned_team": ticket.get("assigned_team", "Unassigned"),
             "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
         }
