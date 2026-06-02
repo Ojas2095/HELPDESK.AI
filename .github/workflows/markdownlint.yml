@@ -8,3 +8,12 @@ jobs:
       - uses: DavidAnson/markdownlint-cli2-action@v16
         with:
           globs: '**/*.md'
+          ignores: |
+            .tmp-ci-venv/**/*.md
+            node_modules/**/*.md
+            venv/**/*.md
+            .venv/**/*.md
+            dist/**/*.md
+            build/**/*.md
+            scratch/**/*.md
+            Summary/**/*.md

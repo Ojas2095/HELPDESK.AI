@@ -17,6 +17,7 @@ supabase migration up
 ```
 
 This creates:
+
 - `system_settings` table (stores per-company system configuration and notification preferences)
 - `closed_at` and `auto_closed` columns on tickets table
 - Performance indexes
@@ -29,6 +30,7 @@ python scripts/seed_company_settings.py
 ```
 
 Creates default settings for all existing companies:
+
 - Auto-close enabled, 7-day inactivity threshold
 - `email_notifications` enabled
 - `admin_alerts` enabled
@@ -54,6 +56,7 @@ NOTIFICATION_ROUTING_LOG_LEVEL=info
 ### 5. Restart Backend
 
 Backend will automatically:
+
 - Load auto-close service
 - Register cron job on startup
 - Initialize notification routing middleware
@@ -62,7 +65,7 @@ Backend will automatically:
 
 ### Auto-Close Flow
 
-```
+```bash
 Every Day at 2 AM UTC
     ↓
 Query all tickets with status="resolved"
@@ -77,7 +80,7 @@ Log results: "Closed 5, Skipped 10, Errors 0"
 
 ### Notification Routing Flow
 
-```
+```bash
 Before sending notification (digest, alert, push):
         ↓
 Check system_settings:
@@ -142,14 +145,14 @@ routing.invalidate_cache(company_id)  # Clear cached settings
 
 Backend logs will show:
 
-```
+```text
 [AutoCloseService] ... - Starting auto-close job...
 [AutoCloseService] ... - Found 42 resolved tickets
 [AutoCloseService] ... - Closed ticket abc-123 for company xyz
 [AutoCloseService] ... - Auto-close job completed. Closed: 5, Skipped: 10, Errors: 0
 ```
 
-```
+```text
 [NotificationRouting] ... - Notification sent | company=xyz | type=daily_digest
 [NotificationRouting] ... - Notification skipped | company=abc | reason=admin_alerts_disabled
 ```
@@ -200,6 +203,7 @@ Backend logs will show:
 ## Support
 
 For questions or issues:
+
 1. Check logs for error messages
 2. Review INTEGRATION_GUIDE_ISSUE_41.md troubleshooting section
 3. Test manually with provided examples
