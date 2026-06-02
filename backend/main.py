@@ -94,9 +94,11 @@ class TicketRequest(BaseModel):
     @field_validator('image_base64')
     @classmethod
     def limit_image_base64_size(cls, value: str) -> str:
-        max_chars = 15_000_000  # ~11 MB binary after base64 decode
+        max_chars = 15_000_000
         if value and len(value) > max_chars:
-            raise ValueError(f"image_base64 exceeds maximum allowed size ({max_chars} chars)")
+            raise ValueError(
+                f"image_base64 exceeds maximum allowed size ({max_chars} chars)"
+            )
         return value
 
 class TicketSaveRequest(BaseModel):
