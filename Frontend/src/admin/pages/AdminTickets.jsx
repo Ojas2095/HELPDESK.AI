@@ -139,6 +139,10 @@ const AdminTickets = () => {
             if (categoryFilter !== 'All') query = query.eq('category', categoryFilter);
             if (priorityFilter !== 'All') query = query.eq('priority', priorityFilter.toLowerCase());
             if (teamFilter !== 'All') query = query.eq('assigned_team', teamFilter);
+            if (searchQuery) {
+                const escaped = searchQuery.replace(/%/g, '\\%').replace(/_/g, '\\_');
+                query = query.or(`subject.ilike.%${escaped}%,description.ilike.%${escaped}%,summary.ilike.%${escaped}%`);
+            }
 
             const start = pageNum * PAGE_SIZE;
             const end = start + PAGE_SIZE - 1;
@@ -178,7 +182,7 @@ const AdminTickets = () => {
 
     useEffect(() => {
         fetchInitialData();
-    }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
+    }, [statusFilter, categoryFilter, priorityFilter, teamFilter, searchQuery]);
 
     useEffect(() => {
         const channelSla = supabase
@@ -300,16 +304,7 @@ const AdminTickets = () => {
 
     const filteredTickets = useMemo(() => {
         let result = tickets;
-        if (searchQuery) {
-            const q = searchQuery.toLowerCase();
-            result = result.filter(t =>
-                String(t.id).includes(q) ||
-                (t.subject || '').toLowerCase().includes(q) ||
-                (t.summary || '').toLowerCase().includes(q) ||
-                (t.description || '').toLowerCase().includes(q) ||
-                (t.profiles?.full_name || '').toLowerCase().includes(q)
-            );
-        }
+        // Search is now server-side via Supabase .or() filter in fetchTickets
         if (languageFilter !== 'All') {
             result = result.filter(t => {
                 const translated = t.detected_language && t.detected_language.toLowerCase() !== 'en';
@@ -326,7 +321,7 @@ const AdminTickets = () => {
             result = result.filter(t => (t.tags || []).length > 0 && tagFilters.every(tag => (t.tags || []).includes(tag)));
         }
         return result;
-    }, [tickets, searchQuery, languageFilter, slaAtRisk, tagFilters]);
+    }, [tickets, languageFilter, slaAtRisk, tagFilters]);
 
     const getPriorityStyle = (priority) => {
         const p = String(priority || '').toLowerCase();
