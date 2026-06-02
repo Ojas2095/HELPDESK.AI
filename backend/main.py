@@ -47,6 +47,17 @@ import redis
 from pathlib import Path
 from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
+import ipaddress
+
+# Prometheus instrumentation (optional - added when package is available)
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY
+except Exception:
+    Instrumentator = None
+    generate_latest = None
+    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+    REGISTRY = None
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -1211,35 +1222,83 @@ async def custom_swagger_ui_html(request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Prometheus instrumentation and /metrics endpoint (secure)
+# ---------------------------------------------------------------------------
+if Instrumentator:
+    try:
+        instrumentator = Instrumentator()
+        instrumentator.instrument(app)
+    except Exception as e:
+        instrumentator = None
+        print(f"[METRICS] Instrumentator init failed: {e}")
+else:
+    instrumentator = None
 
-# Prometheus Metrics
-from prometheus_fastapi_instrumentator import Instrumentator, metrics
-from prometheus_client import CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST
 
-# Initialize Prometheus instrumentator
-instrumentator = Instrumentator(
-    should_group_status_codes=True,
-    should_ignore_untemplated=True,
-    should_instrument_requests_inprogress=True,
-    excluded_handlers=["/health", "/ready", "/metrics"],
-    inprogress_name="helpdesk_requests_in_progress",
-    inprogress_labels=True,
-)
+@app.get("/metrics")
+async def metrics_endpoint(request: Request):
+    """Expose Prometheus metrics with basic IP / token-based protections.
 
-# Add custom metrics
-try:
-    instrumentator.add(metrics.latency(buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)))
-    instrumentator.add(metrics.request_size(buckets=(100, 1000, 10000, 100000, 1000000)))
-    instrumentator.add(metrics.response_size(buckets=(100, 1000, 10000, 100000, 1000000)))
-except TypeError:
-    # Newer prometheus-fastapi-instrumentator versions don't support custom buckets
-    instrumentator.add(metrics.latency())
-    instrumentator.add(metrics.request_size())
-    instrumentator.add(metrics.response_size())
+    Controls:
+    - `METRICS_TOKEN` env var: if set, the client must provide that token either
+      via the `token` query param or `X-Metrics-Token` header.
+    - `METRICS_ALLOWED_IPS` env var: comma-separated CIDR or IP list allowed.
+    - If neither is set, only localhost (127.0.0.1 / ::1) is allowed.
+    """
+    # Token-based auth (preferred)
+    metrics_token = os.environ.get("METRICS_TOKEN")
+    allowed_ips = os.environ.get("METRICS_ALLOWED_IPS", "")
+    client_ip = None
+    try:
+        client_ip = request.client.host if request.client else None
+    except Exception:
+        client_ip = None
 
-# Instrument the app
-instrumentator.instrument(app).expose(app, endpoint="/prometheus-metrics", include_in_schema=False)
+    # Check token first (header or query param)
+    if metrics_token:
+        token = None
+        # header may be presented in different casing; prefer X-Metrics-Token
+        token = request.headers.get("X-Metrics-Token") or request.query_params.get("token")
+        if token != metrics_token:
+            raise HTTPException(status_code=403, detail="Forbidden: invalid metrics token")
+    elif allowed_ips:
+        # Validate client IP against allowed CIDRs
+        try:
+            allowed = [s.strip() for s in allowed_ips.split(",") if s.strip()]
+            ok = False
+            if client_ip:
+                for entry in allowed:
+                    try:
+                        net = ipaddress.ip_network(entry, strict=False)
+                        if ipaddress.ip_address(client_ip) in net:
+                            ok = True
+                            break
+                    except Exception:
+                        # Treat as single IP
+                        if client_ip == entry:
+                            ok = True
+                            break
+            if not ok:
+                raise HTTPException(status_code=403, detail="Forbidden: IP not allowed")
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[METRICS] allowed_ips parse error: {e}")
+            raise HTTPException(status_code=500, detail="Metrics configuration error")
+    else:
+        # Default: local-only
+        if client_ip not in ("127.0.0.1", "::1"):
+            raise HTTPException(status_code=403, detail="Forbidden: metrics restricted to localhost")
 
+    if REGISTRY is None or generate_latest is None:
+        return JSONResponse(status_code=503, content={"status": "metrics_unavailable"})
+
+    data = generate_latest(REGISTRY)
+    return StreamingResponse(content=data, media_type=CONTENT_TYPE_LATEST)
+
+
+
+# ---------------------------------------------------------------------------
 # Root & Health check
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse, tags=["System"], summary="API landing page")
