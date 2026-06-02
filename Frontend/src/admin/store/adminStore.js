@@ -11,7 +11,14 @@ const useAdminStore = create(
                 enableAutoResolve: false,
                 autoCloseDays: 7,
                 emailNotifications: false,
-                adminAlerts: false
+                adminAlerts: false,
+                digestEnabled: false,
+                digestAdminEmail: "",
+                enableEncryption: false,
+                enablePiiRedaction: false,
+                backupEncryptionEnabled: false,
+                piiRedactionEnabled: false,
+                redactIpAddresses: false,
             },
 
       setUsers: (users) => set({ users }),

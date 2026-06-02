@@ -29,3 +29,17 @@ CLASSIFIER_TOKENS = Counter(
     "Total number of input tokens processed by the classifier",
     labelnames=("model",),
 )
+
+# Total predictions overall (success/failure)
+MODEL_PREDICTIONS_TOTAL = Counter(
+    "model_predictions_total",
+    "Total number of model predictions",
+    labelnames=("status",),
+)
+
+# Overall prediction latency (seconds)
+MODEL_PREDICTION_LATENCY = Histogram(
+    "model_prediction_latency_seconds",
+    "Overall latency of model prediction function",
+)
+

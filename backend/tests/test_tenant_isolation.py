@@ -21,39 +21,104 @@ class MockResult:
 class MockSupabaseTable:
     def __init__(self, name):
         self.name = name
+        self._is_single = False
+        self.filters = {}
+        self._insert_data = None
 
     def select(self, *args, **kwargs):
         return self
 
     def eq(self, field, value):
+        self.filters[field] = value
         return self
 
     def order(self, *args, **kwargs):
         return self
 
+    def limit(self, *args, **kwargs):
+        return self
+
+    def offset(self, *args, **kwargs):
+        return self
+
     def single(self):
+        self._is_single = True
         return self
 
     def execute(self):
+        if self._insert_data is not None:
+            data = self._insert_data
+            res_data = [data] if isinstance(data, dict) else data
+            for item in res_data:
+                if "id" not in item:
+                    item["id"] = "new-ticket-id"
+            return MockResult(res_data)
+
         if self.name == "tickets":
-            return MockResult([
+            ticket_id = self.filters.get("id")
+            if ticket_id:
+                if ticket_id.startswith("mock-"):
+                    parts = ticket_id.split("-")
+                    resource_company = parts[2] if len(parts) > 2 else "company-mock-default"
+                else:
+                    resource_company = "companyA"
+                ticket_data = {"id": ticket_id, "company_id": resource_company, "subject": "Ticket"}
+                if self._is_single:
+                    return MockResult(ticket_data)
+                return MockResult([ticket_data])
+
+            data = [
                 {"id": "ticket-123", "company_id": "companyA", "subject": "Ticket A"},
                 {"id": "ticket-456", "company_id": "companyA", "subject": "Ticket A2"}
-            ])
+            ]
+            comp_id = self.filters.get("company_id")
+            if comp_id:
+                data = [t for t in data if t.get("company_id") == comp_id]
+            if self._is_single:
+                return MockResult(data[0] if data else None)
+            return MockResult(data)
+
         elif self.name == "profiles":
-            return MockResult([
-                {"id": "user123", "company_id": "companyA", "role": "user"}
-            ])
+            user_id = self.filters.get("id")
+            if user_id:
+                company = "companyA"
+                role = "user"
+                if user_id.startswith("mock-user-") or user_id.startswith("mock-token-"):
+                    parts = user_id.split("-")
+                    for p in parts:
+                        if p in ["companyA", "companyB", "master"]:
+                            company = p
+                        if p in ["user", "admin", "master_admin"]:
+                            role = p
+                    if company == "master":
+                        company = None
+                        role = "master_admin"
+                elif user_id == "user123":
+                    company = "companyA"
+                    role = "user"
+                elif user_id == "user456":
+                    company = "companyB"
+                    role = "user"
+                elif user_id == "admin123":
+                    company = "companyA"
+                    role = "admin"
+                elif "admin" in user_id:
+                    company = "companyA"
+                    role = "admin"
+                profile_data = {"id": user_id, "company_id": company, "role": role}
+                if self._is_single:
+                    return MockResult(profile_data)
+                return MockResult([profile_data])
+
+            data = {"id": "user123", "company_id": "companyA", "role": "user"}
+            if self._is_single:
+                return MockResult(data)
+            return MockResult([data])
         return MockResult([])
 
     def insert(self, data):
-        # Allow returning inserted data structure for test
-        res_data = [data] if isinstance(data, dict) else data
-        # Ensure ID exists on returned record
-        for item in res_data:
-            if "id" not in item:
-                item["id"] = "new-ticket-id"
-        return MockResult(res_data)
+        self._insert_data = data
+        return self
 
 class MockSupabaseClient:
     def __init__(self):
@@ -74,17 +139,17 @@ mock_supabase_lib = MagicMock()
 mock_supabase_lib.create_client.return_value = mock_supabase
 
 # Mock out libraries to avoid database connection or massive package compilation issues
-sys.modules["postgrest"] = MagicMock()
-sys.modules["postgrest.exceptions"] = postgrest_exceptions
-sys.modules["postgrest._sync.request_builder"] = MagicMock()
-sys.modules["supabase"] = mock_supabase_lib
+if "postgrest" not in sys.modules: sys.modules["postgrest"] = MagicMock()
+if "postgrest.exceptions" not in sys.modules: sys.modules["postgrest.exceptions"] = postgrest_exceptions
+if "postgrest._sync.request_builder" not in sys.modules: sys.modules["postgrest._sync.request_builder"] = MagicMock()
+if "supabase" not in sys.modules: sys.modules["supabase"] = mock_supabase_lib
 
 for module_name in [
     "torch", "torch.nn", "torch.nn.functional", "torch.optim", "transformers", "sentence_transformers", 
     "easyocr", "datasets", "sklearn", "sklearn.metrics", "pandas", "openpyxl",
     "prometheus_client"
 ]:
-    sys.modules[module_name] = MagicMock()
+    if module_name not in sys.modules: sys.modules[module_name] = MagicMock()
 
 import pytest
 from fastapi.testclient import TestClient
@@ -93,6 +158,38 @@ from backend.main import app, classifier_service, ner_service
 # Mock classifier and ner services as loaded for ready checks
 classifier_service._loaded = True
 ner_service._loaded = True
+
+# Dependency Override for get_current_user to support mock tokens
+from backend.auth_cookie import get_current_user
+from fastapi import Request, HTTPException
+
+async def mock_get_current_user(request: Request) -> dict:
+    from backend.auth_cookie import extract_token
+    token = extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if token.startswith("mock-token-"):
+        parts = token.split("-")
+        company_id = parts[2] if len(parts) > 2 else "company-mock-default"
+        role = parts[3] if len(parts) > 3 else "user"
+        user_id = parts[4] if len(parts) > 4 else f"user-{company_id}-{role}"
+        if company_id == "master":
+            company_id = None
+            role = "master_admin"
+        return {"id": user_id, "company_id": company_id, "role": role}
+    raise HTTPException(status_code=401, detail="Invalid token")
+
+app.dependency_overrides[get_current_user] = mock_get_current_user
+
+import backend.main as main
+
+@pytest.fixture(autouse=True)
+def force_mock_supabase():
+    original = main.supabase
+    main.supabase = mock_supabase
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    yield
+    main.supabase = original
 
 client = TestClient(app)
 

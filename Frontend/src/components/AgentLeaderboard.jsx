@@ -95,7 +95,7 @@ export default function AgentLeaderboard({ companyId, onSelectAgent }) {
 
               <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {agent.profiles?.avatar_url ? (
-                  <img src={agent.profiles.avatar_url} className="w-8 h-8 rounded-full object-cover" alt={name} />
+                  <img src={agent.profiles.avatar_url} className="w-8 h-8 rounded-full object-cover" alt={name} loading="lazy" />
                 ) : (
                   <span className="text-xs font-bold text-indigo-600">{name[0]?.toUpperCase() || "A"}</span>
                 )}
