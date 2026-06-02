@@ -1098,46 +1098,31 @@ async def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -
 
 app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
-# ---------------------------------------------------------------------------
-# CORS — locked to production + local dev only
-allowed_origins = os.getenv("CORS_ORIGINS", "https://helpdeskaiv1.vercel.app,http://localhost:5173,http://localhost:3000").split(",")
+# ── Security Headers Middleware (Helmet.js equivalent) ────────────────────────
+from security_middleware import SecurityHeadersMiddleware, get_allowed_origins
+app.add_middleware(SecurityHeadersMiddleware)
+
+# ── CORS — strictly from ALLOWED_ORIGINS env var, never wildcard ──────────────
+_allowed_origins = get_allowed_origins()
+print(f"[startup] CORS allowed origins: {_allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "https://helpdeskaiv1.vercel.app,http://localhost:5173,http://localhost:3000").split(","),
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-API-Key",
+        "X-CSRF-Token",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+    ],
+    expose_headers=["X-Request-ID"],
+    max_age=600,
 )
-
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss: http://localhost:7860 ws://localhost:7860 http://127.0.0.1:7860 ws://127.0.0.1:7860;"
-    )
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
-    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss: http://localhost:7860 ws://localhost:7860 http://127.0.0.1:7860 ws://127.0.0.1:7860;"
-    )
-    return response
 
 
 app.include_router(auth_cookie_router)
