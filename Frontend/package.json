@@ -9,6 +9,7 @@
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "check:ai-secrets": "node ../scripts/check-frontend-secrets.mjs",
     "preview": "vite preview",
+    "test": "node --test ./src/utils/dateUtils.test.js",
     "prepare": "husky install",
     "format": "prettier --write .",
     "test": "jest",
