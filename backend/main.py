@@ -581,12 +581,14 @@ class TicketSaveRequest(BaseModel):
 
 @app.get("/health")
 async def health_check():
+    """Return a lightweight status payload showing whether core models are loaded."""
     return {"status": "ok"}
 
 # NLP classification endpoint
 @app.post("/analyze")
 @limiter.limit(ML_HEAVY_LIMIT)
 async def analyze_ticket(request: Request, ticket: TicketRequest):
+    """Legacy NLP classification endpoint. Use /ai/analyze_ticket for full pipeline."""
     # ... existing implementation unchanged ...
     pass
 
@@ -594,6 +596,7 @@ async def analyze_ticket(request: Request, ticket: TicketRequest):
 @app.post("/analyze-ocr")
 @limiter.limit(ML_HEAVY_LIMIT)
 async def analyze_ocr(request: Request, ticket: TicketRequest):
+    """Legacy OCR analysis endpoint. Extracts text from images and classifies alongside ticket text."""
     # ... existing implementation unchanged ...
     pass
 
@@ -601,6 +604,7 @@ async def analyze_ocr(request: Request, ticket: TicketRequest):
 @app.post("/similar")
 @limiter.limit(ML_LIGHT_LIMIT)
 async def find_similar(request: Request, ticket: TicketRequest):
+    """Legacy similar ticket detection. Use /ai/check_duplicate for the current implementation."""
     # ... existing implementation unchanged ...
     pass
 
@@ -1011,23 +1015,43 @@ The `/ai/analyze_ticket` endpoint is capped at **10 requests / minute / IP**.
 TAGS_METADATA = [
     {
         "name": "System",
-        "description": "Service health, readiness, and landing page.",
+        "description": "Service health, readiness, landing page, and monitoring endpoints.",
     },
     {
         "name": "AI Analysis",
-        "description": "Core NLP endpoints: classification, troubleshooting, bug analysis, and streaming analysis.",
+        "description": "Core NLP endpoints: classification, troubleshooting, bug analysis, duplicate detection, and streaming analysis.",
     },
     {
         "name": "Tickets",
-        "description": "CRUD operations over support tickets (Supabase + in-memory).",
+        "description": "CRUD operations over support tickets (Supabase + in-memory). Includes search, bulk operations, and ratings.",
     },
     {
         "name": "Admin",
-        "description": "Internal endpoints for correction logging and model feedback loops.",
+        "description": "Internal endpoints for correction logging, CSAT reporting, knowledge gap analysis, and security auditing.",
     },
     {
         "name": "Docs",
         "description": "Themed API documentation (Swagger UI and ReDoc).",
+    },
+    {
+        "name": "SLA Management",
+        "description": "SLA tracking, breach detection, escalation management, and policy configuration.",
+    },
+    {
+        "name": "Translation",
+        "description": "Multi-language translation endpoints for tickets and text.",
+    },
+    {
+        "name": "Estimator",
+        "description": "Response time and SLA estimation endpoints.",
+    },
+    {
+        "name": "Voice",
+        "description": "Voice-to-ticket endpoints using speech-to-text transcription.",
+    },
+    {
+        "name": "Weekly Digest",
+        "description": "Automated weekly digest emails with ticket summaries and trends.",
     },
 ]
 
@@ -1036,6 +1060,7 @@ app = FastAPI(
     description=API_DESCRIPTION,
     version="1.0.0",
     lifespan=lifespan,
+    openapi_tags=TAGS_METADATA,
     swagger_ui_parameters={
         "defaultModelsExpandDepth": -1,
         "docExpansion": "none",
@@ -1391,6 +1416,7 @@ async def verify_metrics_token(x_metrics_token: str | None = Header(default=None
 
 @app.get("/metrics", dependencies=[Depends(verify_metrics_token)])
 def metrics():
+    """Prometheus scrape endpoint — exposes HTTP request, AI inference, and system metrics."""
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
@@ -3161,6 +3187,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
 @app.post("/ai/analyze-v2")
 @limiter.limit("10/minute")
 async def analyze_ticket_v2(request: TicketRequest):
+    """V2 AI analysis with improved classifier. Returns category, subcategory, priority, and auto-resolve flag."""
     text = sanitize_text(request.text) or ""
     try:
         prediction = classifier_v2.predict(text)
