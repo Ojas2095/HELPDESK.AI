@@ -9,6 +9,7 @@ export const DEFAULT_ADMIN_SETTINGS = {
     digestAdminEmail: "",
     enableEncryption: false,
     enablePiiRedaction: false,
+    redactIpAddresses: false,
 };
 
 export const resolveCompanyId = (profile, user) => {
@@ -35,6 +36,7 @@ export const settingsFromSystemSettingsRow = (row, fallback = DEFAULT_ADMIN_SETT
         digestAdminEmail: row.digest_admin_email ?? fallback.digestAdminEmail,
         enableEncryption: row.enable_encryption ?? fallback.enableEncryption,
         enablePiiRedaction: row.enable_pii_redaction ?? fallback.enablePiiRedaction,
+        redactIpAddresses: row.redact_ip_addresses ?? fallback.redactIpAddresses,
     };
 };
 
@@ -50,4 +52,5 @@ export const settingsToSystemSettingsRow = (settings, companyId) => ({
     digest_admin_email: settings.digestAdminEmail || null,
     enable_encryption: Boolean(settings.enableEncryption),
     enable_pii_redaction: Boolean(settings.enablePiiRedaction),
+    redact_ip_addresses: Boolean(settings.redactIpAddresses),
 });

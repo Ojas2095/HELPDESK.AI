@@ -1,77 +1,59 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <!-- Google Fonts: Syne + Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap"
-      rel="stylesheet"
-    />
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
- 
+  <!-- ── Security Headers (issue #1169) ──────────────────────────────────── -->
+  <!-- Single authoritative CSP — removed duplicate that existed previously  -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self';
+             script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
+             style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+             font-src 'self' https://fonts.gstatic.com data:;
+             img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in;
+             connect-src 'self'
+               https://*.supabase.co https://*.supabase.in wss://*.supabase.co
+               https://generativelanguage.googleapis.com
+               https://helpdeskaiv1.vercel.app
+               https://ritesh19180-ai-helpdesk-api.hf.space
+               http://localhost:8000 http://localhost:7860
+               ws://localhost:7860 ws://localhost:8000;
+             worker-src 'self' blob:;
+             object-src 'none';
+             frame-ancestors 'none';
+             form-action 'self';
+             base-uri 'self';
+             upgrade-insecure-requests;" />
+  <meta http-equiv="X-Content-Type-Options"  content="nosniff" />
+  <meta http-equiv="X-Frame-Options"         content="DENY" />
+  <meta http-equiv="Referrer-Policy"         content="strict-origin-when-cross-origin" />
+  <!-- ───────────────────────────────────────────────────────────────────── -->
+
+  <!-- Google Fonts: Syne + Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HELPDESK.AI - Professional AI Ticketing</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://helpdesk.ai/" />
-  <meta property="og:title" content="HELPDESK.AI - Professional AI Ticketing" />
+
+  <!-- Open Graph -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://helpdesk.ai/" />
+  <meta property="og:title"       content="HELPDESK.AI - Professional AI Ticketing" />
   <meta property="og:description" content="AI-Powered Ticket Creation and Categorization SaaS. Resolve customer issues faster with intelligent routing and auto-categorization." />
-  <meta property="og:image" content="https://helpdesk.ai/og-image.png" />
+  <meta property="og:image"       content="https://helpdesk.ai/og-image.png" />
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://helpdesk.ai/" />
-    <meta property="twitter:title" content="HELPDESK.AI - Professional AI Ticketing" />
-    <meta
-      property="twitter:description"
-      content="AI-Powered Ticket Creation and Categorization SaaS. Resolve customer issues faster with intelligent routing and auto-categorization."
-    />
-    <meta property="twitter:image" content="https://helpdesk.ai/og-image.png" />
+  <!-- Twitter -->
+  <meta property="twitter:card"        content="summary_large_image" />
+  <meta property="twitter:url"         content="https://helpdesk.ai/" />
+  <meta property="twitter:title"       content="HELPDESK.AI - Professional AI Ticketing" />
+  <meta property="twitter:description" content="AI-Powered Ticket Creation and Categorization SaaS. Resolve customer issues faster with intelligent routing and auto-categorization." />
+  <meta property="twitter:image"       content="https://helpdesk.ai/og-image.png" />
 
+  <!-- Favicon -->
   <link rel="icon" type="image/png" href="/favicon.png" />
-
-  <!-- Security Headers (Content Security Policy) -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' http://localhost:8000 https://ritesh19180-ai-helpdesk-api.hf.space https://helpdeskaiv1.vercel.app https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; form-action 'self'; base-uri 'self'" />
-  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-  <meta http-equiv="X-Frame-Options" content="DENY" />
-  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
-
-  <script>
-    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
-  </script>
 </head>
-
 <body>
-  <script>
-    // Apply dark mode class immediately to prevent flash of wrong theme
-    (function() {
-      try {
-        var stored = JSON.parse(localStorage.getItem('theme'));
-        if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        }
-      } catch(e) {}
-    })();
-  </script>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
-
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
 </html>

@@ -15,10 +15,10 @@ import ShortcutsHelpModal from '../../admin/components/ShortcutsHelpModal';
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const { showHelp, setShowHelp } = useKeyboardShortcuts({ isAdmin: true });
 
-    // Rapid keyboard navigation (G+D, G+T, …) and Ctrl+F search focus.
-    useKeyboardShortcuts();
+    // Single hook call — handles G+key navigation, Ctrl+K search, Ctrl+/ and ?
+    // shortcuts-help toggle, and Escape to close the help modal.
+    const { showHelp, setShowHelp } = useKeyboardShortcuts({}, { isAdmin: true });
 
   return (
     <div className='flex h-screen bg-[#f8faf9] overflow-hidden font-sans'>

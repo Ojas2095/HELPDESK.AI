@@ -57,7 +57,7 @@ const AdminSettings = () => {
 
             const { data, error } = await supabase
                 .from('system_settings')
-                .select('ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, auto_close_days, email_notifications, admin_alerts, digest_enabled, digest_admin_email, digest_last_sent, enable_encryption, enable_pii_redaction')
+                .select('ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, auto_close_days, email_notifications, admin_alerts, digest_enabled, digest_admin_email, digest_last_sent, enable_encryption, enable_pii_redaction, redact_ip_addresses')
                 .eq('company_id', companyId)
                 .maybeSingle();
 

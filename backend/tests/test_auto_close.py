@@ -26,6 +26,15 @@ from backend.services.auto_close_service import AutoCloseService
 
 class TestAutoCloseService(unittest.TestCase):
     def setUp(self):
+        self.env_patcher = patch.dict(os.environ, {
+            "SUPABASE_URL": "https://example.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "mock_key",
+            "AUTO_CLOSE_ENABLED": "true",
+            "AUTO_CLOSE_DAYS": "7",
+            "AUTO_CLOSE_CRON_SCHEDULE": "0 2 * * *",
+        })
+        self.env_patcher.start()
+        
         self.patcher = patch("backend.services.auto_close_service.create_client")
         self.mock_create_client = self.patcher.start()
         self.mock_supabase = MagicMock()
@@ -35,6 +44,7 @@ class TestAutoCloseService(unittest.TestCase):
 
     def tearDown(self):
         self.patcher.stop()
+        self.env_patcher.stop()
 
     def test_init(self):
         self.assertTrue(self.service.enabled)

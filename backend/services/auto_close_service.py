@@ -18,6 +18,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
 
+from backend.utils.date_utils import parse_iso_string
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -82,7 +83,8 @@ class AutoCloseService:
                     "auto_close_days": response.data.get("auto_close_days", self.default_auto_close_days),
                     # Fixes #913: respect the DB value explicitly; default to False (safe/disabled)
                     # so that a missing or unreadable setting never silently auto-closes tickets.
-                    "auto_close_enabled": bool(response.data.get("auto_close_enabled", False))
+                    "auto_close_enabled": bool(response.data.get("auto_close_enabled", False)),
+                    "_cached_at": datetime.now(timezone.utc).timestamp(),
                 }
                 self._settings_cache[company_id] = settings
                 return settings

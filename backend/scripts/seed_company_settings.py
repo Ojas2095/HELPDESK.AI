@@ -27,10 +27,14 @@ import os
 import sys
 import argparse
 import logging
-import argparse
 from datetime import datetime, timezone
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv() -> None:
+        return None
+
 
 # Load environment variables
 load_dotenv()
@@ -67,6 +71,8 @@ def _build_client():
             "Set them in .env or export them before running this script."
         )
 
+    from supabase import create_client
+
     return create_client(url, key)
 
 
@@ -97,13 +103,14 @@ def _fetch_all_pages(supabase, table: str, column: str = "*") -> list[dict]:
     return all_rows
 
 
-def seed_company_settings(dry_run: bool = False) -> dict:
+def seed_company_settings(dry_run: bool = False, supabase=None) -> dict:
     """Main function to seed company settings for all companies.
 
     Args:
         dry_run: If True, log intended inserts without writing to the database.
     """
-    supabase = _build_client()
+    if supabase is None:
+        supabase = _build_client()
 
     logger.info("Starting company settings seed script...")
     if dry_run:
@@ -227,7 +234,7 @@ def verify_seed(supabase=None) -> bool:
 
 # ─── CLI ──────────────────────────────────────────────────────────────────────
 
-def _parse_args() -> argparse.Namespace:
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Seed default system_settings for all companies."
     )
@@ -236,39 +243,29 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Preview inserts without writing to the database.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Seed system_settings for all companies.")
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Preview what would be inserted without writing to the database.",
-    )
-    args = parser.parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv)
+    supabase = _build_client()
+    result = seed_company_settings(dry_run=args.dry_run, supabase=supabase)
 
-    # Run seed
-    result = seed_company_settings(dry_run=args.dry_run)
-
-    # Skip verification on dry run
     if args.dry_run:
-        sys.exit(0)
+        return 0
 
-    # Verify
-    verified = verify_seed()
+    verified = verify_seed(supabase)
 
-    # Exit with appropriate code
     if verified and result.get("status") in ["success", "complete"]:
         logger.info("Seed script completed successfully!")
-        sys.exit(0)
-    elif result.get("status") == "no_tickets":
+        return 0
+    if result.get("status") == "no_tickets":
         logger.warning("Nothing seeded — no tickets in database.")
-        sys.exit(0)
-    else:
-        logger.error("Seed script completed with issues")
-        sys.exit(1)
+        return 0
+
+    logger.error("Seed script completed with issues")
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
