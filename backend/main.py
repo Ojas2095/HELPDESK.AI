@@ -267,6 +267,8 @@ app = FastAPI(
     description="Ticket classification, entity extraction, and duplicate detection",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
@@ -375,6 +377,11 @@ async def root():
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
+    """Health check endpoint that returns the operational status of the helpdesk service.
+    
+    Returns model loading status for the classifier and NER services. Use this
+    endpoint for uptime monitoring and readiness probes.
+    """
     return HealthResponse(
         status="ok",
         classifier_loaded=classifier_service._loaded,
@@ -384,6 +391,12 @@ async def health_check():
 
 @app.get("/ready", response_model=ReadinessResponse)
 async def readiness_check():
+    """Readiness probe for the ticket inference pipeline.
+    
+    Checks whether core AI services (classifier, NER, duplicate index, and RAG)
+    are loaded and operational. Returns HTTP 503 if any required service is not ready.
+    Set `ALLOW_DEGRADED_STARTUP=1` to skip duplicate/RAG checks in development.
+    """
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
     allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
     
