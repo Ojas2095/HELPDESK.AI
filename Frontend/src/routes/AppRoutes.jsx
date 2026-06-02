@@ -55,6 +55,10 @@ const UserProfile = lazy(() => import('../user/pages/Profile'));
 const Login = lazy(() => import('../auth/Login'));
 const Register = lazy(() => import('../auth/Register'));
 
+// ─── Lazy-loaded Landing Pages ──────────────────────────────────────────────
+
+const AboutUs = lazy(() => import('../pages/AboutUs'));
+
 // ─── Route Wrapper with Suspense ────────────────────────────────────────────
 
 const LazyRoute = ({ children, fallback = <PageSkeleton /> }) => (
@@ -107,6 +111,9 @@ const AppRoutes = () => (
         } />
         <Route path="/profile" element={
             <LazyRoute><UserProfile /></LazyRoute>
+        } />
+        <Route path="/about" element={
+            <LazyRoute><AboutUs /></LazyRoute>
         } />
 
         {/* Default redirect */}
