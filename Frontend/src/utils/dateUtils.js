@@ -173,7 +173,7 @@ export const isValidDate = (dateStr) => {
 };
 
 /**
- * Returns a human-readable relative time string (e.g. "2 hours ago").
+ * Returns a human-readable relative time string (e.g. "Just now", "5 minutes ago").
  * Falls back to a formatted date string for dates older than 7 days.
  * Returns 'Unknown' for invalid inputs.
  *
@@ -182,7 +182,21 @@ export const isValidDate = (dateStr) => {
  */
 export const getRelativeTime = (dateStr) => {
     const date = parseDate(dateStr);
-    if (!date) return 'Processing...';
+    if (!date) return 'Unknown';
+
+    const now = Date.now();
+    const diffMs = now - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    if (diffSec < 60) return 'Just now';
+    if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`;
+    if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? '' : 's'} ago`;
+    if (diffDay < 7) return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`;
+
+    // For dates older than 7 days, return formatted date with timezone
     const formatted = formatTimelineDate(date);
     const tz = getTimeZoneAbbr();
     return `${formatted} (${tz})`;
@@ -201,21 +215,4 @@ export const safeParseDateForSort = (dateStr) => {
     return parseDate(dateStr) ?? new Date(0);
 };
 
-export const getTimeZoneAbbr = () => {
-    try {
-        return new Intl.DateTimeFormat('en-US', {
-            timeZoneName: 'short'
-        })
-        .formatToParts(new Date())
-        .find(part => part.type === 'timeZoneName')?.value || 'IST';
-    } catch (_e) {
-        return 'IST';
-    }
-};
 
-export const formatFullTimestamp = (dateStr) => {
-    const date = parseDate(dateStr);
-    if (!date) return 'Processing...';
-    const formatted = formatTimelineDate(dateStr);
-    return `${formatted} (${getTimeZoneAbbr()})`;
-};

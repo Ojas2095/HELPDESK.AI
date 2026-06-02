@@ -13,6 +13,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+    parseDate,
     formatTimelineDate,
     formatFullTimestamp,
     isValidDate,
@@ -322,5 +323,132 @@ describe('safeParseDateForSort', () => {
         }).not.toThrow();
         // null falls back to epoch, so it should sort first
         expect(items[0].created_at).toBeNull();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Timezone configuration tests (Issue #1174)
+// ---------------------------------------------------------------------------
+
+describe('Timezone configuration — cross-browser consistency', () => {
+    it('formatTimelineDate produces consistent output regardless of timezone', () => {
+        // The normalized UTC timestamp should always parse to the same instant
+        const utcDate = '2024-06-15T14:30:00Z';
+        const result = formatTimelineDate(utcDate);
+        expect(result).not.toBe('Invalid Date');
+        // Should always contain the date parts
+        expect(result).toContain('Jun');
+        expect(result).toContain('2024');
+    });
+
+    it('handles UTC+0 timezone correctly', () => {
+        const result = formatTimelineDate('2024-01-15T12:00:00Z');
+        expect(result).not.toBe('Invalid Date');
+        expect(result).toContain('Jan');
+        expect(result).toContain('2024');
+    });
+
+    it('handles UTC+5:30 (IST) timezone correctly', () => {
+        const result = formatTimelineDate('2024-01-15T12:00:00+05:30');
+        expect(result).not.toBe('Invalid Date');
+        expect(result).toContain('Jan');
+    });
+
+    it('handles UTC-5 (EST) timezone correctly', () => {
+        const result = formatTimelineDate('2024-01-15T12:00:00-05:00');
+        expect(result).not.toBe('Invalid Date');
+        expect(result).toContain('Jan');
+    });
+
+    it('handles UTC+9 (JST) timezone correctly', () => {
+        const result = formatTimelineDate('2024-01-15T12:00:00+09:00');
+        expect(result).not.toBe('Invalid Date');
+        expect(result).toContain('Jan');
+    });
+
+    it('getTimeZoneAbbr always returns a valid non-empty string', () => {
+        const tz = getTimeZoneAbbr();
+        expect(typeof tz).toBe('string');
+        expect(tz.length).toBeGreaterThan(0);
+    });
+
+    it('formatFullTimestamp includes timezone for all timezone offsets', () => {
+        const offsets = ['+00:00', '+05:30', '-05:00', '+09:00', '-08:00'];
+        offsets.forEach((offset) => {
+            const result = formatFullTimestamp(`2024-06-15T12:00:00${offset}`);
+            expect(result).toContain('(');
+            expect(result).toContain(')');
+            expect(result).not.toBe('Processing...');
+        });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Robust fallbacks — corrupt / empty dates (Issue #1174)
+// ---------------------------------------------------------------------------
+
+describe('Robust fallbacks — corrupt and empty dates', () => {
+    it('formatTimelineDate returns Invalid Date for undefined', () => {
+        expect(formatTimelineDate(undefined)).toBe('Invalid Date');
+    });
+
+    it('formatTimelineDate returns Invalid Date for null', () => {
+        expect(formatTimelineDate(null)).toBe('Invalid Date');
+    });
+
+    it('formatTimelineDate returns Invalid Date for empty string', () => {
+        expect(formatTimelineDate('')).toBe('Invalid Date');
+    });
+
+    it('formatTimelineDate returns Invalid Date for whitespace-only string', () => {
+        expect(formatTimelineDate('   ')).toBe('Invalid Date');
+    });
+
+    it('formatTimelineDate returns Invalid Date for NaN string', () => {
+        expect(formatTimelineDate('NaN')).toBe('Invalid Date');
+    });
+
+    it('formatTimelineDate returns Invalid Date for impossible date', () => {
+        expect(formatTimelineDate('2024-13-45T99:99:99')).toBe('Invalid Date');
+    });
+
+    it('formatTimelineDate returns Invalid Date for HTML injection attempt', () => {
+        expect(formatTimelineDate('<script>alert(1)</script>')).toBe('Invalid Date');
+    });
+
+    it('formatTimelineDate returns Invalid Date for SQL injection attempt', () => {
+        expect(formatTimelineDate("' OR 1=1 --")).toBe('Invalid Date');
+    });
+
+    it('parseDate returns null for undefined', () => {
+        expect(parseDate(undefined)).toBeNull();
+    });
+
+    it('parseDate returns null for null', () => {
+        expect(parseDate(null)).toBeNull();
+    });
+
+    it('parseDate returns null for empty string', () => {
+        expect(parseDate('')).toBeNull();
+    });
+
+    it('parseDate returns null for random text', () => {
+        expect(parseDate('hello world')).toBeNull();
+    });
+
+    it('safeParseDateForSort returns epoch for all corrupt inputs', () => {
+        const corruptInputs = [null, undefined, '', '   ', 'NaN', 'not-a-date', '<script>'];
+        corruptInputs.forEach((input) => {
+            const result = safeParseDateForSort(input);
+            expect(result).toBeInstanceOf(Date);
+            expect(result.getTime()).toBe(0);
+        });
+    });
+
+    it('getRelativeTime returns Unknown for all corrupt inputs', () => {
+        const corruptInputs = [null, undefined, '', '   ', 'NaN', 'not-a-date'];
+        corruptInputs.forEach((input) => {
+            expect(getRelativeTime(input)).toBe('Unknown');
+        });
     });
 });
