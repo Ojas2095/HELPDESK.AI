@@ -4,11 +4,65 @@ import types
 import pytest
 from unittest.mock import MagicMock, patch
 
+# Define shared mock objects to prevent ModuleNotFoundError on optional ML/caching libraries in test runs
+def _get_or_create_mock(name):
+    if name not in sys.modules:
+        sys.modules[name] = MagicMock()
+    return sys.modules[name]
+
+# Mock redis
+mock_redis = types.ModuleType("redis")
+mock_redis.from_url = MagicMock()
+sys.modules["redis"] = mock_redis
+
+# Mock torch
+mock_torch = _get_or_create_mock("torch")
+mock_torch.device.return_value = "cpu"
+mock_torch.cuda.is_available.return_value = False
+
+# Ensure torch.max behaves correctly by default to prevent unpack errors in classifier/duplicate tests
+def default_torch_max(tensor, dim=None, *args, **kwargs):
+    val = MagicMock()
+    val.item.return_value = 0
+    idx = MagicMock()
+    idx.item.return_value = 0
+    return (val, idx)
+mock_torch.max.side_effect = default_torch_max
+
+_get_or_create_mock("torch.nn")
+
+mock_f = _get_or_create_mock("torch.nn.functional")
+def default_softmax(input, dim=None):
+    return input
+mock_f.softmax = default_softmax
+
+_get_or_create_mock("transformers")
+
+# sentence-transformers
+mock_st = _get_or_create_mock("sentence_transformers")
+mock_st.SentenceTransformer = MagicMock()
+mock_st.util = MagicMock()
+
 # Force test environment variables before anything is imported
 os.environ["ALLOW_DEGRADED_STARTUP"] = "1"
 os.environ["SUPABASE_URL"] = "https://mock.supabase.co"
 os.environ["SUPABASE_SERVICE_KEY"] = "mockservicekey"
 os.environ["SLA_ESCALATION_ENABLED"] = "false"
+
+# Mock prometheus_fastapi_instrumentator to prevent duplicate timeseries registry errors
+class MockInstrumentator:
+    def __init__(self, *args, **kwargs):
+        pass
+    def add(self, *args, **kwargs):
+        return self
+    def instrument(self, *args, **kwargs):
+        return self
+    def expose(self, *args, **kwargs):
+        return self
+
+sys.modules["prometheus_fastapi_instrumentator"] = types.ModuleType("prometheus_fastapi_instrumentator")
+sys.modules["prometheus_fastapi_instrumentator"].Instrumentator = MockInstrumentator
+sys.modules["prometheus_fastapi_instrumentator"].metrics = MagicMock()
 
 # Ensure root directory is in python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))

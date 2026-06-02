@@ -22,12 +22,28 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # ---------------------------------------------------------------------------
-# sentence-transformers mock (module not installed in CI)
+# sentence-transformers & torch mocks (modules not installed in CI)
 # ---------------------------------------------------------------------------
-_mock_st = MagicMock()
-_mock_st.SentenceTransformer = MagicMock()
-_mock_st.util = MagicMock()
-sys.modules.setdefault("sentence_transformers", _mock_st)
+if "sentence_transformers" not in sys.modules:
+    _mock_st = MagicMock()
+    _mock_st.SentenceTransformer = MagicMock()
+    _mock_st.util = MagicMock()
+    sys.modules["sentence_transformers"] = _mock_st
+else:
+    _mock_st = sys.modules["sentence_transformers"]
+
+if "torch" not in sys.modules:
+    _mock_torch = MagicMock()
+    sys.modules["torch"] = _mock_torch
+else:
+    _mock_torch = sys.modules["torch"]
+
+def fake_max(tensor, dim=None):
+    idx_mock = MagicMock()
+    idx_mock.item.return_value = 0
+    return (tensor, idx_mock)
+_mock_torch.max.side_effect = fake_max
+sys.modules.pop("backend.services.duplicate_service", None)
 
 # Ensure the backend package is importable
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -216,22 +232,21 @@ class TestCheckDuplicate:
         )
         svc.model.encode.return_value = mock_tensor
 
-        # Return different scores for each comparison
-        scores = [0.50, 0.95, 0.72]
-        call_count = {"n": 0}
-
-        def fake_cos_sim(a, b):
-            result = MagicMock()
-            result.item.return_value = scores[call_count["n"]]
-            call_count["n"] += 1
-            return result
-
-        _mock_st.util.cos_sim.side_effect = fake_cos_sim
-
-        result = svc.check_duplicate("test query")
-        assert result["is_duplicate"] is True
-        assert result["duplicate_ticket_id"] == "T-20"
-        assert result["similarity"] == 0.95
+        # In vectorized mode, util.cos_sim returns similarity_matrix
+        cosine_result = MagicMock()
+        _mock_st.util.cos_sim.return_value = cosine_result
+        
+        # We mock torch.max to return (0.95, 1) because T-20 is at index 1 with score 0.95
+        mock_score = MagicMock()
+        mock_score.item.return_value = 0.95
+        mock_idx = MagicMock()
+        mock_idx.item.return_value = 1
+        
+        with patch("torch.max", return_value=(mock_score, mock_idx)):
+            result = svc.check_duplicate("test query")
+            assert result["is_duplicate"] is True
+            assert result["duplicate_ticket_id"] == "T-20"
+            assert result["similarity"] == 0.95
 
     def test_threshold_boundary_exactly_at(self):
         """Score exactly equal to threshold should count as duplicate."""
@@ -265,16 +280,11 @@ class TestCheckDuplicate:
 
     def test_check_duplicate_vectorized_matches_best(self):
         """Should correctly find duplicate when tickets exist in store."""
-        mock_torch = MagicMock()
-        sys.modules['torch'] = mock_torch
-
-        self.service._loaded = True
-        self.service._load_failed = False
+        svc = _make_service(loaded=True)
+        svc.model = MagicMock()
+        svc.model.encode.return_value = MagicMock()
         
-        self.service.model = MagicMock()
-        self.service.model.encode.return_value = MagicMock()
-        
-        self.service._tickets = [
+        svc._tickets = [
             ("T-1", MagicMock(), "orthogonal"),
             ("T-2", MagicMock(), "identical"),
             ("T-3", MagicMock(), "close")
@@ -286,13 +296,12 @@ class TestCheckDuplicate:
         mock_index_tensor = MagicMock()
         mock_index_tensor.item.return_value = 1
         
-        mock_torch.max.return_value = (mock_score_tensor, mock_index_tensor)
-        
-        result = self.service.check_duplicate("identical text")
-        
-        assert result["is_duplicate"] is True
-        assert result["duplicate_ticket_id"] == "T-2"
-        assert result["similarity"] == 0.95
+        with patch("torch.max", return_value=(mock_score_tensor, mock_index_tensor)):
+            result = svc.check_duplicate("identical text")
+            
+            assert result["is_duplicate"] is True
+            assert result["duplicate_ticket_id"] == "T-2"
+            assert result["similarity"] == 0.95
 
 
 class TestSaveToDisk:

@@ -49,6 +49,12 @@ class _AutoCloseTestBase(unittest.TestCase):
     """Shared setup: patches create_client so no real Supabase calls happen."""
 
     def setUp(self):
+        self.env_patcher = patch.dict(os.environ, {
+            "SUPABASE_URL": "https://example.supabase.co",
+            "SUPABASE_SERVICE_ROLE_KEY": "mock_service_key",
+        })
+        self.env_patcher.start()
+        
         self.patcher = patch("backend.services.auto_close_service.create_client")
         self.mock_create_client = self.patcher.start()
         self.mock_supabase = MagicMock()
@@ -57,6 +63,7 @@ class _AutoCloseTestBase(unittest.TestCase):
 
     def tearDown(self):
         self.patcher.stop()
+        self.env_patcher.stop()
 
 
 # ---------------------------------------------------------------------------

@@ -1,10 +1,24 @@
-import pytest
 import sys
 import os
+from unittest.mock import MagicMock
+# Mock heavy modules to prevent loading failures when torch/transformers are missing
+for module in ["torch", "torch.nn", "torch.nn.functional", "transformers", "sentence_transformers"]:
+    sys.modules[module] = MagicMock()
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from unittest.mock import patch, MagicMock
+
+# Start the mock patcher for _anon_supabase before importing/creating client
+patcher = patch("backend.auth_cookie._anon_supabase")
+mock_anon = patcher.start()
+mock_client = MagicMock()
+mock_anon.return_value = mock_client
+mock_client.auth.sign_in_with_password.side_effect = Exception("Invalid email or password.")
+mock_client.auth.sign_up.side_effect = Exception("Invalid signup details or email already in use.")
+
 from fastapi.testclient import TestClient
-from main import app, LoginBody
+from main import app
 
 client = TestClient(app)
 
