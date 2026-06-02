@@ -126,3 +126,13 @@ enforcement ladder](https://github.com/mozilla/diversity).
 For answers to common questions about this code of conduct, see the FAQ at
 https://www.contributor-covenant.org/faq. Translations are available at
 https://www.contributor-covenant.org/translations.
+
+
+## CoC Incident Reporting Escalation Template
+
+When reporting a Code of Conduct violation, please copy and fill the following template:
+- **Reporter details**: Name/username (optional for anonymous reports).
+- **Accused details**: Username or incident participant.
+- **Detailed description**: What happened, where, and links to issues/PRs.
+- **Severity level**: Minor (correction needed), Medium (warning/mute), Major (ban).
+Submit the filled report to the CoC enforcement committee.
