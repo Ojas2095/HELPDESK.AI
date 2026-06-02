@@ -20,3 +20,11 @@ Previously, tickets created through the normal save flow were stored in Supabase
 ### Validation
 - Ran a backend error check on the modified file.
 - No errors were reported for `backend/main.py`.
+
+
+## Release Changes Semantic Versioning Rules
+
+All development changes logged in `CHANGES.md` must adhere to SemVer:
+- **Patch Update**: For documentation fixes, small improvements, and dependency changes.
+- **Minor Update**: For adding new features, API endpoints, or platform integrations.
+- **Major Update**: For backwards-incompatible API refactoring or dataset structural shifts.
