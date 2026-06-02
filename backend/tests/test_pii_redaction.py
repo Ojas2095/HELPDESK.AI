@@ -119,11 +119,11 @@ class TestPhoneRedaction:
 
 class TestAPIKeyRedaction:
     def test_aws_access_key(self):
-        result = redact_api_keys("Key: AKIAIO...MPLE")
-        assert "AKIAIO...MPLE" not in result
+        result = redact_api_keys("Key: AKIAIOSFODNN7EXAMPLE")
+        assert "AKIAIOSFODNN7EXAMPLE" not in result
 
     def test_github_pat(self):
-        result = redact_api_keys("token: ghp_AB...ghij")
+        result = redact_api_keys("token: ghp_123456789012345678901234567890123456")
         assert "ghp_" not in result
 
     def test_google_api_key(self):
