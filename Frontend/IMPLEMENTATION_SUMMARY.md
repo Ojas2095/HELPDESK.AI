@@ -150,7 +150,7 @@ Visual confidence indicator with contextual tooltips and color-coded progress ba
 
 ## 📁 Project Structure
 
-```
+```text
 ai-helpdesk-frontend/
 ├── src/
 │   ├── App.jsx (Ant Design Layout)
