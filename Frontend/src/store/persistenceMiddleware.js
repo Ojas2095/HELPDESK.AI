@@ -23,51 +23,32 @@ const safeLocalStorage = {
         }
     },
     setItem: (name, value) => {
+        let serialized = '';
         try {
-            localStorage.setItem(name, JSON.stringify(value));
-        } catch (e) {
-            if (e.name === 'QuotaExceededError') {
-                console.warn(`[Sync] Storage quota exceeded. Cleaning up...`);
+            serialized = JSON.stringify(value);
+            localStorage.setItem(name, serialized);
+        } catch (error) {
+            if (error.name === 'QuotaExceededError' || error.code === 22 || error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                console.warn(`[Sync] Storage quota exceeded for ${name}. Attempting cleanup...`);
                 recoverStorageQuota();
                 // Retry once
                 try {
-                    storage.removeItem(name);
-                } catch (e) {
-                    // Ignore cleanup errors
+                    localStorage.setItem(name, serialized);
+                } catch (retryError) {
+                    console.error(`[Sync] Failed to save ${name} even after cleanup:`, retryError);
                 }
-                return null;
-            }
-        },
-
-        setItem: (name, value) => {
-            let serialized = '';
-            try {
-                serialized = JSON.stringify(value);
-                storage.setItem(name, serialized);
-            } catch (error) {
-                if (error.name === 'QuotaExceededError') {
-                    console.error(`[Zustand] Storage quota exceeded for ${name}. Attempting cleanup...`);
-                    // Try to free up space by removing old data
-                    try {
-                        const keys = Object.keys(storage);
-                        const storeKeys = keys.filter(k => k.startsWith('helpdesk-'));
-                        // Remove oldest entries (first 25%)
-                        const removeCount = Math.ceil(storeKeys.length * 0.25);
-                        for (let i = 0; i < removeCount; i++) {
-                            storage.removeItem(storeKeys[i]);
-                        }
-                        // Retry the save
-                        storage.setItem(name, serialized);
-                    } catch (retryError) {
-                        console.error(`[Zustand] Failed to save ${name} even after cleanup:`, retryError);
-                    }
-                } else {
-                    console.error(`[Zustand] Failed to save ${name}:`, error);
-                }
+            } else {
+                console.error(`[Sync] Failed to save ${name}:`, error);
             }
         }
     },
-    removeItem: (name) => localStorage.removeItem(name),
+    removeItem: (name) => {
+        try {
+            localStorage.removeItem(name);
+        } catch (e) {
+            console.error(`[Sync] Remove failed for ${name}:`, e);
+        }
+    }
 };
 
 /**
@@ -119,15 +100,24 @@ export const createPersistedStore = (storeName, creator, options = {}) => {
  * Force sync all stores across tabs by triggering a storage event.
  */
 export const broadcastStoreSync = () => {
-    localStorage.setItem(`${STORAGE_PREFIX}sync-trigger`, Date.now().toString());
+    try {
+        localStorage.setItem(`${STORAGE_PREFIX}sync-trigger`, Date.now().toString());
+    } catch (e) {
+        console.error("[Sync] Broadcast failed:", e);
+    }
 };
 
 /**
  * Clear all project-related storage.
  */
 export const clearGlobalState = () => {
-    Object.keys(localStorage)
-        .filter(key => key.startsWith(STORAGE_PREFIX) || key.startsWith('helpdesk-'))
-        .forEach(key => localStorage.removeItem(key));
+    try {
+        Object.keys(localStorage)
+            .filter(key => key.startsWith(STORAGE_PREFIX) || key.startsWith('helpdesk-'))
+            .forEach(key => localStorage.removeItem(key));
+    } catch (e) {
+        console.error("[Sync] Clear state failed:", e);
+    }
     window.location.reload();
 };
+
