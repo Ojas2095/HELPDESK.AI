@@ -3,12 +3,14 @@
 ## 🚀 Quick Start
 
 ### View the Component
+
 ```bash
 # Open in editor
 code Frontend/src/components/landing/Hero.jsx
 ```
 
 ### Run Locally
+
 ```bash
 cd Frontend
 npm install
@@ -17,6 +19,7 @@ npm run dev
 ```
 
 ### Build for Production
+
 ```bash
 npm run build
 npm run lint
@@ -26,7 +29,7 @@ npm run lint
 
 ## 📁 File Structure
 
-```
+```text
 Frontend/
 ├── src/
 │   ├── pages/
@@ -43,6 +46,7 @@ Frontend/
 ## 🎨 Component Usage
 
 ### Basic Setup
+
 ```jsx
 import Hero from '../components/landing/Hero';
 
@@ -54,6 +58,7 @@ import Hero from '../components/landing/Hero';
 ```
 
 ### Props
+
 ```typescript
 interface HeroProps {
   onDemoClick: () => void;
@@ -62,6 +67,7 @@ interface HeroProps {
 ```
 
 ### In LandingPage Context
+
 ```jsx
 export default function LandingPage() {
   const [showDemo, setShowDemo] = useState(false);
@@ -93,17 +99,20 @@ export default function LandingPage() {
 ## 🎯 Key Features
 
 ### Desktop (lg: 1024px+)
+
 - ✅ 50/50 split layout
 - ✅ 3 glassmorphic cards on right
 - ✅ Full animations & hover effects
 - ✅ min-h-screen positioning
 
 ### Tablet (md: 768px)
+
 - ✅ Grid adapts to single column
 - ✅ Cards remain visible
 - ✅ Reduced spacing
 
 ### Mobile (sm: <768px)
+
 - ✅ Stacked single column
 - ✅ Simplified card layout
 - ✅ Full-width buttons
@@ -113,6 +122,7 @@ export default function LandingPage() {
 ## 🎭 Animations
 
 ### Entrance
+
 ```jsx
 Motion.div with fadeInUpVariants
 Duration: 0.6s
@@ -120,6 +130,7 @@ Stagger: 0.2s between elements
 ```
 
 ### Hover States
+
 ```jsx
 Cards:
   y: -8 to -12px
@@ -132,6 +143,7 @@ Buttons:
 ```
 
 ### Continuous
+
 ```jsx
 Badge: pulse animation (infinite)
 Bot: scale pulse + y drift
@@ -140,6 +152,7 @@ Particles: y/x drifts (4s, 5s)
 ```
 
 ### On Interaction
+
 ```jsx
 Click: scale 0.98 (feedback)
 Hover: All states above smooth to 0.3s
@@ -150,6 +163,7 @@ Hover: All states above smooth to 0.3s
 ## 🎨 Customization Guide
 
 ### Change Primary Color
+
 ```jsx
 // Current: emerald-900
 // Find: className="...emerald-900..."
@@ -161,6 +175,7 @@ Hover: All states above smooth to 0.3s
 ```
 
 ### Change Animation Speed
+
 ```jsx
 // Card hover elevation (slower)
 transition={{ type: 'spring', stiffness: 200, damping: 20 }}
@@ -172,6 +187,7 @@ transition={{ duration: 0.2 }}
 ```
 
 ### Change Text
+
 ```jsx
 // In Hero.jsx:
 <span className="text-xs font-bold tracking-wider uppercase">
@@ -182,6 +198,7 @@ transition={{ duration: 0.2 }}
 ```
 
 ### Adjust Layout Proportions
+
 ```jsx
 // Current: lg:grid-cols-2 (50/50)
 // Change to: lg:grid-cols-3 (66/33)
@@ -197,6 +214,7 @@ left: '5%' → left: '15%' (move right)
 ## 🔧 Common Modifications
 
 ### Hide Right Column
+
 ```jsx
 <motion.div
   className="relative h-[500px] md:h-[600px] lg:h-[650px] 
@@ -206,6 +224,7 @@ left: '5%' → left: '15%' (move right)
 ```
 
 ### Change CTA Button Text
+
 ```jsx
 // Line ~115: "Get Started Free"
 // Line ~125: "Watch Demo"
@@ -213,6 +232,7 @@ left: '5%' → left: '15%' (move right)
 ```
 
 ### Add More Cards
+
 ```jsx
 // Copy one card block (e.g., lines 184-230)
 // Adjust positioning:
@@ -222,6 +242,7 @@ left: 'auto'  // or right: '10%'
 ```
 
 ### Modify Trust Indicators
+
 ```jsx
 // Lines 155-170
 {/* Trust Indicators */}
@@ -244,6 +265,7 @@ left: 'auto'  // or right: '10%'
 ## 🧪 Testing Checklist
 
 ### Visual Testing
+
 - [ ] Open in Chrome (desktop)
 - [ ] Open in Firefox (desktop)
 - [ ] Open in Safari (desktop)
@@ -252,6 +274,7 @@ left: 'auto'  // or right: '10%'
 - [ ] Check tablet view (iPad Pro 12.9")
 
 ### Functional Testing
+
 - [ ] Click "Get Started Free" button
 - [ ] Click "Watch Demo" button
 - [ ] Hover over desktop cards (animation smooth)
@@ -259,12 +282,14 @@ left: 'auto'  // or right: '10%'
 - [ ] Resize window (responsive breakpoints work)
 
 ### Performance Testing
+
 - [ ] Run Lighthouse
 - [ ] Check console (no errors/warnings)
 - [ ] Monitor CPU usage during animations
 - [ ] Check memory (no leaks)
 
 ### Accessibility Testing
+
 - [ ] Tab through buttons (focus visible)
 - [ ] Screen reader announces buttons
 - [ ] Color contrast ✓
@@ -275,11 +300,13 @@ left: 'auto'  // or right: '10%'
 ## 📊 Metrics to Track
 
 ### Pre-Launch
+
 - Build time: `npm run build`
 - Bundle size impact: `npm run build`
 - Lint errors: `npm run lint`
 
 ### Post-Launch
+
 - Page load time (LCP)
 - Button click rate
 - Demo video click-through
@@ -292,21 +319,27 @@ left: 'auto'  // or right: '10%'
 ## 🐛 Troubleshooting
 
 ### Issue: Cards not visible on desktop
+
 **Solution:** Check `hidden lg:flex` class - ensure viewport is >1024px
 
 ### Issue: CTAs not clickable
+
 **Solution:** Verify parent div doesn't have `pointer-events-none` or `z-index: -10`
 
 ### Issue: Animations stuttering
+
 **Solution:** Check browser DevTools for frame drops; reduce animation complexity
 
 ### Issue: Buttons not changing color on hover
+
 **Solution:** Check Tailwind config for `hover:` prefix processing
 
 ### Issue: Text not wrapping properly on mobile
+
 **Solution:** Add `break-words` or `line-clamp-N` to text elements
 
 ### Issue: Cards overlapping incorrectly
+
 **Solution:** Check z-index stacking (should be: incoming 20, processing 25, ticket 30)
 
 ---
@@ -314,6 +347,7 @@ left: 'auto'  // or right: '10%'
 ## 📚 Dependencies
 
 All dependencies already installed:
+
 - ✅ `framer-motion` v12.34.2 - Animations
 - ✅ `lucide-react` v0.574.0 - Icons
 - ✅ `react` v19.2.0 - Framework
@@ -326,6 +360,7 @@ All dependencies already installed:
 ## 🚀 Deployment
 
 ### Before Merging
+
 1. ✅ Run `npm run build`
 2. ✅ Run `npm run lint`
 3. ✅ Test on desktop (1920px)
@@ -334,6 +369,7 @@ All dependencies already installed:
 6. ✅ Verify accessibility
 
 ### Merge to Main
+
 ```bash
 git checkout main
 git merge issue-512-hero-redesign --no-ff
@@ -341,6 +377,7 @@ git push origin main
 ```
 
 ### Rollback if Needed
+
 ```bash
 git revert <commit-hash>
 # OR
@@ -351,7 +388,7 @@ git reset --hard HEAD~1
 
 ## 📖 Related Documentation
 
-```
+```text
 Frontend/src/components/landing/
 ├── Hero.jsx                           ← This component
 ├── TeamSection.jsx                    ← Sister component
@@ -372,6 +409,7 @@ Documentation:
 ## 💡 Pro Tips
 
 ### Tip 1: Adjust Stagger Timing
+
 ```jsx
 const containerVariants = {
   visible: {
@@ -384,6 +422,7 @@ const containerVariants = {
 ```
 
 ### Tip 2: Make Cards 3D with Perspective
+
 ```jsx
 <div style={{ perspective: '1200px' }}>
   {/* Cards will render with 3D effect */}
@@ -391,6 +430,7 @@ const containerVariants = {
 ```
 
 ### Tip 3: Add Blur to Background on Mobile
+
 ```jsx
 // On mobile, reduce blur on cards for clarity
 <motion.div
@@ -399,6 +439,7 @@ const containerVariants = {
 ```
 
 ### Tip 4: Disable Animations for Reduced Motion
+
 ```jsx
 // Check prefers-reduced-motion
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -407,6 +448,7 @@ const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)
 ```
 
 ### Tip 5: Debug Layout Issues
+
 ```jsx
 // Temporarily add borders to see grid
 <div className="border border-red-500">
@@ -419,12 +461,14 @@ const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)
 ## 📞 Support & Questions
 
 ### Where to Ask
+
 - **Code Issues:** GitHub Issues
 - **Design Questions:** Slack #frontend-team
 - **Bugs:** GitHub Discussions
 - **Performance:** Lighthouse Report
 
 ### Pull Request Template
+
 ```markdown
 ## Description
 Updated hero with split-screen SaaS layout
