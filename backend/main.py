@@ -28,7 +28,7 @@ from encryption import encrypt_pii, decrypt_pii, is_encrypted
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, Header
+from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
@@ -3285,16 +3285,72 @@ async def reindex_embeddings(current_user: dict = Depends(get_current_user)):
 @app.get("/admin/knowledge-gaps", tags=["Admin"])
 async def get_knowledge_gaps(current_user: dict = Depends(get_current_user)):
     """
-    Identify gaps in the knowledge base by analyzing low-confidence predictions.
+    Identify gaps in the knowledge base by analyzing resolved tickets and clustering them.
     Requires admin role.
     """
     profile = _get_authenticated_profile(current_user)
     role = str(profile.get("role") or "").lower()
     if role not in ("admin", "company_admin"):
         raise HTTPException(status_code=403, detail="Only admins can access knowledge gaps")
+    
+    company_id = profile.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User must belong to a company")
 
-    from backend.services.knowledge_gap_service import knowledge_gap_service
-    return knowledge_gap_service.get_summary()
+    from backend.services.knowledge_gap_service import KnowledgeGapService
+    kgs = KnowledgeGapService(supabase)
+    return await kgs.get_dashboard_insights(company_id)
+
+@app.post("/admin/knowledge-gaps/detect", tags=["Admin"])
+async def detect_knowledge_gaps(background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    """
+    Trigger background detection of knowledge gaps.
+    """
+    profile = _get_authenticated_profile(current_user)
+    role = str(profile.get("role") or "").lower()
+    if role not in ("admin", "company_admin"):
+        raise HTTPException(status_code=403, detail="Only admins can trigger detection")
+        
+    company_id = profile.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User must belong to a company")
+
+    def run_detection(cid):
+        import asyncio
+        from backend.services.knowledge_gap_service import KnowledgeGapService
+        kgs = KnowledgeGapService(supabase)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(kgs.detect_gaps(cid))
+        finally:
+            loop.close()
+
+    background_tasks.add_task(run_detection, company_id)
+    return {"status": "success", "message": "Knowledge gap detection started in the background."}
+
+@app.post("/admin/tickets/{ticket_id}/convert-to-kb", tags=["Admin"])
+async def convert_ticket_to_kb(ticket_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Convert a resolved ticket into a knowledge base article draft.
+    """
+    profile = _get_authenticated_profile(current_user)
+    role = str(profile.get("role") or "").lower()
+    if role not in ("admin", "company_admin"):
+        raise HTTPException(status_code=403, detail="Only admins can convert tickets to KB")
+        
+    company_id = profile.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User must belong to a company")
+        
+    from backend.services.knowledge_gap_service import KnowledgeGapService
+    kgs = KnowledgeGapService(supabase)
+    try:
+        res = await kgs.convert_ticket_to_article(ticket_id, company_id)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/system/settings")
 async def get_system_settings_endpoint(current_user: dict = Depends(get_current_user)):
