@@ -290,14 +290,13 @@ const useAuthStore = create(
                 });
             }
         }),
-        {
-            createPersistConfig('auth', {
-                partialize: (state) => ({
-                    user: state.user,
-                    profile: state.profile,
-                }),
-            })
-            )
-            );
+        createPersistConfig('auth', {
+            partialize: (state) => ({
+                user: state.user,
+                profile: state.profile,
+            }),
+        })
+    )
+);
 
 export default useAuthStore;

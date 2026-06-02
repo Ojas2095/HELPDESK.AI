@@ -81,7 +81,7 @@ class ErrorBoundary extends React.Component {
                 return this.props.fallback(
                     this.state.error,
                     this.handleReset,
-                    this.buildDiagnosticPayload
+                    () => this.buildDiagnosticPayload()
                 );
             }
 
@@ -100,7 +100,7 @@ class ErrorBoundary extends React.Component {
                         </p>
 
                         {/* Error detail for dev — collapsible */}
-                        {process.env.NODE_ENV !== 'production' && (
+                        {import.meta.env.DEV && (
                             <details style={styles.details}>
                                 <summary style={styles.detailsSummary}>
                                     Technical Details
