@@ -677,13 +677,27 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
-    """Partially update a ticket's fields (e.g., status, viewed_at)."""
+async def update_ticket(
+    ticket_id: str,
+    updates: dict,
+    user: dict = Depends(get_current_user),
+):
+    """Partially update a ticket's fields (e.g. status, viewed_at)."""
+    allowed_fields = {
+        "status",
+        "last_user_viewed_at",
+        "priority",
+        "assigned_team",
+        "category",
+        "subcategory",
+    }
+    filtered = {k: v for k, v in updates.items() if k in allowed_fields}
+    if not filtered:
+        raise HTTPException(status_code=400, detail="No valid update fields provided")
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
-            ticket_dict = ticket.dict()
-            ticket_dict.update(updates)
+            ticket_dict = ticket.model_dump()
+            ticket_dict.update(filtered)
             updated_ticket = TicketRecord(**ticket_dict)
             TICKETS_DB[i] = updated_ticket
             return updated_ticket
@@ -1201,7 +1215,13 @@ async def auth_signup(body: SignupBody, response: Response):
     return {"user": user_payload, "message": "Signup complete"}
 
 @app.post("/auth/logout")
-async def auth_logout(response: Response):
+async def auth_logout(response: Response, request: Request):
+    token = extract_token(request)
+    if token and supabase:
+        try:
+            supabase.auth.admin.sign_out(token)
+        except Exception:
+            pass
     _clear_session_cookies(response)
     return {"ok": True}
 
