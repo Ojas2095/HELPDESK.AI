@@ -61,7 +61,10 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
 
             // 3. Combine and Sort
             const combined = [...(publicMsgs || []), ...internalMsgs].sort(
-                (a, b) => new Date(a.created_at) - new Date(b.created_at)
+                (a, b) => {
+                const parseDate = (s) => new Date(String(s || '').trim().replace(' ', 'T'));
+                return parseDate(a.created_at) - parseDate(b.created_at);
+            }
             );
 
             setMessages(combined);
@@ -217,13 +220,17 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     // ─── Helpers ─────────────────────────────────────────────────────────
     const formatTime = (iso) => {
         try {
-            return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // Safari-safe date parsing: normalize space-separated timestamps to ISO 8601
+            const normalized = String(iso || '').trim().replace(' ', 'T');
+            return new Date(normalized).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } catch { return ''; }
     };
 
     const formatDate = (iso) => {
         try {
-            const d = new Date(iso);
+            // Safari-safe date parsing: normalize space-separated timestamps to ISO 8601
+            const normalized = String(iso || '').trim().replace(' ', 'T');
+            const d = new Date(normalized);
             const today = new Date();
             if (d.toDateString() === today.toDateString()) return 'Today';
             const yesterday = new Date(today);

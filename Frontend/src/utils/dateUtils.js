@@ -10,7 +10,9 @@ export const formatTimelineDate = (dateStr) => {
     let date;
     if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
         // If it's a raw string without TZ, assume it was intended as UTC from our backend
-        date = new Date(dateStr + 'Z');
+        // Normalize space-separated dates to ISO 8601 for cross-browser compatibility (Safari fix)
+        const normalized = dateStr.trim().replace(' ', 'T');
+        date = new Date(normalized + 'Z');
     } else {
         date = new Date(dateStr);
     }

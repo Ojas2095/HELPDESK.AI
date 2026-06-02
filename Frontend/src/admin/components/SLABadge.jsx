@@ -37,7 +37,9 @@ export default function SLABadge({ priority, createdAt, status, compact = false 
 
         const priorityKey = priority.toLowerCase();
         const limit = SLA_LIMITS[priorityKey] || SLA_LIMITS.medium;
-        const createdMs = new Date(createdAt).getTime();
+        // Safari-safe date parsing: normalize space-separated timestamps to ISO 8601
+    const normalized = String(createdAt || '').trim().replace(' ', 'T');
+    const createdMs = new Date(normalized).getTime();
 
         const calculate = () => {
             const elapsed = Date.now() - createdMs;
