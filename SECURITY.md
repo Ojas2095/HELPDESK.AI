@@ -21,3 +21,11 @@ We take all security vulnerabilities seriously. Once a vulnerability is submitte
 3. Release a patch or advisory once the issue has been resolved.
 
 Thank you for helping us keep HELPDESK.AI safe and secure for all users!
+
+
+## API Integration Security Guidelines
+
+To maintain safety across helpdesk integrations:
+- **Secret Management**: Never hardcode API keys for Supabase (`SUPABASE_URL`, `SUPABASE_KEY`) or Google Gemini GenAI in configuration scripts. Use environment variables.
+- **Encryption**: Enable HTTPS for all outbound webhook requests and API endpoints to ensure transit security.
+- **Role-Based Access**: Restrict API permissions to the minimum scope required (e.g. read-only keys for front-facing apps).
