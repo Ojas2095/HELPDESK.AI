@@ -1,39 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
+import ShortcutsHelpModal from '../../admin/components/ShortcutsHelpModal';
 
 /**
  * AdminLayout Component
  * Master framework for the administrative zone.
  * Enforces a fixed-sidebar architecture with a centered, high-density content terminal.
+ * Integrates global keyboard shortcuts (Issue #911).
  */
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const { showHelp, setShowHelp } = useKeyboardShortcuts({ isAdmin: true });
 
-    return (
-        <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
-            {/* Master Navigation Column (Responsive) */}
-            <div 
-                className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
-                style={{ width: isSidebarCollapsed ? '80px' : '260px' }}
-            >
-                <AdminSidebar isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
-            </div>
+    // Rapid keyboard navigation (G+D, G+T, …) and Ctrl+F search focus.
+    useKeyboardShortcuts();
 
-            {/* Viewport Execution Layer */}
-            <div className="flex-1 flex flex-col min-w-0 relative h-full">
-                {/* Global Command Header */}
-                <AdminHeader 
-                    onMobileNavToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} 
-                    isSidebarCollapsed={isSidebarCollapsed}
-                    onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                />
+  return (
+    <div className='flex h-screen bg-[#f8faf9] overflow-hidden font-sans'>
+      {/* Master Navigation Column (Responsive) */}
+      <div
+        className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
+        style={{ width: isSidebarCollapsed ? '80px' : '260px' }}
+      >
+        <AdminSidebar
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+      </div>
+
+      {/* Viewport Execution Layer */}
+      <div className='flex-1 flex flex-col min-w-0 relative h-full'>
+        {/* Global Command Header */}
+        <AdminHeader
+          onMobileNavToggle={() => setIsMobileNavOpen(!isMobileNavOpen)}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
 
                 {/* Operational Workspace */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
+                <main id="admin-main-content" className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
                     {/* Centered Payload Container */}
                     <div className="max-w-[1280px] w-full mx-auto px-6 md:px-10 py-8 md:py-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                         <Outlet />
@@ -41,8 +51,20 @@ const AdminLayout = () => {
                 </main>
             </div>
 
-            {/* Real-time System Notifications */}
-            <NotificationToast />
+      {/* Real-time System Notifications */}
+      <NotificationToast />
+
+            {/* Keyboard Shortcuts Help Modal */}
+            <ShortcutsHelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} isAdmin={true} />
+
+            {/* Keyboard Shortcuts Help Modal */}
+            <KeyboardShortcutsModal
+                isOpen={isShortcutsModalOpen}
+                onClose={() => setShortcutsModalOpen(false)}
+            />
+
+            {/* Keyboard Shortcuts Legend Modal */}
+            <KeyboardLegend isOpen={showLegend} onClose={closeLegend} />
 
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
@@ -59,7 +81,9 @@ const AdminLayout = () => {
                 </div>
             )}
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 export default AdminLayout;
