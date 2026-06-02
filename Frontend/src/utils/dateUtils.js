@@ -1,21 +1,75 @@
 /**
  * Unified Date Utility for HELPDESK.AI
  * Fixes timezone shift issues by explicitly forcing local display.
+ * Safari-compatible: uses manual parsing instead of Date constructor quirks.
  */
 
-export const formatTimelineDate = (dateStr) => {
-    if (!dateStr) return null;
-    
-    // Ensure the date string is interpreted as UTC if it's an ISO string from DB
-    let date;
-    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
-        // If it's a raw string without TZ, assume it was intended as UTC from our backend
-        date = new Date(dateStr + 'Z');
-    } else {
-        date = new Date(dateStr);
+/**
+ * Parse ISO-8601 date string safely across all browsers.
+ * Safari is strict about Date constructor - manual parsing avoids issues.
+ * @param {string} dateStr - ISO-8601 date string
+ * @returns {Date|null} Parsed Date object or null if invalid
+ */
+const parseDateSafe = (dateStr) => {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+
+    // Trim whitespace
+    const str = dateStr.trim();
+    if (!str) return null;
+
+    // Try ISO-8601 regex parsing (Safari-safe)
+    // Matches: 2026-06-01T12:30:00Z, 2026-06-01T12:30:00+05:30, 2026-06-01 12:30:00
+    const isoMatch = str.match(
+        /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d+))?(Z|[+-]\d{2}:?\d{2})?$/
+    );
+
+    if (isoMatch) {
+        const [, year, month, day, hour, minute, second, ms, tz] = isoMatch;
+        let date;
+
+        if (tz === 'Z' || tz === undefined) {
+            // UTC or no timezone - treat as UTC from backend
+            date = new Date(Date.UTC(
+                parseInt(year), parseInt(month) - 1, parseInt(day),
+                parseInt(hour), parseInt(minute), parseInt(second || 0),
+                ms ? parseInt(ms.padEnd(3, '0').slice(0, 3)) : 0
+            ));
+        } else {
+            // Has timezone offset like +05:30 or -0800
+            const tzMatch = tz.match(/^([+-])(\d{2}):?(\d{2})$/);
+            if (tzMatch) {
+                const sign = tzMatch[1] === '+' ? 1 : -1;
+                const tzHours = parseInt(tzMatch[2]);
+                const tzMinutes = parseInt(tzMatch[3]);
+                const offsetMs = (tzHours * 60 + tzMinutes) * 60 * 1000 * sign;
+
+                // Create UTC date then adjust
+                const utcDate = new Date(Date.UTC(
+                    parseInt(year), parseInt(month) - 1, parseInt(day),
+                    parseInt(hour), parseInt(minute), parseInt(second || 0),
+                    ms ? parseInt(ms.padEnd(3, '0').slice(0, 3)) : 0
+                ));
+                date = new Date(utcDate.getTime() - offsetMs);
+            }
+        }
+
+        if (date && !isNaN(date.getTime())) return date;
     }
 
-    if (isNaN(date.getTime())) return 'Invalid Date';
+    // Fallback: try native Date constructor (works in Chrome/Firefox)
+    const nativeDate = new Date(str);
+    if (!isNaN(nativeDate.getTime())) return nativeDate;
+
+    // Fallback: try appending Z (for Chrome/Firefox compatibility)
+    const withZ = new Date(str + 'Z');
+    if (!isNaN(withZ.getTime())) return withZ;
+
+    return null;
+};
+
+export const formatTimelineDate = (dateStr) => {
+    const date = parseDateSafe(dateStr);
+    if (!date) return null;
 
     // Using the browser's default locale and timeZone (which is the user's local)
     return date.toLocaleString(undefined, {
