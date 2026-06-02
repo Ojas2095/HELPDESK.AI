@@ -25,6 +25,7 @@ from logging.handlers import RotatingFileHandler
 
 # Suppress harmless PyTorch CPU pin_memory warning
 from encryption import encrypt_pii, decrypt_pii, is_encrypted
+from pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
@@ -2070,6 +2071,18 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
                 existing_metadata[extra_key] = final_data[extra_key]
         final_data["metadata"] = existing_metadata
 
+        # Apply PII redaction if enabled for this company
+        company_id_for_settings = final_data.get("company_id")
+        if company_id_for_settings:
+            try:
+                _cs = get_system_settings(company_id_for_settings)
+                if _cs.get("enable_pii_redaction"):
+                    redact_ips = _cs.get("redact_ip_addresses", False)
+                    final_data = redact_pii_dict(final_data, redact_ips=redact_ips)
+                    logger.info("[PIIRedaction] PII redacted for ticket save (company=%s)", company_id_for_settings)
+            except Exception as redact_err:
+                logger.warning("[PIIRedaction] Redaction skipped: %s", redact_err)
+
         # Strip keys not accepted by the DB schema
         insert_data = {k: v for k, v in final_data.items() if k in VALID_TICKET_COLUMNS}
 
@@ -2257,6 +2270,16 @@ async def create_ticket(
         data["company_id"] = profile_company_id
     elif data.get("company_id"):
         raise HTTPException(status_code=403, detail="User has no tenant assignment")
+
+    # Apply PII redaction if enabled for this company
+    if data.get("company_id"):
+        try:
+            _cs = get_system_settings(data["company_id"])
+            if _cs.get("enable_pii_redaction"):
+                redact_ips = _cs.get("redact_ip_addresses", False)
+                data = redact_pii_dict(data, redact_ips=redact_ips)
+        except Exception:
+            pass
 
     res = supabase.table("tickets").insert(data).execute()
     if not res.data:
@@ -3729,3 +3752,30 @@ async def download_security_report(current_user: dict = Depends(get_current_user
             "Content-Disposition": "attachment; filename=tenant_isolation_report.md",
         },
     )
+
+
+@app.post("/api/pii/scan", tags=["Security"])
+async def scan_text_for_pii(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Scan text for PII without redacting. Returns found PII grouped by type.
+    Admin-only endpoint for auditing PII exposure.
+    """
+    profile = _get_authenticated_profile(current_user)
+    if not profile.get("is_master_admin"):
+        raise HTTPException(status_code=403, detail="Only administrators can scan for PII.")
+
+    body = await request.json()
+    text = body.get("text", "")
+    if not text:
+        return {"findings": {}, "message": "No text provided"}
+
+    from pii_redaction import scan_pii
+    findings = scan_pii(text)
+    return {
+        "findings": findings,
+        "total_pii_found": sum(len(v) for v in findings.values()),
+        "types_found": list(findings.keys()),
+    }
