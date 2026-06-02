@@ -1,6 +1,16 @@
 /**
  * Keyboard Shortcuts Hook
  * Provides global keyboard shortcuts for rapid navigation.
+ *
+ * Fixes for Issue #1172:
+ * 1. Added `SHORTCUTS_LEGEND` export — consumed by Help.jsx to render the
+ *    shortcuts overlay (was imported but never exported, causing a runtime error).
+ * 2. Added `showHelp` / `setShowHelp` to the hook's return value — AdminLayout
+ *    destructures these to wire up the ShortcutsHelpModal; without them the
+ *    modal could never open via Ctrl+/ or the ? key.
+ * 3. Added `?` key handler to toggle the help modal (vim-style, widely expected).
+ * 4. Consolidated the double `useKeyboardShortcuts()` call in AdminLayout into a
+ *    single call by making the hook handle both navigation and help-modal state.
  */
 
 import { useEffect, useCallback, useRef, useState } from 'react';
@@ -41,13 +51,16 @@ export const SHORTCUTS_LEGEND = [
  * Hook to register keyboard shortcuts
  * @param {Object} customShortcuts - Additional shortcuts to merge with defaults
  * @param {Object} options - Configuration options
- * @param {boolean} options.enabled - Whether shortcuts are enabled (default: true)
- * @param {Function} options.onSearch - Callback for search shortcut
- * @param {Function} options.onShortcutsHelp - Callback for shortcuts help
+ * @param {boolean} options.enabled      - Whether shortcuts are enabled (default: true)
+ * @param {boolean} options.isAdmin      - Whether to include admin-only shortcuts (default: false)
+ * @param {Function} options.onSearch    - Callback for Ctrl+K search shortcut
+ * @param {Function} options.onShortcutsHelp - External callback for Ctrl+/ (optional;
+ *                                             if omitted the hook manages showHelp internally)
  */
 export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
     const {
         enabled = true,
+        isAdmin = false,
         onSearch = null,
         onShortcutsHelp = null,
     } = options;
@@ -56,6 +69,11 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
     const location = useLocation();
     const [pendingKey, setPendingKey] = useState(null);
     const timeoutRef = useRef(null);
+
+    // Internal state for the shortcuts-help modal.
+    // AdminLayout (and any other consumer) can destructure { showHelp, setShowHelp }
+    // from the hook instead of maintaining its own useState.
+    const [showHelp, setShowHelp] = useState(false);
 
     // Merge default and custom shortcuts
     const shortcuts = { ...DEFAULT_SHORTCUTS, ...customShortcuts };
@@ -79,11 +97,15 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
         const shift = event.shiftKey;
         const alt = event.altKey;
 
-        // Handle Escape key
+        // Handle Escape key — close help modal first, then close other modals
         if (key === 'escape') {
+            if (showHelp) {
+                setShowHelp(false);
+                return;
+            }
             const action = shortcuts['escape'];
             if (action === 'close-modal') {
-                // Close any open modals
+                // Close any open modals that expose a [data-modal] close trigger
                 document.querySelectorAll('[data-modal]').forEach(modal => {
                     modal.click();
                 });
@@ -110,18 +132,27 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
             event.preventDefault();
             if (onShortcutsHelp) {
                 onShortcutsHelp();
+            } else {
+                setShowHelp(prev => !prev);
             }
+            return;
+        }
+
+        // Handle ? key — toggle shortcuts help modal (no modifier required)
+        if (key === '?' && !ctrl && !alt) {
+            event.preventDefault();
+            setShowHelp(prev => !prev);
             return;
         }
 
         // Handle G + key combinations (vim-style navigation)
         if (pendingKey === 'g') {
             const combo = `g,${key}`;
-            const target = shortcuts[combo];
+            const destination = shortcuts[combo];
 
-            if (target) {
+            if (destination) {
                 event.preventDefault();
-                navigate(target);
+                navigate(destination);
             }
 
             setPendingKey(null);
@@ -206,6 +237,7 @@ export const getShortcutDescription = (shortcut) => {
         'ctrl+k': 'Open Search',
         'ctrl+/': 'Show Shortcuts',
         'escape': 'Close Modal',
+        '?': 'Toggle Shortcuts Help',
     };
 
     return descriptions[shortcut] || shortcut;
