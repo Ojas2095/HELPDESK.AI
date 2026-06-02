@@ -478,5 +478,170 @@ class TestAutoCloseServiceHelpers(unittest.TestCase):
         self.assertIsNone(get_instance())
 
 
+class TestGetCompanySettingsCaching(_AutoCloseTestBase):
+    """Tests for get_company_settings caching behavior (Issue #1155)."""
+
+    def _mock_db_response(self, data):
+        """Configure mock Supabase to return specific settings data."""
+        mock_resp = MagicMock()
+        mock_resp.data = data
+        chain = self.mock_supabase.table.return_value
+        chain.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_resp
+
+    def test_cache_hit_skips_db_query(self):
+        """Second call for same company should use cache, not query DB."""
+        self._mock_db_response({"auto_close_days": 14, "auto_close_enabled": True})
+
+        # First call — populates cache
+        result1 = self.service.get_company_settings("c-cache")
+        # Second call — should hit cache
+        result2 = self.service.get_company_settings("c-cache")
+
+        self.assertEqual(result1["auto_close_days"], 14)
+        self.assertEqual(result2["auto_close_days"], 14)
+        # DB should only be queried once (first call)
+        self.assertEqual(self.mock_supabase.table.call_count, 1)
+
+    def test_different_companies_get_separate_cache_entries(self):
+        """Each company should have its own cache entry."""
+        resp_a = MagicMock()
+        resp_a.data = {"auto_close_days": 5, "auto_close_enabled": True}
+        resp_b = MagicMock()
+        resp_b.data = {"auto_close_days": 10, "auto_close_enabled": False}
+
+        chain = self.mock_supabase.table.return_value
+        chain.select.return_value.eq.return_value.single.return_value.execute.side_effect = [resp_a, resp_b]
+
+        result_a = self.service.get_company_settings("c-A")
+        result_b = self.service.get_company_settings("c-B")
+
+        self.assertEqual(result_a["auto_close_days"], 5)
+        self.assertEqual(result_b["auto_close_days"], 10)
+        self.assertTrue(result_a["auto_close_enabled"])
+        self.assertFalse(result_b["auto_close_enabled"])
+
+    def test_expired_cache_refreshes_from_db(self):
+        """After TTL expires, should query DB again."""
+        self._mock_db_response({"auto_close_days": 7, "auto_close_enabled": True})
+
+        # First call
+        self.service.get_company_settings("c-expire")
+
+        # Manually expire the cache entry
+        self.service._settings_cache["c-expire"]["_cached_at"] = 0
+
+        # Mock new response
+        resp_new = MagicMock()
+        resp_new.data = {"auto_close_days": 21, "auto_close_enabled": False}
+        chain = self.mock_supabase.table.return_value
+        chain.select.return_value.eq.return_value.single.return_value.execute.return_value = resp_new
+
+        result = self.service.get_company_settings("c-expire")
+
+        self.assertEqual(result["auto_close_days"], 21)
+        self.assertFalse(result["auto_close_enabled"])
+        # DB should have been called twice
+        self.assertEqual(self.mock_supabase.table.call_count, 2)
+
+    def test_clear_cache_forces_db_query(self):
+        """clear_cache() should force next call to query DB."""
+        self._mock_db_response({"auto_close_days": 7, "auto_close_enabled": True})
+
+        # Populate cache
+        self.service.get_company_settings("c-clear")
+        self.assertEqual(self.mock_supabase.table.call_count, 1)
+
+        # Clear cache
+        self.service.clear_cache()
+
+        # Next call should query DB again
+        resp_new = MagicMock()
+        resp_new.data = {"auto_close_days": 30, "auto_close_enabled": True}
+        chain = self.mock_supabase.table.return_value
+        chain.select.return_value.eq.return_value.single.return_value.execute.return_value = resp_new
+
+        result = self.service.get_company_settings("c-clear")
+        self.assertEqual(result["auto_close_days"], 30)
+        self.assertEqual(self.mock_supabase.table.call_count, 2)
+
+    def test_cached_at_timestamp_is_stored(self):
+        """Cache entry should include _cached_at timestamp."""
+        self._mock_db_response({"auto_close_days": 7, "auto_close_enabled": True})
+
+        self.service.get_company_settings("c-ts")
+        cached = self.service._settings_cache.get("c-ts")
+
+        self.assertIsNotNone(cached)
+        self.assertIn("_cached_at", cached)
+        self.assertGreater(cached["_cached_at"], 0)
+
+    def test_db_error_does_not_cache_defaults(self):
+        """When DB fails, defaults should be returned but NOT cached."""
+        self.mock_supabase.table.side_effect = Exception("connection refused")
+
+        result = self.service.get_company_settings("c-err")
+
+        self.assertEqual(result["auto_close_days"], 7)
+        self.assertFalse(result["auto_close_enabled"])
+        # Defaults should NOT be cached — next call should retry DB
+        self.assertNotIn("c-err", self.service._settings_cache)
+
+    def test_fallback_defaults_are_disabled(self):
+        """DB error fallback should default to auto_close_enabled=False (safe)."""
+        self.mock_supabase.table.side_effect = Exception("timeout")
+
+        result = self.service.get_company_settings("c-safe")
+        self.assertFalse(result["auto_close_enabled"],
+                         "Fallback should disable auto-close for safety")
+
+
+class TestIsAutoCloseEnabled(_AutoCloseTestBase):
+    """Tests for is_auto_close_enabled helper (Issue #1155)."""
+
+    def test_returns_true_when_db_enabled(self):
+        mock_resp = MagicMock()
+        mock_resp.data = {"auto_close_enabled": True, "auto_close_days": 7}
+        chain = self.mock_supabase.table.return_value
+        chain.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_resp
+
+        self.assertTrue(self.service.is_auto_close_enabled("c-1"))
+
+    def test_returns_false_when_db_disabled(self):
+        mock_resp = MagicMock()
+        mock_resp.data = {"auto_close_enabled": False, "auto_close_days": 7}
+        chain = self.mock_supabase.table.return_value
+        chain.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_resp
+
+        self.assertFalse(self.service.is_auto_close_enabled("c-2"))
+
+    def test_returns_false_on_db_error(self):
+        self.mock_supabase.table.side_effect = Exception("db down")
+        self.assertFalse(self.service.is_auto_close_enabled("c-err"))
+
+
+class TestGetAutoCloseDays(_AutoCloseTestBase):
+    """Tests for get_auto_close_days helper (Issue #1155)."""
+
+    def test_returns_db_value(self):
+        mock_resp = MagicMock()
+        mock_resp.data = {"auto_close_days": 14, "auto_close_enabled": True}
+        chain = self.mock_supabase.table.return_value
+        chain.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_resp
+
+        self.assertEqual(self.service.get_auto_close_days("c-1"), 14)
+
+    def test_returns_default_on_db_error(self):
+        self.mock_supabase.table.side_effect = Exception("db down")
+        self.assertEqual(self.service.get_auto_close_days("c-err"), 7)
+
+    def test_returns_default_when_missing_from_response(self):
+        mock_resp = MagicMock()
+        mock_resp.data = {"auto_close_enabled": True}  # no auto_close_days
+        chain = self.mock_supabase.table.return_value
+        chain.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_resp
+
+        self.assertEqual(self.service.get_auto_close_days("c-partial"), 7)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
