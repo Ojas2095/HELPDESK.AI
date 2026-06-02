@@ -1070,6 +1070,7 @@ app = FastAPI(
     swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
     swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
 )
+app.state.supabase = supabase
 
 # Corporate-clean Swagger theme overrides (HELPDESK.AI palette: emerald + slate).
 SWAGGER_CUSTOM_CSS = """
@@ -1161,6 +1162,9 @@ app.add_middleware(
     expose_headers=["X-Request-ID"],
     max_age=600,
 )
+
+from backend.middleware.tenant_validator import TenantContextMiddleware
+app.add_middleware(TenantContextMiddleware)
 
 
 app.include_router(auth_cookie_router)

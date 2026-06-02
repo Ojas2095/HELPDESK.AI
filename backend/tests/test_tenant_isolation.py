@@ -12,6 +12,7 @@ postgrest_exceptions.APIError = DummyAPIError
 import os
 os.environ["SUPABASE_URL"] = "https://mock-project.supabase.co"
 os.environ["SUPABASE_SERVICE_KEY"] = "mock-service-key"
+os.environ["ALLOW_DEGRADED_STARTUP"] = "1"
 
 # Create mock Supabase client
 class MockResult:
