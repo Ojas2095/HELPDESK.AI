@@ -303,6 +303,7 @@ def mock_ai_services(request):
         "test_language_pipeline.py",
         "test_sla_predictor.py",
         "test_webhook_service.py",
+        "test_knowledge_gap_service.py",
         "test_metrics_service.py",
         "test_audit_service.py",
         "test_correction_log_async.py",
