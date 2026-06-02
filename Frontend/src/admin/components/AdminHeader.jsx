@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen, Keyboard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';
@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
  * Features a solid white background, specific search placeholder, 
  * and a functional avatar dropdown menu.
  */
-const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar }) => {
+const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar, onToggleShortcutsHelp }) => {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef(null);
@@ -95,6 +95,14 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                         </button>
                     )}
                 </div>
+
+                <button
+                    onClick={onToggleShortcutsHelp}
+                    title="Keyboard shortcuts"
+                    className="hidden md:flex p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-emerald-600 transition-colors"
+                >
+                    <Keyboard size={18} />
+                </button>
             </div>
 
             {/* Header Operations */}

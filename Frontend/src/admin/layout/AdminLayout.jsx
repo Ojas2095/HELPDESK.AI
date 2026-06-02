@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import KeyboardShortcutsHelp from '../components/KeyboardShortcutsHelp';
 
 /**
  * AdminLayout Component
@@ -12,6 +13,7 @@ import NotificationToast from '../../user/components/NotificationToast';
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
     return (
         <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
@@ -30,6 +32,7 @@ const AdminLayout = () => {
                     onMobileNavToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} 
                     isSidebarCollapsed={isSidebarCollapsed}
                     onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                    onToggleShortcutsHelp={() => setShowShortcutsHelp(true)}
                 />
 
                 {/* Operational Workspace */}
@@ -44,13 +47,16 @@ const AdminLayout = () => {
             {/* Real-time System Notifications */}
             <NotificationToast />
 
+            {/* Keyboard Shortcuts Help Overlay */}
+            <KeyboardShortcutsHelp open={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
+
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
                 <div
                     className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 lg:hidden flex transition-opacity duration-300"
                     onClick={() => setIsMobileNavOpen(false)}
                 >
-                    <div
+                    <div 
                         className="w-[85%] max-w-[280px] h-full shadow-2xl animate-in slide-in-from-left duration-300"
                         onClick={(e) => e.stopPropagation()}
                     >
