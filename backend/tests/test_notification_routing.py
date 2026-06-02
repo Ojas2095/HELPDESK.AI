@@ -1,180 +1,274 @@
-import pytest
-import sys
+"""
+Unit tests for NotificationRoutingMiddleware.
+Issues: #1157, #1158, #1162
+"""
+
 import os
-from unittest.mock import patch, MagicMock
+import sys
+import unittest
+from unittest.mock import Mock, patch
 
-sys.modules['supabase'] = MagicMock()
-sys.modules['dotenv'] = MagicMock()
+sys.modules["supabase"] = Mock()
+sys.modules["supabase"].create_client = Mock()
+sys.modules["dotenv"] = Mock()
+sys.modules["dotenv"].load_dotenv = Mock()
 
-# Ensure we import the real service, bypassing the conftest stub
-sys.path.insert(0, os.path.join(os.getcwd(), 'backend'))
-from services.notification_routing import NotificationRoutingMiddleware, NotificationType
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-
-class TestNotificationRoutingNoneHandling:
-    """Tests for handling None values in notification_routing service"""
-
-    def test_should_send_admin_alert_with_none_admin_alerts(self):
-        """Test that admin_alerts=None returns False"""
-        svc = NotificationRoutingMiddleware()
-
-        with patch.object(svc, 'get_system_settings', return_value={"admin_alerts": None}):
-            result = svc.should_send_admin_alert("company-123")
-            assert result is False
-
-    def test_should_send_admin_alert_with_false_admin_alerts(self):
-        """Test that admin_alerts=False returns False"""
-        svc = NotificationRoutingMiddleware()
-
-        with patch.object(svc, 'get_system_settings', return_value={"admin_alerts": False}):
-            result = svc.should_send_admin_alert("company-123")
-            assert result is False
-
-    def test_should_send_admin_alert_with_true_admin_alerts(self):
-        """Test that admin_alerts=True returns True"""
-        svc = NotificationRoutingMiddleware()
-
-        with patch.object(svc, 'get_system_settings', return_value={"admin_alerts": True}):
-            result = svc.should_send_admin_alert("company-123")
-            assert result is True
+from backend.services.notification_routing import (
+    NotificationRoutingMiddleware, 
+    NotificationType,
+    load, 
+    get_instance
+)
 
 
-class TestNotificationRoutingEmailGating:
-    """Tests for email notification gating rules"""
+class TestShouldSendPushNotification(unittest.TestCase):
+    def setUp(self):
+        import backend.services.notification_routing as nr
+        nr._instance = None
+        self.middleware = NotificationRoutingMiddleware()
+        self.middleware._settings_cache = {}
 
-    def test_email_notifications_globally_disabled(self):
-        """Test that when email_notifications is False, should_send_email_notification returns False"""
-        svc = NotificationRoutingMiddleware()
-        settings = {
+    def test_push_allowed_when_email_enabled(self):
+        self.middleware._settings_cache["company-001"] = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        result = self.middleware.should_send_push_notification("company-001")
+        self.assertTrue(result)
+
+    def test_push_blocked_when_email_disabled(self):
+        self.middleware._settings_cache["company-002"] = {
             "email_notifications": False,
             "admin_alerts": True,
             "digest_frequency": "daily"
         }
-        with patch.object(svc, 'get_system_settings', return_value=settings):
-            result = svc.should_send_email_notification("company-123", NotificationType.DAILY_DIGEST)
-            assert result is False
+        result = self.middleware.should_send_push_notification("company-002")
+        self.assertFalse(result)
 
-    def test_digest_frequency_disabled(self):
-        """Test that digest email is not sent if digest frequency is set to 'disabled'"""
-        svc = NotificationRoutingMiddleware()
-        settings = {
+    def test_push_uses_fallback_when_settings_unavailable(self):
+        self.middleware._settings_cache = {}
+        with patch.object(self.middleware, "_fetch_system_settings") as mock_fetch:
+            mock_fetch.return_value = {
+                "email_notifications": True,
+                "admin_alerts": True,
+                "digest_frequency": "daily"
+            }
+            result = self.middleware.should_send_push_notification("company-003")
+            self.assertTrue(result)
+
+
+class TestShouldSendAdminAlert(unittest.TestCase):
+    def setUp(self):
+        import backend.services.notification_routing as nr
+        nr._instance = None
+        self.middleware = NotificationRoutingMiddleware()
+        self.middleware._settings_cache = {}
+
+    def test_admin_alert_allowed_when_enabled(self):
+        self.middleware._settings_cache["company-001"] = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        result = self.middleware.should_send_admin_alert("company-001")
+        self.assertTrue(result)
+
+    def test_admin_alert_blocked_when_disabled(self):
+        self.middleware._settings_cache["company-002"] = {
+            "email_notifications": True,
+            "admin_alerts": False,
+            "digest_frequency": "daily"
+        }
+        result = self.middleware.should_send_admin_alert("company-002")
+        self.assertFalse(result)
+
+    def test_admin_alert_blocked_when_none(self):
+        self.middleware._settings_cache["company-003"] = {
+            "email_notifications": True,
+            "admin_alerts": None,
+            "digest_frequency": "daily"
+        }
+        result = self.middleware.should_send_admin_alert("company-003")
+        self.assertFalse(result)
+
+    def test_admin_alert_uses_fallback_when_settings_unavailable(self):
+        self.middleware._settings_cache = {}
+        with patch.object(self.middleware, "_fetch_system_settings") as mock_fetch:
+            mock_fetch.return_value = {
+                "email_notifications": True,
+                "admin_alerts": True,
+                "digest_frequency": "daily"
+            }
+            result = self.middleware.should_send_admin_alert("company-004")
+            self.assertTrue(result)
+
+
+class TestShouldSendEmailNotification(unittest.TestCase):
+    def setUp(self):
+        import backend.services.notification_routing as nr
+        nr._instance = None
+        self.middleware = NotificationRoutingMiddleware()
+        self.middleware._settings_cache = {}
+
+    def test_email_allowed_when_enabled(self):
+        self.middleware._settings_cache["company-001"] = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        result = self.middleware.should_send_email_notification(
+            "company-001", NotificationType.TICKET_ALERT
+        )
+        self.assertTrue(result)
+
+    def test_email_blocked_when_disabled(self):
+        self.middleware._settings_cache["company-002"] = {
+            "email_notifications": False,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        result = self.middleware.should_send_email_notification(
+            "company-002", NotificationType.TICKET_ALERT
+        )
+        self.assertFalse(result)
+
+    def test_daily_digest_allowed_when_frequency_daily(self):
+        self.middleware._settings_cache["company-003"] = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        result = self.middleware.should_send_email_notification(
+            "company-003", NotificationType.DAILY_DIGEST
+        )
+        self.assertTrue(result)
+
+    def test_weekly_digest_blocked_when_frequency_daily(self):
+        self.middleware._settings_cache["company-004"] = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        result = self.middleware.should_send_email_notification(
+            "company-004", NotificationType.WEEKLY_DIGEST
+        )
+        self.assertFalse(result)
+
+    def test_digest_blocked_when_frequency_disabled(self):
+        self.middleware._settings_cache["company-005"] = {
             "email_notifications": True,
             "admin_alerts": True,
             "digest_frequency": "disabled"
         }
-        with patch.object(svc, 'get_system_settings', return_value=settings):
-            result = svc.should_send_email_notification("company-123", NotificationType.DAILY_DIGEST)
-            assert result is False
+        result = self.middleware.should_send_email_notification(
+            "company-005", NotificationType.DAILY_DIGEST
+        )
+        self.assertFalse(result)
 
-    def test_digest_frequency_mismatch(self):
-        """Test that weekly digest is not sent if frequency is set to daily"""
-        svc = NotificationRoutingMiddleware()
-        settings = {
-            "email_notifications": True,
-            "admin_alerts": True,
-            "digest_frequency": "daily"
-        }
-        with patch.object(svc, 'get_system_settings', return_value=settings):
-            result = svc.should_send_email_notification("company-123", NotificationType.WEEKLY_DIGEST)
-            assert result is False
-
-    def test_digest_frequency_valid(self):
-        """Test that digest email is allowed when frequencies align"""
-        svc = NotificationRoutingMiddleware()
-        settings = {
+    def test_weekly_digest_allowed_when_frequency_weekly(self):
+        self.middleware._settings_cache["company-006"] = {
             "email_notifications": True,
             "admin_alerts": True,
             "digest_frequency": "weekly"
         }
-        with patch.object(svc, 'get_system_settings', return_value=settings):
-            result = svc.should_send_email_notification("company-123", NotificationType.WEEKLY_DIGEST)
-            assert result is True
+        result = self.middleware.should_send_email_notification(
+            "company-006", NotificationType.WEEKLY_DIGEST
+        )
+        self.assertTrue(result)
 
 
-class TestNotificationRoutingPushGating:
-    """Tests for push notification gating rules"""
+class TestSystemSettingsFetch(unittest.TestCase):
+    def setUp(self):
+        import backend.services.notification_routing as nr
+        nr._instance = None
+        self.middleware = NotificationRoutingMiddleware()
+        self.middleware._settings_cache = {}
 
-    def test_push_notifications_gate_on_global_email_setting(self):
-        """Test that push notifications are disabled if global email_notifications is False"""
-        svc = NotificationRoutingMiddleware()
-        settings = {
+    @patch("backend.services.notification_routing.create_client")
+    def test_fetch_from_database(self, mock_create_client):
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.data = {
             "email_notifications": False,
-            "admin_alerts": True,
-            "digest_frequency": "daily"
-        }
-        with patch.object(svc, 'get_system_settings', return_value=settings):
-            result = svc.should_send_push_notification("company-123")
-            assert result is False
-
-    def test_push_notifications_allowed(self):
-        """Test that push notifications are allowed if email_notifications is True"""
-        svc = NotificationRoutingMiddleware()
-        settings = {
-            "email_notifications": True,
-            "admin_alerts": True,
-            "digest_frequency": "daily"
-        }
-        with patch.object(svc, 'get_system_settings', return_value=settings):
-            result = svc.should_send_push_notification("company-123")
-            assert result is True
-
-
-class TestNotificationRoutingDatabaseAndCache:
-    """Tests for database fetching and cache behavior"""
-
-    def test_fetch_system_settings_success(self):
-        """Test fetching system settings successfully from Supabase"""
-        svc = NotificationRoutingMiddleware()
-        mock_data = {
-            "email_notifications": True,
             "admin_alerts": False,
             "digest_frequency": "weekly"
         }
-        
-        # Setup mock client behavior
-        mock_execute = MagicMock()
-        mock_execute.data = mock_data
-        
-        mock_single = MagicMock()
-        mock_single.execute.return_value = mock_execute
-        
-        mock_eq = MagicMock()
-        mock_eq.single.return_value = mock_single
-        
-        mock_select = MagicMock()
-        mock_select.eq.return_value = mock_eq
-        
-        svc.supabase = MagicMock()
-        svc.supabase.table.return_value.select.return_value = mock_select
-        
-        settings = svc._fetch_system_settings("company-123")
-        assert settings["email_notifications"] is True
-        assert settings["admin_alerts"] is False
-        assert settings["digest_frequency"] == "weekly"
+        mock_client.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value = mock_response
+        mock_create_client.return_value = mock_client
+        result = self.middleware._fetch_system_settings("company-001")
+        self.assertFalse(result.get("email_notifications"))
+        self.assertFalse(result.get("admin_alerts"))
+        self.assertEqual(result.get("digest_frequency"), "weekly")
 
-    def test_fetch_system_settings_fail_open(self):
-        """Test that on database errors, the middleware degrades gracefully to fail-open"""
-        svc = NotificationRoutingMiddleware()
-        svc.supabase = MagicMock()
-        svc.supabase.table.side_effect = Exception("DB Connection Refused")
-        
-        settings = svc._fetch_system_settings("company-123")
-        assert settings["email_notifications"] is True
-        assert settings["admin_alerts"] is True
-        assert settings["digest_frequency"] == "daily"
+    @patch("backend.services.notification_routing.create_client")
+    def test_fallback_on_db_error(self, mock_create_client):
+        mock_client = Mock()
+        mock_client.table.return_value.select.return_value.eq.return_value.single.return_value.execute.side_effect = Exception("DB Error")
+        mock_create_client.return_value = mock_client
+        result = self.middleware._fetch_system_settings("company-002")
+        self.assertTrue(result.get("email_notifications"))
+        self.assertTrue(result.get("admin_alerts"))
+        self.assertEqual(result.get("digest_frequency"), "daily")
 
-    def test_get_system_settings_cache(self):
-        """Test that settings are cached after the first fetch to avoid repeated DB hits"""
-        svc = NotificationRoutingMiddleware()
-        
-        with patch.object(svc, '_fetch_system_settings') as mock_fetch:
-            mock_fetch.return_value = {"email_notifications": True}
-            
-            # First call should hit DB
-            settings_first = svc.get_system_settings("company-123")
-            # Second call should read from cache
-            settings_second = svc.get_system_settings("company-123")
-            
-            assert settings_first == {"email_notifications": True}
-            assert settings_second == {"email_notifications": True}
-            mock_fetch.assert_called_once_with("company-123")
+    def test_caching(self):
+        self.middleware._settings_cache["company-001"] = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        with patch.object(self.middleware, "_fetch_system_settings") as mock_fetch:
+            result = self.middleware.get_system_settings("company-001")
+            mock_fetch.assert_not_called()
+            self.assertTrue(result.get("email_notifications"))
+
+
+class TestCacheInvalidation(unittest.TestCase):
+    def setUp(self):
+        import backend.services.notification_routing as nr
+        nr._instance = None
+        self.middleware = NotificationRoutingMiddleware()
+        self.middleware._settings_cache = {}
+
+    def test_invalidate_cache(self):
+        self.middleware._settings_cache["company-001"] = {
+            "email_notifications": True,
+            "admin_alerts": True,
+            "digest_frequency": "daily"
+        }
+        self.middleware.invalidate_cache("company-001")
+        self.assertNotIn("company-001", self.middleware._settings_cache)
+
+    def test_invalidate_nonexistent_cache(self):
+        self.middleware.invalidate_cache("company-999")
+        self.assertEqual(self.middleware._settings_cache, {})
+
+
+class TestSingleton(unittest.TestCase):
+    def setUp(self):
+        import backend.services.notification_routing as nr
+        nr._instance = None
+
+    @patch("backend.services.notification_routing.create_client")
+    def test_load_singleton(self, mock_create_client):
+        mock_client = Mock()
+        mock_create_client.return_value = mock_client
+        import backend.services.notification_routing as nr
+        nr._instance = None
+        instance1 = load()
+        instance2 = load()
+        self.assertIs(instance1, instance2)
+        self.assertIsNotNone(get_instance())
+        self.assertIs(get_instance(), instance1)
+
+    @patch("backend.services.notification_routing.create_client")
+    def test_get_instance_before_load(self, mock_create_client):
+        import backend.services.notification_routing as nr
+        nr._instance = None
+        self.assertIsNone(get_instance())
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
