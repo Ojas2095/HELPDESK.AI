@@ -3,11 +3,13 @@
 ## File 1: Frontend/src/components/landing/Hero.jsx (NEW)
 
 ### Overview
+
 New React component implementing a modern SaaS split-screen hero with glassmorphic cards, Framer Motion animations, and full responsive support.
 
 ### Key Sections
 
 #### Imports & Setup
+
 ```jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -20,6 +22,7 @@ const slideInRightVariants = { /* right column entrance */ };
 ```
 
 #### Component Structure
+
 ```jsx
 export default function Hero({ onDemoClick, onGetStartedClick })
 ├── Background gradient accents (3 blurred circles)
@@ -46,6 +49,7 @@ export default function Hero({ onDemoClick, onGetStartedClick })
 ```
 
 #### Card Styling Pattern
+
 ```jsx
 // All cards use consistent glassmorphism pattern:
 motion.div
@@ -60,6 +64,7 @@ motion.div
 ### Changes Summary
 
 #### Line 16: Added Import
+
 ```jsx
 // Before:
 import TeamSection from '../components/landing/TeamSection';
@@ -70,6 +75,7 @@ import Hero from '../components/landing/Hero';
 ```
 
 #### Lines 351-550: Replaced Old Hero Section
+
 ```jsx
 // Before: 199-line centered hero with bento cards
 <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden">
@@ -89,6 +95,7 @@ import Hero from '../components/landing/Hero';
 ```
 
 ### Impact Analysis
+
 - ✅ LandingPage JSX reduced by ~200 lines
 - ✅ Improved component separation of concerns
 - ✅ Callbacks properly maintained (setShowDemo, navigate)
@@ -99,6 +106,7 @@ import Hero from '../components/landing/Hero';
 ## Component API
 
 ### Hero Props
+
 ```typescript
 interface HeroProps {
   onDemoClick: () => void;      // Triggered when "Watch Demo" button clicked
@@ -107,6 +115,7 @@ interface HeroProps {
 ```
 
 ### Usage Example
+
 ```jsx
 <Hero 
   onDemoClick={() => setShowDemo(true)}
@@ -119,7 +128,8 @@ interface HeroProps {
 ## Responsive Breakpoints
 
 ### Desktop (lg: 1024px+)
-```
+
+```diff
 ┌─────────────────────────────────────────────┐
 │ LEFT COLUMN (50%) │ RIGHT COLUMN (50%)      │
 │ - AI Badge        │ Glasmorphic Cards:      │
@@ -132,13 +142,15 @@ Height: min-h-screen (100vh)
 ```
 
 ### Tablet (md: 768px - 1024px)
-```
+
+```diff
 Grid adapts to single column, cards remain visible
 Height: Still min-h-screen with adjusted spacing
 ```
 
 ### Mobile (sm: < 768px)
-```
+
+```diff
 ┌──────────────────────┐
 │ AI Badge             │
 │ Headline             │
@@ -162,6 +174,7 @@ Width: Full (px-4)
 ## Animation Variants
 
 ### containerVariants
+
 ```javascript
 {
   hidden: { opacity: 0 },
@@ -175,6 +188,7 @@ Width: Full (px-4)
 ```
 
 ### fadeInUpVariants
+
 ```javascript
 {
   hidden: { opacity: 0, y: 20 },
@@ -189,6 +203,7 @@ Width: Full (px-4)
 ```
 
 ### slideInRightVariants
+
 ```javascript
 {
   hidden: { opacity: 0, x: 40 },
@@ -207,6 +222,7 @@ Width: Full (px-4)
 ## Interactive States
 
 ### Button Hover Effects
+
 ```jsx
 // Primary CTA
 whileHover={{ scale: 1.02 }}
@@ -218,6 +234,7 @@ whileTap={{ scale: 0.98 }}
 ```
 
 ### Card Hover Effects
+
 ```jsx
 // All cards
 whileHover={{
@@ -229,6 +246,7 @@ transition={{ type: 'spring', stiffness: 300, damping: 30 }}
 ```
 
 ### Continuous Animations
+
 ```jsx
 // Bot icon pulse
 animate={{ scale: [1, 1.1, 1], y: [0, -4, 0] }}
@@ -248,21 +266,25 @@ transition={{ duration: [4, 5], repeat: Infinity }}
 ## Tailwind Classes Used
 
 ### Spacing & Layout
+
 - `min-h-screen`, `py-12`, `px-4`, `gap-12`, `gap-16`
 - `grid`, `lg:grid-cols-2`, `grid-cols-1`
 
 ### Typography
+
 - `text-7xl`, `text-6xl`, `text-5xl`, `text-lg`, `text-sm`
 - `font-black`, `font-bold`, `font-semibold`
 - `tracking-tight`, `tracking-wider`, `uppercase`
 - `leading-[1.1]`, `leading-relaxed`, `line-clamp-3`
 
 ### Colors
+
 - `text-emerald-900`, `text-emerald-600`, `text-gray-900`, `text-white`
 - `bg-emerald-900`, `bg-white/80`, `bg-emerald-50`, `bg-gradient-to-r`
 - `border-emerald-200`, `border-white/60`, `shadow-2xl`
 
 ### Effects
+
 - `backdrop-blur-xl`, `backdrop-blur-2xl`, `backdrop-blur-sm`
 - `rounded-2xl`, `rounded-3xl`, `rounded-full`
 - `shadow-xl`, `shadow-2xl`, `shadow-emerald-900/25`
@@ -274,7 +296,8 @@ transition={{ duration: [4, 5], repeat: Infinity }}
 ## Performance Considerations
 
 ### Build Output
-```
+
+```diff
 Before: Hero section inline in LandingPage.jsx (~3500 lines total)
 After: Hero extracted to separate component
 Result: Better tree-shaking, improved code splitting potential
@@ -283,12 +306,14 @@ Bundle impact: Negligible (same code, better organization)
 ```
 
 ### Animation Performance
+
 - All animations use `transform` and `opacity` (GPU-accelerated)
 - No repaints on `scale`, `y`, `x` transforms
 - Framer Motion optimizes render cycles
 - Spring physics use efficient easing functions
 
 ### Mobile Performance
+
 - Mobile version uses `lg:hidden` (CSS reduces DOM)
 - Simplified animations on mobile (no floating particles)
 - Cards don't layer excessively
@@ -299,12 +324,14 @@ Bundle impact: Negligible (same code, better organization)
 ## Browser Compatibility
 
 ### Supported Browsers
+
 - ✅ Chrome 88+ (backdrop-filter support)
 - ✅ Firefox 104+ (backdrop-filter support)
 - ✅ Safari 15+ (backdrop-filter support)
 - ⚠️ Edge 88+ (good support, some animation edge cases)
 
 ### Fallbacks
+
 - No explicit fallbacks (modern browser stack assumed)
 - Glassmorphism gracefully degrades to solid bg + border if backdrop-filter unsupported
 - All functionality preserved without animations
@@ -314,16 +341,19 @@ Bundle impact: Negligible (same code, better organization)
 ## Accessibility Features
 
 ### Semantic HTML
+
 - `<section>` for hero region
 - `<motion.div>` renders valid DOM (not a custom element)
 - Buttons with `onClick` handlers (keyboard accessible)
 
 ### Color Contrast
+
 - Text: emerald-900 (hsl(33, 100%, 11%)) on white - ✅ WCAG AAA
 - Buttons: white text on emerald-900 - ✅ WCAG AAA
 - Interactive elements: 44px minimum touch target
 
 ### Reduced Motion
+
 - Spring animations respect timing
 - No strobe effects or rapid flashing
 - Text remains readable without animations
@@ -332,7 +362,7 @@ Bundle impact: Negligible (same code, better organization)
 
 ## Testing Checklist
 
-```
+```diff
 [ ] Desktop layout (1920px, 1440px, 1280px)
   [ ] Headline renders correctly
   [ ] Cards display in correct positions
@@ -383,6 +413,7 @@ Bundle impact: Negligible (same code, better organization)
 ## Rollback Instructions
 
 If revert needed:
+
 ```bash
 git revert issue-512-hero-redesign
 # OR
@@ -394,7 +425,7 @@ rm Frontend/src/components/landing/Hero.jsx
 
 ## References
 
-- **Framer Motion Docs:** https://www.framer.com/motion/
-- **Tailwind Backdrop Filter:** https://tailwindcss.com/docs/backdrop-filter
-- **Lucide React Icons:** https://lucide.dev/
-- **Web Animations Performance:** https://web.dev/animations-guide/
+- **Framer Motion Docs:** <https://www.framer.com/motion/>
+- **Tailwind Backdrop Filter:** <https://tailwindcss.com/docs/backdrop-filter>
+- **Lucide React Icons:** <https://lucide.dev/>
+- **Web Animations Performance:** <https://web.dev/animations-guide/>
