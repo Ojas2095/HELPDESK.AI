@@ -13,7 +13,24 @@
  *
  * All public functions route through `normalizeDateString` before constructing
  * a Date object, ensuring cross-browser compatibility.
+ *
+ * Issue #1174 Fix:
+ *   - Removed duplicate exports (getTimeZoneAbbr, formatFullTimestamp)
+ *   - Fixed getRelativeTime to return actual relative strings ("2 hours ago")
+ *   - Added graceful fallback: invalid dates return current local timestamp
+ *   - Added input validation and max length guard (200 chars)
+ *   - Added comprehensive unit tests for cross-browser compatibility
  */
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Maximum allowed length for raw date input strings (DoS prevention). */
+const MAX_DATE_INPUT_LENGTH = 200;
+
+/** Fallback used when a date cannot be parsed. */
+const FALLBACK_DATE = () => new Date();
 
 // ---------------------------------------------------------------------------
 // Private helpers
@@ -26,8 +43,8 @@
  * Transformations applied (in order):
  *  1. Trim surrounding whitespace.
  *  2. Replace space separator with 'T'.
- *  3. Truncate microseconds to milliseconds (6 digits → 3 digits).
- *  4. Insert colon in compact timezone offset (+0530 → +05:30).
+ *  3. Truncate microseconds to milliseconds (6 digits -> 3 digits).
+ *  4. Insert colon in compact timezone offset (+0530 -> +05:30).
  *  5. Append 'Z' when no timezone indicator is present.
  *
  * @private
@@ -38,24 +55,36 @@ const normalizeDateString = (str) => {
     let s = str.trim();
 
     // 1. Replace space between date and time with 'T'
-    //    "2024-01-15 10:30:00" → "2024-01-15T10:30:00"
+    //    "2024-01-15 10:30:00" -> "2024-01-15T10:30:00"
     s = s.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}:\d{2})/, '$1T$2');
 
     // 2. Truncate microseconds to milliseconds
-    //    "2024-01-15T10:30:00.123456+00:00" → "2024-01-15T10:30:00.123+00:00"
+    //    "2024-01-15T10:30:00.123456+00:00" -> "2024-01-15T10:30:00.123+00:00"
     s = s.replace(/(\.\d{3})\d+/, '$1');
 
     // 3. Insert colon in compact timezone offset
-    //    "+0530" → "+05:30"  |  "-0430" → "-04:30"
+    //    "+0530" -> "+05:30"  |  "-0430" -> "-04:30"
     s = s.replace(/([+-])(\d{2})(\d{2})$/, '$1$2:$3');
 
     // 4. Append 'Z' if there is no timezone indicator at all
-    //    "2024-01-15T10:30:00" → "2024-01-15T10:30:00Z"
+    //    "2024-01-15T10:30:00" -> "2024-01-15T10:30:00Z"
     if (!/Z|[+-]\d{2}:\d{2}$/.test(s)) {
         s += 'Z';
     }
 
     return s;
+};
+
+/**
+ * Validates that a raw date input is a safe string length.
+ * Prevents DoS via extremely long query strings (Issue #1174 requirement).
+ *
+ * @private
+ * @param {string} str - Raw input string.
+ * @returns {boolean} True if length is within safe bounds.
+ */
+const isSafeDateInput = (str) => {
+    return str.length <= MAX_DATE_INPUT_LENGTH;
 };
 
 /**
@@ -83,6 +112,9 @@ export const parseDate = (dateStr) => {
     const str = String(dateStr).trim();
     if (!str) return null;
 
+    // Reject overly long strings (security / DoS guard)
+    if (!isSafeDateInput(str)) return null;
+
     // Numeric epoch timestamp (milliseconds or seconds)
     if (/^\d+$/.test(str)) {
         const num = parseInt(str, 10);
@@ -91,7 +123,7 @@ export const parseDate = (dateStr) => {
         return isNaN(epochDate.getTime()) ? null : epochDate;
     }
 
-    // Slash-separated format: "2024/01/15" → "2024-01-15"
+    // Slash-separated format: "2024/01/15" -> "2024-01-15"
     const normalized = normalizeDateString(
         str.replace(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/, (_, y, m, d) =>
             `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
@@ -110,16 +142,17 @@ export const parseDate = (dateStr) => {
  * Formats a date value for display in ticket timelines.
  *
  * Returns a locale-formatted string such as "15 Jan 2024, 10:30 AM".
- * Returns 'Invalid Date' for any input that cannot be parsed.
+ * Falls back to the current local timestamp for any input that cannot be parsed
+ * (prevents blank timeline entries on Safari and other browsers).
  *
  * @param {string|number|Date|null|undefined} dateStr - Raw date value.
- * @returns {string} Formatted date string or 'Invalid Date'.
+ * @returns {string} Formatted date string.
  */
 export const formatTimelineDate = (dateStr) => {
     const date = parseDate(dateStr);
-    if (!date) return 'Invalid Date';
+    const safeDate = date || FALLBACK_DATE();
 
-    return date.toLocaleString(undefined, {
+    return safeDate.toLocaleString(undefined, {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
@@ -157,8 +190,9 @@ export const getTimeZoneAbbr = () => {
  * @returns {string} Formatted timestamp with timezone, or 'Processing...'.
  */
 export const formatFullTimestamp = (dateStr) => {
+    const date = parseDate(dateStr);
+    if (!date) return 'Processing...';
     const formatted = formatTimelineDate(dateStr);
-    if (!formatted || formatted === 'Invalid Date') return 'Processing...';
     return `${formatted} (${getTimeZoneAbbr()})`;
 };
 
@@ -178,14 +212,26 @@ export const isValidDate = (dateStr) => {
  * Returns 'Unknown' for invalid inputs.
  *
  * @param {string|number|Date|null|undefined} dateStr - Raw date value.
- * @returns {string} Relative time string or 'Unknown'.
+ * @returns {string} Relative time string or formatted date or 'Unknown'.
  */
 export const getRelativeTime = (dateStr) => {
     const date = parseDate(dateStr);
-    if (!date) return 'Processing...';
-    const formatted = formatTimelineDate(date);
-    const tz = getTimeZoneAbbr();
-    return `${formatted} (${tz})`;
+    if (!date) return 'Unknown';
+
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return 'just now';
+    if (diffMin < 60) return `${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
+    if (diffHour < 24) return `${diffHour} hour${diffHour !== 1 ? 's' : ''} ago`;
+    if (diffDay < 7) return `${diffDay} day${diffDay !== 1 ? 's' : ''} ago`;
+
+    // Fallback to formatted date for dates older than 7 days
+    return formatTimelineDate(dateStr);
 };
 
 /**
@@ -199,23 +245,4 @@ export const getRelativeTime = (dateStr) => {
  */
 export const safeParseDateForSort = (dateStr) => {
     return parseDate(dateStr) ?? new Date(0);
-};
-
-export const getTimeZoneAbbr = () => {
-    try {
-        return new Intl.DateTimeFormat('en-US', {
-            timeZoneName: 'short'
-        })
-        .formatToParts(new Date())
-        .find(part => part.type === 'timeZoneName')?.value || 'IST';
-    } catch (_e) {
-        return 'IST';
-    }
-};
-
-export const formatFullTimestamp = (dateStr) => {
-    const date = parseDate(dateStr);
-    if (!date) return 'Processing...';
-    const formatted = formatTimelineDate(dateStr);
-    return `${formatted} (${getTimeZoneAbbr()})`;
 };

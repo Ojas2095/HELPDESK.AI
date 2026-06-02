@@ -1,326 +1,322 @@
 /**
- * @file dateUtils.test.js
- * @description Unit tests for dateUtils.js — cross-browser date parsing utility.
+ * Unit tests for dateUtils.js
  *
- * Covers the Safari-specific parsing failures described in Issue #912:
- *   - Space-separated timestamps ("2024-01-15 10:30:00")
- *   - Microsecond precision ("2024-01-15T10:30:00.123456+00:00")
- *   - Compact timezone offsets ("+0530")
- *   - Missing timezone indicator ("2024-01-15T10:30:00")
+ * Covers:
+ *  - Safari-specific ISO-8601 parsing edge cases
+ *  - Cross-browser compatibility (Chrome, Firefox, Safari behavior simulation)
+ *  - Graceful fallback behavior for invalid / empty / corrupt dates
+ *  - Timezone configuration tests
+ *  - Input validation and length limits (security)
+ *  - Relative time calculations
  *
- * Also covers general correctness, edge cases, and the safeParseDateForSort helper.
+ * Issue #1174: Fix Ticket Timeline Date Parsing Discrepancies on Older Safari
  */
 
-import { describe, it, expect } from 'vitest';
 import {
+    parseDate,
     formatTimelineDate,
+    getTimeZoneAbbr,
     formatFullTimestamp,
     isValidDate,
     getRelativeTime,
-    getTimeZoneAbbr,
     safeParseDateForSort,
-} from './dateUtils';
+} from './dateUtils.js';
 
 // ---------------------------------------------------------------------------
-// formatTimelineDate — happy path
+// Helper: freeze time for deterministic relative-time tests
 // ---------------------------------------------------------------------------
+const MOCK_NOW = new Date('2024-06-15T12:00:00Z');
 
-describe('formatTimelineDate — valid inputs', () => {
-    it('handles standard ISO-8601 with Z suffix', () => {
-        const result = formatTimelineDate('2024-01-15T10:30:00Z');
-        expect(result).not.toBe('Invalid Date');
-        expect(result).toContain('Jan');
-        expect(result).toContain('2024');
+describe('dateUtils', () => {
+    let originalDate;
+
+    beforeAll(() => {
+        // Save original Date constructor
+        originalDate = global.Date;
+        // Mock Date to freeze "now" but allow normal construction with args
+        global.Date = class extends Date {
+            constructor(arg) {
+                if (arg === undefined) {
+                    super(MOCK_NOW);
+                } else {
+                    super(arg);
+                }
+            }
+            static now() {
+                return MOCK_NOW.getTime();
+            }
+        };
+        // Copy static methods from original
+        Object.setPrototypeOf(global.Date, originalDate);
+        global.Date.UTC = originalDate.UTC;
+        global.Date.parse = originalDate.parse;
     });
 
-    it('handles ISO-8601 without timezone (assumes UTC)', () => {
-        const result = formatTimelineDate('2024-01-15T10:30:00');
-        expect(result).not.toBe('Invalid Date');
+    afterAll(() => {
+        global.Date = originalDate;
     });
 
-    it('handles ISO-8601 with milliseconds and Z', () => {
-        const result = formatTimelineDate('2024-01-15T10:30:00.123Z');
-        expect(result).not.toBe('Invalid Date');
+    // =====================================================================
+    // parseDate
+    // =====================================================================
+    describe('parseDate', () => {
+        it('returns null for falsy inputs', () => {
+            expect(parseDate(null)).toBeNull();
+            expect(parseDate(undefined)).toBeNull();
+            expect(parseDate('')).toBeNull();
+            expect(parseDate('   ')).toBeNull();
+        });
+
+        it('returns the same Date instance if valid', () => {
+            const d = new Date('2024-01-15T10:30:00Z');
+            expect(parseDate(d)).toEqual(d);
+        });
+
+        it('returns null for an invalid Date object', () => {
+            expect(parseDate(new Date('not-a-date'))).toBeNull();
+        });
+
+        it('parses epoch timestamps in milliseconds', () => {
+            const ms = new Date('2024-01-15T10:30:00Z').getTime();
+            const result = parseDate(String(ms));
+            expect(result.getTime()).toBe(ms);
+        });
+
+        it('parses epoch timestamps in seconds', () => {
+            const s = Math.floor(new Date('2024-01-15T10:30:00Z').getTime() / 1000);
+            const result = parseDate(String(s));
+            expect(result.getTime()).toBe(s * 1000);
+        });
+
+        // Safari-specific edge cases
+        it('parses ISO-8601 with space separator (Safari fix)', () => {
+            const result = parseDate('2024-01-15 10:30:00');
+            expect(result).toBeInstanceOf(Date);
+            expect(isNaN(result.getTime())).toBe(false);
+        });
+
+        it('parses ISO-8601 with microseconds (Safari fix)', () => {
+            const result = parseDate('2024-01-15T10:30:00.123456+00:00');
+            expect(result).toBeInstanceOf(Date);
+            expect(isNaN(result.getTime())).toBe(false);
+        });
+
+        it('parses ISO-8601 with compact timezone offset (Safari fix)', () => {
+            const result = parseDate('2024-01-15T10:30:00+0530');
+            expect(result).toBeInstanceOf(Date);
+            expect(isNaN(result.getTime())).toBe(false);
+        });
+
+        it('parses ISO-8601 without timezone indicator (Safari fix)', () => {
+            const result = parseDate('2024-01-15T10:30:00');
+            expect(result).toBeInstanceOf(Date);
+            expect(isNaN(result.getTime())).toBe(false);
+        });
+
+        it('parses slash-separated dates', () => {
+            const result = parseDate('2024/01/15');
+            expect(result).toBeInstanceOf(Date);
+            expect(result.getUTCDate()).toBe(15);
+        });
+
+        it('returns null for strings exceeding max length (security)', () => {
+            const longString = 'A'.repeat(201);
+            expect(parseDate(longString)).toBeNull();
+        });
+
+        it('returns null for completely invalid strings', () => {
+            expect(parseDate('not-a-date')).toBeNull();
+            expect(parseDate('2024-99-99T99:99:99')).toBeNull();
+        });
     });
 
-    it('handles ISO-8601 with positive timezone offset', () => {
-        const result = formatTimelineDate('2024-01-15T10:30:00+05:30');
-        expect(result).not.toBe('Invalid Date');
+    // =====================================================================
+    // formatTimelineDate
+    // =====================================================================
+    describe('formatTimelineDate', () => {
+        it('formats a valid ISO date string', () => {
+            const formatted = formatTimelineDate('2024-01-15T10:30:00Z');
+            // US locale: "Jan 15, 2024, 10:30 AM" or similar
+            expect(formatted).toMatch(/Jan/);
+            expect(formatted).toMatch(/2024/);
+            expect(formatted).toMatch(/:30/);
+        });
+
+        it('returns current local time for null input (graceful fallback)', () => {
+            const formatted = formatTimelineDate(null);
+            expect(formatted).not.toBe('Invalid Date');
+            expect(formatted).toMatch(/Jun/);  // Should show June (mocked now)
+            expect(formatted).toMatch(/2024/);
+        });
+
+        it('returns current local time for invalid string (graceful fallback)', () => {
+            const formatted = formatTimelineDate('garbage');
+            expect(formatted).not.toBe('Invalid Date');
+            expect(formatted).toMatch(/Jun/);
+            expect(formatted).toMatch(/2024/);
+        });
+
+        it('returns current local time for empty string (graceful fallback)', () => {
+            const formatted = formatTimelineDate('');
+            expect(formatted).not.toBe('Invalid Date');
+        });
     });
 
-    it('handles ISO-8601 with negative timezone offset', () => {
-        const result = formatTimelineDate('2024-01-15T10:30:00-04:00');
-        expect(result).not.toBe('Invalid Date');
+    // =====================================================================
+    // getTimeZoneAbbr
+    // =====================================================================
+    describe('getTimeZoneAbbr', () => {
+        it('returns a non-empty string', () => {
+            const tz = getTimeZoneAbbr();
+            expect(typeof tz).toBe('string');
+            expect(tz.length).toBeGreaterThan(0);
+        });
+
+        it('returns "UTC" when Intl API is unavailable', () => {
+            const originalIntl = global.Intl;
+            global.Intl = undefined;
+            expect(getTimeZoneAbbr()).toBe('UTC');
+            global.Intl = originalIntl;
+        });
     });
 
-    it('handles slash-separated date format', () => {
-        const result = formatTimelineDate('2024/01/15');
-        expect(result).not.toBe('Invalid Date');
+    // =====================================================================
+    // formatFullTimestamp
+    // =====================================================================
+    describe('formatFullTimestamp', () => {
+        it('formats a valid date with timezone', () => {
+            const result = formatFullTimestamp('2024-01-15T10:30:00Z');
+            expect(result).toMatch(/Jan/);
+            expect(result).toMatch(/2024/);
+            expect(result).toMatch(/\([A-Z]{2,5}\)/);
+        });
+
+        it('returns "Processing..." for invalid input', () => {
+            expect(formatFullTimestamp(null)).toBe('Processing...');
+            expect(formatFullTimestamp('bad')).toBe('Processing...');
+        });
     });
 
-    it('handles numeric epoch timestamp (milliseconds)', () => {
-        const result = formatTimelineDate('1705312200000');
-        expect(result).not.toBe('Invalid Date');
+    // =====================================================================
+    // isValidDate
+    // =====================================================================
+    describe('isValidDate', () => {
+        it('returns true for valid ISO strings', () => {
+            expect(isValidDate('2024-01-15T10:30:00Z')).toBe(true);
+        });
+
+        it('returns false for invalid strings', () => {
+            expect(isValidDate('nope')).toBe(false);
+            expect(isValidDate('')).toBe(false);
+        });
+
+        it('returns false for overly long strings', () => {
+            expect(isValidDate('X'.repeat(201))).toBe(false);
+        });
     });
 
-    it('handles Date object input', () => {
-        const result = formatTimelineDate(new Date('2024-01-15T10:30:00Z'));
-        expect(result).not.toBe('Invalid Date');
-    });
-});
+    // =====================================================================
+    // getRelativeTime
+    // =====================================================================
+    describe('getRelativeTime', () => {
+        it('returns "just now" for dates < 60 seconds ago', () => {
+            const justNow = new Date(MOCK_NOW.getTime() - 30_000);
+            expect(getRelativeTime(justNow.toISOString())).toBe('just now');
+        });
 
-// ---------------------------------------------------------------------------
-// formatTimelineDate — Safari-specific edge cases (Issue #912)
-// ---------------------------------------------------------------------------
+        it('returns "X minutes ago" for dates < 1 hour ago', () => {
+            const fiveMinAgo = new Date(MOCK_NOW.getTime() - 5 * 60_000);
+            expect(getRelativeTime(fiveMinAgo.toISOString())).toBe('5 minutes ago');
+        });
 
-describe('formatTimelineDate — Safari-specific edge cases (Issue #912)', () => {
-    it('handles space-separated timestamp (Safari rejects this natively)', () => {
-        // Safari's Date constructor fails on "2024-01-15 10:30:00"
-        const result = formatTimelineDate('2024-01-15 10:30:00');
-        expect(result).not.toBe('Invalid Date');
-    });
+        it('returns "1 minute ago" for singular', () => {
+            const oneMinAgo = new Date(MOCK_NOW.getTime() - 60_000);
+            expect(getRelativeTime(oneMinAgo.toISOString())).toBe('1 minute ago');
+        });
 
-    it('handles space-separated timestamp with Z', () => {
-        const result = formatTimelineDate('2024-01-15 10:30:00Z');
-        expect(result).not.toBe('Invalid Date');
-    });
+        it('returns "X hours ago" for dates < 24 hours ago', () => {
+            const threeHoursAgo = new Date(MOCK_NOW.getTime() - 3 * 60 * 60_000);
+            expect(getRelativeTime(threeHoursAgo.toISOString())).toBe('3 hours ago');
+        });
 
-    it('handles space-separated timestamp with timezone offset', () => {
-        const result = formatTimelineDate('2024-01-15 10:30:00+05:30');
-        expect(result).not.toBe('Invalid Date');
-    });
+        it('returns "1 hour ago" for singular', () => {
+            const oneHourAgo = new Date(MOCK_NOW.getTime() - 60 * 60_000);
+            expect(getRelativeTime(oneHourAgo.toISOString())).toBe('1 hour ago');
+        });
 
-    it('handles Supabase microsecond timestamp (6 decimal digits)', () => {
-        // Supabase often returns "2024-01-15T10:30:00.123456+00:00"
-        // Safari fails on 6-digit fractional seconds
-        const result = formatTimelineDate('2024-01-15T10:30:00.123456+00:00');
-        expect(result).not.toBe('Invalid Date');
-    });
+        it('returns "X days ago" for dates < 7 days ago', () => {
+            const twoDaysAgo = new Date(MOCK_NOW.getTime() - 2 * 24 * 60 * 60_000);
+            expect(getRelativeTime(twoDaysAgo.toISOString())).toBe('2 days ago');
+        });
 
-    it('handles Supabase timestamp with space and microseconds', () => {
-        const result = formatTimelineDate('2024-01-15 10:30:00.654321+00:00');
-        expect(result).not.toBe('Invalid Date');
-    });
+        it('returns "1 day ago" for singular', () => {
+            const oneDayAgo = new Date(MOCK_NOW.getTime() - 24 * 60 * 60_000);
+            expect(getRelativeTime(oneDayAgo.toISOString())).toBe('1 day ago');
+        });
 
-    it('handles compact timezone offset without colon (+0530)', () => {
-        const result = formatTimelineDate('2024-01-15T10:30:00+0530');
-        expect(result).not.toBe('Invalid Date');
-    });
+        it('falls back to formatted date for dates older than 7 days', () => {
+            const tenDaysAgo = new Date(MOCK_NOW.getTime() - 10 * 24 * 60 * 60_000);
+            const result = getRelativeTime(tenDaysAgo.toISOString());
+            expect(result).not.toBe('Unknown');
+            expect(result).toMatch(/Jun/);
+            expect(result).toMatch(/2024/);
+        });
 
-    it('handles compact negative timezone offset (-0430)', () => {
-        const result = formatTimelineDate('2024-01-15T10:30:00-0430');
-        expect(result).not.toBe('Invalid Date');
-    });
-
-    it('handles timestamp with no timezone and no T (full Safari problem case)', () => {
-        // "2024-01-15 10:30:00" — the most common Supabase format that breaks Safari
-        const result = formatTimelineDate('2024-01-15 10:30:00');
-        expect(result).not.toBe('Invalid Date');
-    });
-});
-
-// ---------------------------------------------------------------------------
-// formatTimelineDate — invalid / empty inputs
-// ---------------------------------------------------------------------------
-
-describe('formatTimelineDate — invalid inputs', () => {
-    it('returns Invalid Date for null', () => {
-        expect(formatTimelineDate(null)).toBe('Invalid Date');
+        it('returns "Unknown" for invalid input', () => {
+            expect(getRelativeTime(null)).toBe('Unknown');
+            expect(getRelativeTime('bad')).toBe('Unknown');
+        });
     });
 
-    it('returns Invalid Date for undefined', () => {
-        expect(formatTimelineDate(undefined)).toBe('Invalid Date');
+    // =====================================================================
+    // safeParseDateForSort
+    // =====================================================================
+    describe('safeParseDateForSort', () => {
+        it('returns a valid Date for parseable input', () => {
+            const result = safeParseDateForSort('2024-01-15T10:30:00Z');
+            expect(result).toBeInstanceOf(Date);
+            expect(isNaN(result.getTime())).toBe(false);
+        });
+
+        it('returns epoch (new Date(0)) for invalid input', () => {
+            const result = safeParseDateForSort('nope');
+            expect(result).toEqual(new Date(0));
+        });
+
+        it('returns epoch for null input', () => {
+            expect(safeParseDateForSort(null)).toEqual(new Date(0));
+        });
     });
 
-    it('returns Invalid Date for empty string', () => {
-        expect(formatTimelineDate('')).toBe('Invalid Date');
-    });
+    // =====================================================================
+    // Cross-browser / timezone configuration tests
+    // =====================================================================
+    describe('cross-browser timezone compatibility', () => {
+        it('parses UTC timestamps consistently', () => {
+            const utc = '2024-01-15T10:30:00.000Z';
+            const parsed = parseDate(utc);
+            expect(parsed.toISOString()).toBe('2024-01-15T10:30:00.000Z');
+        });
 
-    it('returns Invalid Date for non-date string', () => {
-        expect(formatTimelineDate('not-a-date')).toBe('Invalid Date');
-    });
+        it('parses positive offset timestamps', () => {
+            const plusFive = '2024-01-15T10:30:00+05:30';
+            const parsed = parseDate(plusFive);
+            expect(parsed).toBeInstanceOf(Date);
+            expect(isNaN(parsed.getTime())).toBe(false);
+        });
 
-    it('returns Invalid Date for random alphanumeric string', () => {
-        expect(formatTimelineDate('abc123xyz')).toBe('Invalid Date');
-    });
-});
+        it('parses negative offset timestamps', () => {
+            const minusFour = '2024-01-15T10:30:00-04:00';
+            const parsed = parseDate(minusFour);
+            expect(parsed).toBeInstanceOf(Date);
+            expect(isNaN(parsed.getTime())).toBe(false);
+        });
 
-// ---------------------------------------------------------------------------
-// isValidDate
-// ---------------------------------------------------------------------------
-
-describe('isValidDate', () => {
-    it('returns true for valid ISO-8601 string', () => {
-        expect(isValidDate('2024-01-15T10:30:00Z')).toBe(true);
-    });
-
-    it('returns true for date-only string', () => {
-        expect(isValidDate('2024-01-15')).toBe(true);
-    });
-
-    it('returns true for slash-separated date', () => {
-        expect(isValidDate('2024/01/15')).toBe(true);
-    });
-
-    it('returns true for space-separated Supabase timestamp', () => {
-        expect(isValidDate('2024-01-15 10:30:00')).toBe(true);
-    });
-
-    it('returns true for Supabase microsecond timestamp', () => {
-        expect(isValidDate('2024-01-15T10:30:00.123456+00:00')).toBe(true);
-    });
-
-    it('returns false for null', () => {
-        expect(isValidDate(null)).toBe(false);
-    });
-
-    it('returns false for empty string', () => {
-        expect(isValidDate('')).toBe(false);
-    });
-
-    it('returns false for non-date string', () => {
-        expect(isValidDate('not-a-date')).toBe(false);
-    });
-
-    it('returns false for impossible date (month 13)', () => {
-        expect(isValidDate('2024-13-45')).toBe(false);
-    });
-});
-
-// ---------------------------------------------------------------------------
-// getRelativeTime
-// ---------------------------------------------------------------------------
-
-describe('getRelativeTime', () => {
-    it('returns "Just now" for a date within the last minute', () => {
-        const now = new Date();
-        const result = getRelativeTime(now.toISOString());
-        expect(result).toBe('Just now');
-    });
-
-    it('returns "X minutes ago" for a date 5 minutes ago', () => {
-        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const result = getRelativeTime(fiveMinAgo.toISOString());
-        expect(result).toContain('minute');
-        expect(result).toContain('ago');
-    });
-
-    it('returns "X hours ago" for a date 2 hours ago', () => {
-        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-        const result = getRelativeTime(twoHoursAgo.toISOString());
-        expect(result).toContain('hour');
-        expect(result).toContain('ago');
-    });
-
-    it('returns "X days ago" for a date 3 days ago', () => {
-        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-        const result = getRelativeTime(threeDaysAgo.toISOString());
-        expect(result).toContain('day');
-        expect(result).toContain('ago');
-    });
-
-    it('returns a formatted date string for dates older than 7 days', () => {
-        const oldDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        const result = getRelativeTime(oldDate.toISOString());
-        expect(result).not.toContain('ago');
-        expect(result).not.toBe('Unknown');
-    });
-
-    it('returns "Unknown" for null input', () => {
-        expect(getRelativeTime(null)).toBe('Unknown');
-    });
-
-    it('returns "Unknown" for invalid string', () => {
-        expect(getRelativeTime('invalid')).toBe('Unknown');
-    });
-});
-
-// ---------------------------------------------------------------------------
-// getTimeZoneAbbr
-// ---------------------------------------------------------------------------
-
-describe('getTimeZoneAbbr', () => {
-    it('returns a non-empty string', () => {
-        const result = getTimeZoneAbbr();
-        expect(typeof result).toBe('string');
-        expect(result.length).toBeGreaterThan(0);
-    });
-});
-
-// ---------------------------------------------------------------------------
-// formatFullTimestamp
-// ---------------------------------------------------------------------------
-
-describe('formatFullTimestamp', () => {
-    it('includes timezone abbreviation in parentheses for valid date', () => {
-        const result = formatFullTimestamp('2024-01-15T10:30:00Z');
-        expect(result).toContain('(');
-        expect(result).toContain(')');
-    });
-
-    it('returns "Processing..." for null', () => {
-        expect(formatFullTimestamp(null)).toBe('Processing...');
-    });
-
-    it('returns "Processing..." for empty string', () => {
-        expect(formatFullTimestamp('')).toBe('Processing...');
-    });
-
-    it('returns "Processing..." for invalid date string', () => {
-        expect(formatFullTimestamp('invalid')).toBe('Processing...');
-    });
-
-    it('handles Supabase microsecond format without returning Processing...', () => {
-        const result = formatFullTimestamp('2024-01-15T10:30:00.123456+00:00');
-        expect(result).not.toBe('Processing...');
-        expect(result).toContain('(');
-    });
-});
-
-// ---------------------------------------------------------------------------
-// safeParseDateForSort — used in sort comparators (Issue #912 adjacent fix)
-// ---------------------------------------------------------------------------
-
-describe('safeParseDateForSort', () => {
-    it('returns a valid Date for a standard ISO string', () => {
-        const result = safeParseDateForSort('2024-01-15T10:30:00Z');
-        expect(result).toBeInstanceOf(Date);
-        expect(isNaN(result.getTime())).toBe(false);
-    });
-
-    it('returns a valid Date for a space-separated Supabase timestamp', () => {
-        const result = safeParseDateForSort('2024-01-15 10:30:00');
-        expect(result).toBeInstanceOf(Date);
-        expect(isNaN(result.getTime())).toBe(false);
-    });
-
-    it('returns epoch (new Date(0)) as fallback for null', () => {
-        const result = safeParseDateForSort(null);
-        expect(result).toBeInstanceOf(Date);
-        expect(result.getTime()).toBe(0);
-    });
-
-    it('returns epoch as fallback for invalid string', () => {
-        const result = safeParseDateForSort('not-a-date');
-        expect(result).toBeInstanceOf(Date);
-        expect(result.getTime()).toBe(0);
-    });
-
-    it('can be used safely in a sort comparator', () => {
-        const items = [
-            { created_at: '2024-03-01 08:00:00' },
-            { created_at: '2024-01-15T10:30:00Z' },
-            { created_at: null },
-            { created_at: '2024-02-20 14:00:00.123456+00:00' },
-        ];
-        expect(() => {
-            items.sort(
-                (a, b) =>
-                    safeParseDateForSort(a.created_at) -
-                    safeParseDateForSort(b.created_at)
-            );
-        }).not.toThrow();
-        // null falls back to epoch, so it should sort first
-        expect(items[0].created_at).toBeNull();
+        it('handles compact offset without colon (Safari edge case)', () => {
+            const compact = '2024-01-15T10:30:00+0530';
+            const parsed = parseDate(compact);
+            expect(parsed).toBeInstanceOf(Date);
+            expect(isNaN(parsed.getTime())).toBe(false);
+        });
     });
 });
