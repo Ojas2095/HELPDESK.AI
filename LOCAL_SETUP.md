@@ -1,5 +1,6 @@
 # Local Backend Setup & Schema Verification Guide
-### HELPDESK.AI · GSSoC 2026 Contributor Reference
+
+## HELPDESK.AI · GSSoC 2026 Contributor Reference
 
 > **Who this is for:** First-time contributors setting up HELPDESK.AI locally after the centralized notification system, automated ticket auto-close loops, and backend startup health validations. The environment requirements have grown, this guide reflects that.
 
@@ -39,6 +40,7 @@ git branch --show-current
 ```
 
 > 🔁 **Creating your working branch:** Branch off `gssoc` for your changes, and make sure your PR targets `gssoc` — not `main`.
+>
 > ```bash
 > git checkout -b feature/your-feature-name
 > ```
@@ -118,7 +120,7 @@ supabase start
 
 The first run pulls Docker images — this takes a few minutes. When it completes, your terminal prints a credentials block like this:
 
-```
+```bash
 API URL: http://localhost:54321
 DB URL:  postgresql://postgres:postgres@localhost:54322/postgres
 anon key: eyJhbGc...
@@ -187,6 +189,7 @@ curl http://127.0.0.1:8000/health
 ```
 
 Expected response:
+
 ```json
 {"status": "ok"}
 ```
