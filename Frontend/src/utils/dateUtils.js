@@ -3,21 +3,34 @@
  * Fixes timezone shift issues by explicitly forcing local display.
  */
 
-export const formatTimelineDate = (dateStr) => {
+export const toSafariSafeDate = (dateStr) => {
     if (!dateStr) return null;
-    
-    // Ensure the date string is interpreted as UTC if it's an ISO string from DB
-    let date;
-    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
-        // If it's a raw string without TZ, assume it was intended as UTC from our backend
-        date = new Date(dateStr + 'Z');
-    } else {
-        date = new Date(dateStr);
+
+    const hasUtcSuffix = /(Z|[+-]\d{2}(?::?\d{2})?)$/.test(dateStr);
+
+    let sanitized = dateStr;
+    if (!hasUtcSuffix) {
+        sanitized = sanitized.replace(/\.\d+/u, '');
+        sanitized += 'Z';
     }
 
-    if (isNaN(date.getTime())) return 'Invalid Date';
+    const date = new Date(sanitized);
+    if (Number.isNaN(date.getTime())) return null;
 
-    // Using the browser's default locale and timeZone (which is the user's local)
+    return date;
+};
+
+export const formatTimelineDate = (dateStr) => {
+    let date = toSafariSafeDate(dateStr);
+    if (!date) return new Date().toLocaleString(undefined, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+
     return date.toLocaleString(undefined, {
         day: '2-digit',
         month: 'short',
@@ -42,6 +55,5 @@ export const getTimeZoneAbbr = () => {
 
 export const formatFullTimestamp = (dateStr) => {
     const formatted = formatTimelineDate(dateStr);
-    if (!formatted) return 'Processing...';
     return `${formatted} (${getTimeZoneAbbr()})`;
 };
