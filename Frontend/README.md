@@ -19,3 +19,11 @@ If you are developing a production application, we recommend using TypeScript wi
 - Fast Refresh (HMR)
 - Optimized build setup
 - ESLint integration
+
+## Environment Variables Troubleshooting
+
+If the frontend application fails to connect to backend APIs:
+- **VITE_ Prefix Requirement**: Ensure all client-side variables are prefixed with `VITE_` (e.g. `VITE_API_URL`). Non-prefixed variables are excluded from Vite build bundles.
+- **Docker Setup**: Verify that environment variables are correctly forwarded in `docker-compose` or local runtime environments.
+- **Caching Issues**: Clear build caches and restart the development server after updating `.env` files:
+    `npm run dev -- --force`
