@@ -66,7 +66,7 @@ function MasterAdminLayout() {
   ];
 
   return (
-    <div className='min-h-screen bg-[#050508] flex font-sans overflow-hidden text-slate-300'>
+    <div className='min-h-screen bg-[#050508] flex font-sans overflow-auto text-slate-300'>
       {/* Ambient Background Glows */}
       <div className='fixed inset-0 pointer-events-none z-0'>
         <div className='absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-600/5 rounded-full blur-[150px] mix-blend-screen' />
@@ -137,7 +137,7 @@ function MasterAdminLayout() {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 flex flex-col min-w-0 relative z-10 h-screen overflow-hidden">
+            <main className="flex-1 flex flex-col min-w-0 relative z-10 h-screen overflow-auto">
                 {/* Top Bar */}
                 <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 shrink-0 dark:border-white/5 dark:bg-white/[0.01]">
                     <div className="flex items-center gap-4 flex-1 max-w-xl">
@@ -215,7 +215,7 @@ function MasterAdminLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <main className='flex-1 flex flex-col min-w-0 relative z-10 h-screen overflow-hidden'>
+      <main className='flex-1 flex flex-col min-w-0 relative z-10 h-screen overflow-auto'>
         {/* Top Bar */}
         <header className='h-16 border-b border-white/5 bg-white/[0.01] backdrop-blur-md flex items-center justify-between px-8 shrink-0'>
           <div className='flex items-center gap-4 flex-1 max-w-xl'>
