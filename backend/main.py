@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -533,10 +533,81 @@ async def log_correction(raw_request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
+# ---------------------------------------------------------------------------
+ACCESS_COOKIE = "access_token"
+REFRESH_COOKIE = "refresh_token"
+ACCESS_MAX_AGE = 60 * 60
+REFRESH_MAX_AGE = 60 * 60 * 24 * 7
+
+def _cookie_kwargs() -> dict:
+    secure = os.getenv("ENV", "production").lower() != "development"
+    return {
+        "httponly": True,
+        "secure": secure,
+        "samesite": "strict",
+        "path": "/",
+    }
+
+def extract_token(request: Request) -> str | None:
+    cookie_token = request.cookies.get(ACCESS_COOKIE)
+    if cookie_token:
+        return cookie_token
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip() or None
+    return None
+
+def _set_session_cookies(response: Response, session) -> None:
+    if not session or not getattr(session, "access_token", None):
+        return
+    response.set_cookie(
+        ACCESS_COOKIE,
+        session.access_token,
+        max_age=ACCESS_MAX_AGE,
+        **_cookie_kwargs(),
+    )
+    refresh = getattr(session, "refresh_token", None)
+    if refresh:
+        response.set_cookie(
+            REFRESH_COOKIE,
+            refresh,
+            max_age=REFRESH_MAX_AGE,
+            **_cookie_kwargs(),
+        )
+
+def _clear_session_cookies(response: Response) -> None:
+    kwargs = _cookie_kwargs()
+    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
+    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+
+async def get_current_user(request: Request) -> dict:
+    token = extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid session: {exc}",
+        ) from exc
+    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    if hasattr(user, "model_dump"):
+        return user.model_dump()
+    if hasattr(user, "dict"):
+        return user.dict()
+    return dict(user)
+
+# ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -549,11 +620,12 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_current_user)):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
     """
+    request_body.user_id = user.get("id", request_body.user_id) # Enforce IDOR protection
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
@@ -652,7 +724,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -664,7 +736,7 @@ async def get_ticket_by_id(ticket_id: str):
 
 
 @app.post("/tickets", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+async def create_ticket(ticket: TicketRecord, user: dict = Depends(get_current_user)):
     """Save a new ticket into the system."""
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
@@ -677,7 +749,7 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
@@ -696,7 +768,7 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
-async def analyze_ticket(request_body: TicketRequest, request: Request):
+async def analyze_ticket(request_body: TicketRequest, request: Request, user: dict = Depends(get_current_user)):
     """
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
     """
@@ -731,7 +803,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+async def analyze_only(request_body: TicketRequest, user: dict = Depends(get_current_user)):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -1068,76 +1140,7 @@ async def analyze_ticket_v2(request: TicketRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ---------------------------------------------------------------------------
-# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
-# ---------------------------------------------------------------------------
-ACCESS_COOKIE = "access_token"
-REFRESH_COOKIE = "refresh_token"
-ACCESS_MAX_AGE = 60 * 60
-REFRESH_MAX_AGE = 60 * 60 * 24 * 7
-
-def _cookie_kwargs() -> dict:
-    secure = os.getenv("ENV", "production").lower() != "development"
-    return {
-        "httponly": True,
-        "secure": secure,
-        "samesite": "strict",
-        "path": "/",
-    }
-
-def extract_token(request: Request) -> str | None:
-    cookie_token = request.cookies.get(ACCESS_COOKIE)
-    if cookie_token:
-        return cookie_token
-    auth = request.headers.get("authorization") or request.headers.get("Authorization")
-    if auth and auth.lower().startswith("bearer "):
-        return auth.split(" ", 1)[1].strip() or None
-    return None
-
-def _set_session_cookies(response: Response, session) -> None:
-    if not session or not getattr(session, "access_token", None):
-        return
-    response.set_cookie(
-        ACCESS_COOKIE,
-        session.access_token,
-        max_age=ACCESS_MAX_AGE,
-        **_cookie_kwargs(),
-    )
-    refresh = getattr(session, "refresh_token", None)
-    if refresh:
-        response.set_cookie(
-            REFRESH_COOKIE,
-            refresh,
-            max_age=REFRESH_MAX_AGE,
-            **_cookie_kwargs(),
-        )
-
-def _clear_session_cookies(response: Response) -> None:
-    kwargs = _cookie_kwargs()
-    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
-    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
-
-async def get_current_user(request: Request) -> dict:
-    token = extract_token(request)
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not supabase:
-        raise HTTPException(status_code=503, detail="Database connection offline")
-    try:
-        result = supabase.auth.get_user(token)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=401,
-            detail=f"Invalid session: {exc}",
-        ) from exc
-    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    if hasattr(user, "model_dump"):
-        return user.model_dump()
-    if hasattr(user, "dict"):
-        return user.dict()
-    return dict(user)
+# Auth functions moved to top of file
 
 class LoginBody(BaseModel):
     email: str
