@@ -6,7 +6,10 @@ GET  /health             →  service health check
 
 import os
 import sys
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 import uuid
 import json
 import re
