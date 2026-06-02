@@ -28,7 +28,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -90,6 +90,14 @@ class TicketRequest(BaseModel):
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
+
+    @field_validator('image_base64')
+    @classmethod
+    def limit_image_base64_size(cls, value: str) -> str:
+        max_chars = 15_000_000  # ~11 MB binary after base64 decode
+        if value and len(value) > max_chars:
+            raise ValueError(f"image_base64 exceeds maximum allowed size ({max_chars} chars)")
+        return value
 
 class TicketSaveRequest(BaseModel):
     user_id: str

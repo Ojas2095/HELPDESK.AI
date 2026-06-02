@@ -35,13 +35,40 @@ class GeminiService:
             return {
                 "image_description": "[Gemini API Key Missing] Could not analyze image.",
                 "ocr_text": "",
-                "detected_problem": ""
+                "detected_problem": "",
             }
 
         try:
-            # Decode base64 image (actually the new SDK handles base64 easily if we just pass bytes, 
-            # but we can also use PIL if we need to process it)
+            # Enforce queued request size limit first to avoid decode-then-reject.
+            max_input = 15_000_000
+            if image_base64 and len(image_base64) > max_input:
+                raise ValueError("image_base64 payload exceeds the allowed size limit")
+
             image_bytes = base64.b64decode(image_base64)
+            if not image_bytes:
+                return {
+                    "image_description": "No image data provided.",
+                    "ocr_text": "",
+                    "detected_problem": "",
+                }
+
+            max_bytes = 10 * 1024 * 1024
+            if len(image_bytes) > max_bytes:
+                raise ValueError(
+                    f"Decoded image payload is too large ({len(image_bytes)} bytes); max is {max_bytes} bytes"
+                )
+
+            Image.MAX_IMAGE_PIXELS = 80_000_000
+
+            magic = image_bytes[:4]
+            if not (
+                magic.startswith(b"\xff\xd8\xff")
+                or magic.startswith(b"\x89PNG")
+                or magic.startswith(b"GIF8")
+                or magic.startswith(b"RIFF")
+            ):
+                raise ValueError("Unsupported image format")
+
             img = Image.open(io.BytesIO(image_bytes))
 
             prompt = (
