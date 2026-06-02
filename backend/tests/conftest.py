@@ -306,6 +306,8 @@ def mock_ai_services(request):
         "test_metrics_service.py",
         "test_audit_service.py",
         "test_correction_log_async.py",
+        "test_notification_routing.py",
+        "test_notification_routing_push.py",
     }:
         yield
         return
