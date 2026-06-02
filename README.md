@@ -188,3 +188,12 @@ Helpdesk.ai is now available as a native Android application. It features a comp
 <div align="center">
 Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team. 
 </div>
+
+
+## Local Docker Deployment Verification Checklist
+
+Before deploying your container to staging or production, verify:
+- [ ] Port binding configuration maps correctly (default `7860`).
+- [ ] Volumetric storage binds persist datasets like `final_dataset.xlsx`.
+- [ ] Database credentials (`SUPABASE_URL`, `SUPABASE_KEY`) are passed correctly.
+- [ ] Container health check is active and returns status green.
