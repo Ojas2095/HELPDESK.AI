@@ -299,6 +299,10 @@ const AdminTickets = () => {
             if (categoryFilter !== 'All') query = query.eq('category', categoryFilter);
             if (priorityFilter !== 'All') query = query.eq('priority', priorityFilter.toLowerCase());
             if (teamFilter !== 'All') query = query.eq('assigned_team', teamFilter);
+            if (searchQuery) {
+                const escaped = searchQuery.replace(/%/g, '\\%').replace(/_/g, '\\_');
+                query = query.or(`subject.ilike.%${escaped}%,description.ilike.%${escaped}%,summary.ilike.%${escaped}%`);
+            }
 
             let { data, error: sbError } = await query.order('created_at', { ascending: false });
 
@@ -321,7 +325,7 @@ const AdminTickets = () => {
 
     useEffect(() => {
         fetchInitialData();
-    }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
+    }, [statusFilter, categoryFilter, priorityFilter, teamFilter, searchQuery]);
 
     // SLA breach realtime listener
     useEffect(() => {
@@ -470,7 +474,7 @@ const AdminTickets = () => {
             result = result.filter(t => (t.tags || []).length > 0 && tagFilters.every(tag => (t.tags || []).includes(tag)));
         }
         return result;
-    }, [tickets, searchQuery, languageFilter, slaAtRisk, tagFilters]);
+    }, [tickets, languageFilter, slaAtRisk, tagFilters]);
 
     // Clear selection when filters change (selected IDs may no longer be visible)
     useEffect(() => {
