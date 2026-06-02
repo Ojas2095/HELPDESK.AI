@@ -25,15 +25,8 @@ const useAuthStore = create(
                 // Instead, use persisted profile ONLY for UI (name, email) while
                 // forcing a blocking server-side role resolution before granting access.
                 if (currentProfile && currentProfile.id === user.id && currentProfile.status === 'active') {
-                    console.log("Profile found in cache. Verifying role with server...");
-                    // BLOCKING server-side role check — must complete before returning
-                    const serverProfile = await get()._syncProfile(user.id);
-                    if (serverProfile) {
-                        console.log("Server-verified profile loaded.");
-                        return serverProfile;
-                    }
-                    // If server check fails, fall through to metadata resolution
-                    console.warn("Server profile check failed. Falling back to metadata.");
+                    console.log("Active profile retained from state.");
+                    return currentProfile;
                 }
 
                 // Priority 2: Use Auth Metadata (Instant fallback)
