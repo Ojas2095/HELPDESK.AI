@@ -1,0 +1,9 @@
+.tmp-ci-venv/
+node_modules/
+venv/
+.venv/
+env/
+dist/
+build/
+scratch/
+Summary/
