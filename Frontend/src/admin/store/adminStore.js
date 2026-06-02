@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createPersistConfig } from '../../store/persistence';
 
 const useAdminStore = create(
     persist(
@@ -29,9 +30,9 @@ const useAdminStore = create(
                 users: state.users.filter(u => u.id !== userId)
             })),
         }),
-        {
+        createPersistConfig('admin-settings', {
             name: 'admin-storage-settings',
-        }
+        })
     )
 );
 

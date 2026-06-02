@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createPersistConfig } from './persistence';
 
 const useAdminStore = create(
     persist(
@@ -17,9 +18,7 @@ const useAdminStore = create(
                 adminProfile: { ...state.adminProfile, ...updates }
             })),
         }),
-        {
-            name: 'admin-storage',
-        }
+        createPersistConfig('admin')
     )
 );
 

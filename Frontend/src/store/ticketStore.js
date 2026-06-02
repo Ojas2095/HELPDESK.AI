@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createPersistConfig } from './persistence';
 
 const useTicketStore = create(
     persist(
@@ -87,7 +88,7 @@ const useTicketStore = create(
             clearTicket: () => set({ aiTicket: null, activeTicket: null, autoResolvedTickets: [] }),
         }),
         {
-            name: 'ticket-storage', // unique name for localStorage key
+            ...createPersistConfig('ticket'),
         }
     )
 );

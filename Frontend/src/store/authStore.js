@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createPersistConfig } from './persistence';
 import { supabase } from '../lib/supabaseClient';
 import useTicketStore from './ticketStore';
 
@@ -290,14 +291,13 @@ const useAuthStore = create(
             }
         }),
         {
-            name: 'auth-storage',
-            partialize: (state) => ({
-                // We keep profile persisted for quick UI transitions, 
-                // but session is handled by Supabase cookie/localStorage
-                profile: state.profile
-            }),
-        }
-    )
-);
+            createPersistConfig('auth', {
+                partialize: (state) => ({
+                    user: state.user,
+                    profile: state.profile,
+                }),
+            })
+            )
+            );
 
 export default useAuthStore;
