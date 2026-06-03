@@ -26,6 +26,7 @@ const useTicketStore = create(
                 ]
             })),
             addTicket: (ticket) => set((state) => {
+                if (state.tickets.some(t => t.id === ticket.id)) return state;
                 return {
                     tickets: [...state.tickets, ticket]
                 };
