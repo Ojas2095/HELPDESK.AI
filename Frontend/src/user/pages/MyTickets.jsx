@@ -53,7 +53,7 @@ function MyTickets() {
             setTickets(data || []);
         }
         setLoading(false);
-    }, [user]);
+    }, [user?.id]);
 
     useEffect(() => {
          
@@ -88,7 +88,7 @@ function MyTickets() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user, fetchTickets]); // Re-subscribe when user changes
+    }, [user?.id, fetchTickets]); // Re-subscribe only when user ID changes
 
     // Filtering logic
     const filteredTickets = useMemo(() => {
