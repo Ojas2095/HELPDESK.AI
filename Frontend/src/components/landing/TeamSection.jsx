@@ -1,231 +1,244 @@
 import React from 'react';
 import { Github, Linkedin } from 'lucide-react';
 
-
 const TEAM_MEMBERS = [
-    // --- COORDINATION TEAM ---
-    {
-        name: "Duniya Vasa",
-        role: "Group Lead",
-        team: "Coordination",
-        image: "/team/duniya_vasa.jpg",
-        linkedin: "https://www.linkedin.com/in/duniyavasa/",
-        github: "https://github.com/Duniya-24"
-    },
-    {
-        name: "Sowjanya N",
-        role: "Member",
-        team: "Coordination",
-        image: "/team/sowjanya_n.jpg",
-        linkedin: "https://www.linkedin.com/in/sowjanya-n-962319354",
-        github: "https://github.com/Sowji0118/"
-    },
+  // --- COORDINATION TEAM ---
+  {
+    name: 'Duniya Vasa',
+    role: 'Group Lead',
+    team: 'Coordination',
+    image: '/team/duniya_vasa.jpg',
+    linkedin: 'https://www.linkedin.com/in/duniyavasa/',
+    github: 'https://github.com/Duniya-24',
+  },
+  {
+    name: 'Sowjanya N',
+    role: 'Member',
+    team: 'Coordination',
+    image: '/team/sowjanya_n.jpg',
+    linkedin: 'https://www.linkedin.com/in/sowjanya-n-962319354',
+    github: 'https://github.com/Sowji0118/',
+  },
 
-    // --- MODEL TEAM ---
-    {
-        name: "Pragati Tiwari",
-        role: "Lead",
-        team: "Model",
-        image: "/team/pragati_tiwari.jpg",
-        linkedin: "https://linkedin.com/in/pragati-tiwari-608b043b5",
-        github: "https://github.com/pTIWARI-20"
-    },
-    {
-        name: "Shaik Eshak",
-        role: "Member",
-        team: "Model",
-        image: "/team/shaik_eshak.jpg",
-        linkedin: "https://www.linkedin.com/in/eshak-s-16738626a/",
-        github: "https://github.com/Eshakshai"
-    },
-    {
-        name: "Ippili Raju",
-        role: "Member",
-        team: "Model",
-        image: "/team/ippili_raju.jpg",
-        linkedin: "https://www.linkedin.com/in/raju-ippili-419051308/",
-        github: "https://github.com/raju-ippili"
-    },
-    {
-        name: "Vinitha Giri",
-        role: "Member",
-        team: "Model",
-        image: "/team/vinitha_giri.jpg",
-        linkedin: "https://www.linkedin.com/in/vinitha-giri/",
-        github: "https://github.com/vinitha-giri"
-    },
-    {
-        name: "Asna Abdul Kareem",
-        role: "Member",
-        team: "Model",
-        image: "/team/asna_abdul_kareem.jpg",
-        linkedin: "https://in.linkedin.com/in/asna-abdul-kareem-6774a6292",
-        github: "https://github.com/Asnaabdul"
-    },
-    {
-        name: "Ritesh Bonthalakoti",
-        role: "Member",
-        team: "Model",
-        image: "/team/ritesh_bonthalakoti.jpg",
-        linkedin: "https://www.linkedin.com/in/ritesh1908",
-        github: "https://github.com/ritesh-1918"
-    },
+  // --- MODEL TEAM ---
+  {
+    name: 'Pragati Tiwari',
+    role: 'Lead',
+    team: 'Model',
+    image: '/team/pragati_tiwari.jpg',
+    linkedin: 'https://linkedin.com/in/pragati-tiwari-608b043b5',
+    github: 'https://github.com/pTIWARI-20',
+  },
+  {
+    name: 'Shaik Eshak',
+    role: 'Member',
+    team: 'Model',
+    image: '/team/shaik_eshak.jpg',
+    linkedin: 'https://www.linkedin.com/in/eshak-s-16738626a/',
+    github: 'https://github.com/Eshakshai',
+  },
+  {
+    name: 'Ippili Raju',
+    role: 'Member',
+    team: 'Model',
+    image: '/team/ippili_raju.jpg',
+    linkedin: 'https://www.linkedin.com/in/raju-ippili-419051308/',
+    github: 'https://github.com/raju-ippili',
+  },
+  {
+    name: 'Vinitha Giri',
+    role: 'Member',
+    team: 'Model',
+    image: '/team/vinitha_giri.jpg',
+    linkedin: 'https://www.linkedin.com/in/vinitha-giri/',
+    github: 'https://github.com/vinitha-giri',
+  },
+  {
+    name: 'Asna Abdul Kareem',
+    role: 'Member',
+    team: 'Model',
+    image: '/team/asna_abdul_kareem.jpg',
+    linkedin: 'https://in.linkedin.com/in/asna-abdul-kareem-6774a6292',
+    github: 'https://github.com/Asnaabdul',
+  },
+  {
+    name: 'Ritesh Bonthalakoti',
+    role: 'Member',
+    team: 'Model',
+    image: '/team/ritesh_bonthalakoti.jpg',
+    linkedin: 'https://www.linkedin.com/in/ritesh1908',
+    github: 'https://github.com/ritesh-1918',
+  },
 
-    // --- BACKEND TEAM ---
-    {
-        name: "Asmeet Kaur Makkad",
-        role: "Lead",
-        team: "Backend",
-        image: "/team/asmeet_kaur_makkad.jpg",
-        linkedin: "https://www.linkedin.com/in/asmeet-kaur-makkad-911bb3304",
-        github: "https://github.com/AsmeetKaurMakkad"
-    },
-    {
-        name: "Vijayalakshmi S R",
-        role: "Member",
-        team: "Backend",
-        image: "/team/vijayalakshmi_s_r.jpg",
-        linkedin: "https://www.linkedin.com/in/vijayalakshmi-s-r-6a260228a/",
-        github: "https://github.com/Vijayalakshmi1412"
-    },
-    {
-        name: "Dinesh Reddy Vasampelli",
-        role: "Member",
-        team: "Backend",
-        image: "/team/dinesh_reddy_vasampelli.jpg",
-        linkedin: "https://www.linkedin.com/in/dineshreddy-vasampelli-b11046296/",
-        github: "https://github.com/vasampellidineshreddy18-bot"
-    },
-    {
-        name: "Manya Sahasra",
-        role: "Member",
-        team: "Backend",
-        image: "/team/manya_sahasra.jpg",
-        linkedin: "www.linkedin.com/in/manya2929",
-        github: "https://github.com/ManyaSaaha9"
-    },
+  // --- BACKEND TEAM ---
+  {
+    name: 'Asmeet Kaur Makkad',
+    role: 'Lead',
+    team: 'Backend',
+    image: '/team/asmeet_kaur_makkad.jpg',
+    linkedin: 'https://www.linkedin.com/in/asmeet-kaur-makkad-911bb3304',
+    github: 'https://github.com/AsmeetKaurMakkad',
+  },
+  {
+    name: 'Vijayalakshmi S R',
+    role: 'Member',
+    team: 'Backend',
+    image: '/team/vijayalakshmi_s_r.jpg',
+    linkedin: 'https://www.linkedin.com/in/vijayalakshmi-s-r-6a260228a/',
+    github: 'https://github.com/Vijayalakshmi1412',
+  },
+  {
+    name: 'Dinesh Reddy Vasampelli',
+    role: 'Member',
+    team: 'Backend',
+    image: '/team/dinesh_reddy_vasampelli.jpg',
+    linkedin: 'https://www.linkedin.com/in/dineshreddy-vasampelli-b11046296/',
+    github: 'https://github.com/vasampellidineshreddy18-bot',
+  },
+  {
+    name: 'Manya Sahasra',
+    role: 'Member',
+    team: 'Backend',
+    image: '/team/manya_sahasra.jpg',
+    linkedin: 'www.linkedin.com/in/manya2929',
+    github: 'https://github.com/ManyaSaaha9',
+  },
 
-    // --- FRONTEND TEAM ---
-    {
-        name: "Satla Prayukthika",
-        role: "Lead",
-        team: "Frontend",
-        image: "/team/satla_prayukthika.jpg",
-        linkedin: "https://www.linkedin.com/in/satla-prayukthika-328114291/",
-        github: "https://github.com/prayukthika03"
-    },
-    {
-        name: "Bandi Keerthi Krishna",
-        role: "Member",
-        team: "Frontend",
-        image: "/team/bandi_keerthi_krishna.jpg",
-        linkedin: "https://www.linkedin.com/in/bandikeerthikrishna",
-        github: "https://github.com/bKeerthi-1205"
-    },
-    {
-        name: "Shubha G D",
-        role: "Member",
-        team: "Frontend",
-        image: "/team/shubha_g_d.jpg",
-        linkedin: "https://www.linkedin.com/in/shubha-g-d-a879003b5",
-        github: "https://github.com/gdshubha148"
-    },
-    {
-        name: "Phani Kotha",
-        role: "Member",
-        team: "Frontend",
-        image: "/team/kpvvssmphara.jpg",
-        linkedin: "https://www.linkedin.com/in/phani-kotha-26073439b",
-        github: "https://github.com/phanikotha18-sudo"
-    },
+  // --- FRONTEND TEAM ---
+  {
+    name: 'Satla Prayukthika',
+    role: 'Lead',
+    team: 'Frontend',
+    image: '/team/satla_prayukthika.jpg',
+    linkedin: 'https://www.linkedin.com/in/satla-prayukthika-328114291/',
+    github: 'https://github.com/prayukthika03',
+  },
+  {
+    name: 'Bandi Keerthi Krishna',
+    role: 'Member',
+    team: 'Frontend',
+    image: '/team/bandi_keerthi_krishna.jpg',
+    linkedin: 'https://www.linkedin.com/in/bandikeerthikrishna',
+    github: 'https://github.com/bKeerthi-1205',
+  },
+  {
+    name: 'Shubha G D',
+    role: 'Member',
+    team: 'Frontend',
+    image: '/team/shubha_g_d.jpg',
+    linkedin: 'https://www.linkedin.com/in/shubha-g-d-a879003b5',
+    github: 'https://github.com/gdshubha148',
+  },
+  {
+    name: 'Phani Kotha',
+    role: 'Member',
+    team: 'Frontend',
+    image: '/team/kpvvssmphara.jpg',
+    linkedin: 'https://www.linkedin.com/in/phani-kotha-26073439b',
+    github: 'https://github.com/phanikotha18-sudo',
+  },
 
-    // --- DATA TEAM ---
-    {
-        name: "Praneetha Baru",
-        role: "Lead",
-        team: "Data",
-        image: "/team/praneetha_baru.jpg",
-        linkedin: "https://www.linkedin.com/in/praneetha-baru-0846b0295",
-        github: "https://github.com/Praneetha7305"
-    },
-    {
-        name: "Kavin Sarvesh",
-        role: "Member",
-        team: "Data",
-        image: "/team/kavin_sarvesh.jpg",
-        linkedin: "https://www.linkedin.com/in/kavin-sarvesh-813437360",
-        github: "https://github.com/Kavinsarvesh2006"
-    },
-    {
-        name: "Utukuri Naga Sri Hari Chandana",
-        role: "Member",
-        team: "Data",
-        image: "/team/utukuri_naga_sri_hari_chandana.jpg",
-        linkedin: "https://www.linkedin.com/in/naga-sri-hari-chandana-utukuri-541b072a3",
-        github: "https://github.com/2300031149-chandana"
-    },
-    {
-        name: "Akash Kumar Paswan",
-        role: "Member",
-        team: "Data",
-        image: "/team/akash_kumar_paswan.jpg",
-        linkedin: "https://www.linkedin.com/in/akash-kumar-paswan-951a13361",
-        github: "https://github.com/Akashpaswan302"
-    },
-    {
-        name: "Ganesh Goud Tekmul",
-        role: "Member",
-        team: "Data",
-        image: "/team/ganesh_goud_tekmul.jpg",
-        linkedin: "https://www.linkedin.com/in/ganesh-goud-a55a8b373/",
-        github: "https://github.com/ganeshgoud96"
-    }
+  // --- DATA TEAM ---
+  {
+    name: 'Praneetha Baru',
+    role: 'Lead',
+    team: 'Data',
+    image: '/team/praneetha_baru.jpg',
+    linkedin: 'https://www.linkedin.com/in/praneetha-baru-0846b0295',
+    github: 'https://github.com/Praneetha7305',
+  },
+  {
+    name: 'Kavin Sarvesh',
+    role: 'Member',
+    team: 'Data',
+    image: '/team/kavin_sarvesh.jpg',
+    linkedin: 'https://www.linkedin.com/in/kavin-sarvesh-813437360',
+    github: 'https://github.com/Kavinsarvesh2006',
+  },
+  {
+    name: 'Utukuri Naga Sri Hari Chandana',
+    role: 'Member',
+    team: 'Data',
+    image: '/team/utukuri_naga_sri_hari_chandana.jpg',
+    linkedin: 'https://www.linkedin.com/in/naga-sri-hari-chandana-utukuri-541b072a3',
+    github: 'https://github.com/2300031149-chandana',
+  },
+  {
+    name: 'Akash Kumar Paswan',
+    role: 'Member',
+    team: 'Data',
+    image: '/team/akash_kumar_paswan.jpg',
+    linkedin: 'https://www.linkedin.com/in/akash-kumar-paswan-951a13361',
+    github: 'https://github.com/Akashpaswan302',
+  },
+  {
+    name: 'Ganesh Goud Tekmul',
+    role: 'Member',
+    team: 'Data',
+    image: '/team/ganesh_goud_tekmul.jpg',
+    linkedin: 'https://www.linkedin.com/in/ganesh-goud-a55a8b373/',
+    github: 'https://github.com/ganeshgoud96',
+  },
 ];
 
-// Helper to group members by team
 const TEAM_GROUPS = [
-    { id: 'Coordination', label: 'Leadership & Coordination' },
-    { id: 'Model', label: 'AI & Modeling' },
-    { id: 'Backend', label: 'Backend Engineering' },
-    { id: 'Frontend', label: 'Frontend Engineering' },
-    { id: 'Data', label: 'Data Engineering' }
+  { id: 'Coordination', label: 'Leadership & Coordination' },
+  { id: 'Model', label: 'AI & Modeling' },
+  { id: 'Backend', label: 'Backend Engineering' },
+  { id: 'Frontend', label: 'Frontend Engineering' },
+  { id: 'Data', label: 'Data Engineering' },
 ];
 
 export default function TeamSection() {
     return (
+<<<<<<< HEAD
+        <section className="py-16 sm:py-24 bg-white dark:bg-slate-950 transition-colors duration-300">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                
+                <div className="text-center mb-20 space-y-4">
+                    <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight font-syne">
+                        Meet the Team
+=======
         <section className="py-24 bg-gray-50/50 border-t border-gray-100">
-            <div className="max-w-[1100px] mx-auto px-6">
+            <div className="max-w-[1100px] mx-auto">
                 {/* Section Header */}
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4">
+                <div className="text-center mb-10 sm:mb-12 md:mb-16">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-3 sm:mb-4">
                         Meet the Team Behind helpdesk.ai
+>>>>>>> upstream/gssoc
                     </h2>
-                    <p className="text-slate-500 font-medium text-lg max-w-2xl mx-auto">
+                    <p className="text-slate-500 font-medium text-lg max-w-2xl mx-auto dark:text-slate-300">
                         Built by engineers focused on intelligent support automation.
                     </p>
                 </div>
 
-                {/* Grouped by Team */}
-                <div className="space-y-20">
+                <div className="space-y-24">
                     {TEAM_GROUPS.map((group) => {
-                        const groupMembers = TEAM_MEMBERS.filter(m => m.team === group.id);
-                        if (groupMembers.length === 0) return null;
+                        const members = TEAM_MEMBERS.filter(m => m.team === group.id);
+                        if (!members.length) return null;
 
                         return (
                             <div key={group.id}>
-                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest border-b border-gray-200 pb-2 mb-8 inline-block">
+                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-widest border-b border-gray-200 pb-2 mb-8 inline-block dark:text-slate-100 dark:border-emerald-900/40">
                                     {group.label}
                                 </h3>
 
+<<<<<<< HEAD
+                                <div className="flex flex-wrap justify-center gap-6 w-full">
+                                    {members.map((member, i) => (
+                                        <div 
+                                            key={i} 
+                                            className="group bg-gray-50/50 dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-2xl p-6 w-[240px] sm:w-[220px] flex flex-col items-center justify-center text-center hover:border-emerald-500/50 dark:hover:border-emerald-500/30 transition-all duration-300 hover:shadow-xl dark:hover:shadow-black/20"
+=======
                                 {/* Responsive Grid Layout */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 sm:gap-x-8 gap-y-8 sm:gap-y-12">
                                     {groupMembers.map((member, index) => (
                                         <div
                                             key={index}
-                                            className="group relative bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col items-center text-center"
+                                            className="group relative bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col items-center text-center dark:bg-[#0f1f18] dark:border-emerald-900/35 dark:hover:shadow-black/30"
                                         >
                                             {/* Image Container with Hover Overlay */}
-                                            <div className="relative w-32 h-32 mb-5 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-100/50">
+                                            <div className="relative w-32 h-32 mb-5 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-100/50 dark:border-emerald-100 dark:bg-emerald-950/40">
                                                 {member.image ? (
                                                     <img
                                                         src={member.image}
@@ -273,7 +286,7 @@ export default function TeamSection() {
 
                                             {/* Text Content */}
                                             <div>
-                                                <h3 className="text-lg font-bold text-slate-900 mb-1 leading-tight">{member.name}</h3>
+                                                <h3 className="text-lg font-bold text-slate-900 mb-1 leading-tight dark:text-white">{member.name}</h3>
                                                 <p className={`text-[11px] font-black uppercase tracking-widest ${member.role.includes('Lead') ? 'text-indigo-600' : 'text-emerald-600'}`}>
                                                     {member.role}
                                                 </p>

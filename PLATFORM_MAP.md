@@ -10,6 +10,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Login / Signup** | User & Admin entry points. | Secure JWT-based entry, Role-aware redirection. |
 | **Forgot/Reset Password** | Recovery workflows. | Email-based secure recovery flows. |
 | **Knowledge Check** | Pre-support interactive guide. | Self-service assessment before ticket submission. |
+| **About Us** | Project background and mission. | Information about the mission, 6-stage AI pipeline timeline, tech stack, and resource links. |
 
 ## 👤 Layer 2: Standard User Portal
 | Page | Description | Key Features |
@@ -32,6 +33,8 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Admin Analytics** | Performance dashboard. | Sentiment heatmaps, tech-stack recurring issue analysis. |
 | **Admin Settings** | Organizational configuration. | Custom branding, SLA threshold definitions. |
 | **API Token Management** | Secure API credential hub. | Scoped token creation, IP allowlisting, one-time secret display, revocation, rotation, and usage analytics. |
+| **Knowledge Insights** | AI-powered gap detection dashboard. | Recurring issue clustering, gap score analytics, missing doc alerts. |
+| **Ticket-to-Article** | Resolution-to-Article Pipeline. | Convert resolved tickets to KB drafts with one-click AI generation. |
 | **Admin Profile** | Managerial settings. | Administrative credentials and settings. |
 
 ## 👑 Layer 4: Master Admin Portal

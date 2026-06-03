@@ -58,7 +58,9 @@ pinned: false
 
 ## 🌟 GSSoC '26 Contributor & Community Campaign
 
-We are extremely proud to be part of the **GirlScript Summer of Code (GSSoC) 2026**! To support the project and get real-time open-source project updates, please make sure you participate in our community campaign:
+We are extremely proud to be part of the **GirlScript Summer of Code (GSSoC) 2026**! To ensure high-quality contributions and maximum rewards for both developers and mentors, please review our official [GSSoC Mentorship Guide & Review Standard](MENTORSHIP.md).
+
+To support the project and get real-time open-source project updates, please make sure you participate in our community campaign:
 
 <div align="center">
 
@@ -84,16 +86,18 @@ We are extremely proud to be part of the **GirlScript Summer of Code (GSSoC) 202
   <img src="https://img.shields.io/badge/🔗_CONNECT_ON_LINKEDIN-111827?style=for-the-badge&logo=linkedin&logoColor=white&labelColor=0077b5" height="40" alt="Connect on LinkedIn" />
 </a>
 &nbsp;&nbsp;
-<a href="mailto:bonthalamadhavi1@gmail.com">
-  <img src="https://img.shields.io/badge/✉️_EMAIL_ME-111827?style=for-the-badge&logo=gmail&logoColor=white&labelColor=ea4335" height="40" alt="Email Me" />
+<a href="mailto:support@helpdesk.ai">
+  <img src="https://img.shields.io/badge/✉️_EMAIL_US-111827?style=for-the-badge&logo=gmail&logoColor=white&labelColor=ea4335" height="40" alt="Email Us" />
 </a>
 
 </div>
 
 ---
 
-> [!NOTE] 
+> [!NOTE]
+>
 > ### Eliminating the Manual Triage Bottleneck
+>
 > Helpdesk.ai uses deep-learning neural networks and 4-layer enterprise architecture to categorize, prioritize, and resolve IT issues in milliseconds.
 
 <br/>
@@ -112,12 +116,12 @@ We are extremely proud to be part of the **GirlScript Summer of Code (GSSoC) 202
 
 > [!IMPORTANT]
 > <h2 id="why-helpdeskai">🎯 Why Helpdesk.AI?</h2>
-> 
+>
 > Helpdesk.AI is more than just a ticketing tool; it is a **Neural Service Orchestrator** designed for modern enterprises. It provides massive ROI by:
-> 
-> 1.  **Eliminating the Triage Bottleneck**: By using context-aware AI (DistilBERT), it categorizes 100% of tickets in milliseconds, bypassing the L1 support line entirely.
-> 2.  **Proactive Resolution**: Integrated LLMs (GitHub Models/Gemini) analyze issues during creation to suggest "Instant Fixes," severely reducing actual ticket volume.
-> 3.  **Tiered Multi-Tenancy**: Built for true SaaS isolation, it securely isolates completely separate companies within a single Supabase database.
+>
+> 1. **Eliminating the Triage Bottleneck**: By using context-aware AI (DistilBERT), it categorizes 100% of tickets in milliseconds, bypassing the L1 support line entirely.
+> 2. **Proactive Resolution**: Integrated LLMs (GitHub Models/Gemini) analyze issues during creation to suggest "Instant Fixes," severely reducing actual ticket volume.
+> 3. **Tiered Multi-Tenancy**: Built for true SaaS isolation, it securely isolates completely separate companies within a single Supabase database.
 
 ---
 
@@ -156,6 +160,52 @@ graph TD
 
 ---
 
+<h2 id="project-structure">📁 Project Structure</h2>
+
+This document outlines the key directories in the HELPDESK.AI repository to help contributors navigate the codebase efficiently.
+
+```
+HELPDESK.AI/
+├── Frontend/          # React frontend application (Vite-based)
+├── backend/           # Backend API services
+├── MobileApp/         # Mobile application (Android)
+├── Model/             # ML models and AI inference code
+├── supabase/          # Supabase database configuration and migrations
+├── scripts/           # Utility and automation scripts
+├── docs/              # Documentation files
+├── app/               # Main application entry point
+├── src/               # Source code modules
+├── tests/             # Test suites and fixtures
+├── k8s/               # Kubernetes deployment manifests
+├── deploy/            # Deployment configurations and scripts
+├── middleware/        # Express/FastAPI middleware components
+├── utils/             # Helper functions and utilities
+├── static/            # Static assets (CSS, images)
+├── templates/         # HTML templates
+└── ...
+```
+
+| Directory | Purpose |
+| :--- | :--- |
+| **Frontend/** | React-based web UI built with Vite |
+| **backend/** | FastAPI/Node.js backend API services |
+| **MobileApp/** | React Native mobile application |
+| **Model/** | Machine learning models (DistilBERT, NER, OCR) |
+| **supabase/** | Database schema, migrations, and edge functions |
+| **scripts/** | Build, deployment, and utility scripts |
+| **docs/** | Project documentation and guides |
+| **app/** | Core application logic |
+| **src/** | Shared source modules and libraries |
+| **tests/** | Unit, integration, and E2E tests |
+| **k8s/** | Kubernetes manifests for production deployment |
+| **deploy/** | CI/CD pipelines and deployment configs |
+| **middleware/** | Authentication, logging, and request middleware |
+| **utils/** | Common utilities and helper functions |
+| **static/** | Static assets served by the application |
+| **templates/** | HTML/email templates |
+
+---
+
 <h2 id="the-ai-neural-pipeline">🧠 The AI Neural Pipeline</h2>
 
 Under the hood, Helpdesk.ai leverages a custom suite of high speed models.
@@ -183,6 +233,7 @@ Under the hood, Helpdesk.ai leverages a custom suite of high speed models.
 <h2 id="deploy">🚀 Deployment & Operations</h2>
 
 Create a `.env` file in the `/Frontend` directory:
+
 ```bash
 VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_ANON_KEY=your_key
@@ -191,6 +242,7 @@ VITE_BACKEND_URL=http://localhost:8000
 ```
 
 ### Local Installation
+
 ```bash
 git clone https://github.com/ritesh-1918/HELPDESK.AI.git
 cd HELPDESK.AI/Frontend
@@ -223,6 +275,25 @@ Helpdesk.ai is now available as a native Android application. It features a comp
 
 ---
 
+<h2 id="contributors">✨ Contributors</h2>  
+
+Thanks goes to these wonderful people for contributing to this project ❤️
+
+<a href="https://github.com/ritesh-1918/HELPDESK.AI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ritesh-1918/HELPDESK.AI" />
+</a>
+
+---
+
 <div align="center">
-Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team. 
+Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team.
 </div>
+
+
+## Local Docker Deployment Verification Checklist
+
+Before deploying your container to staging or production, verify:
+- [ ] Port binding configuration maps correctly (default `7860`).
+- [ ] Volumetric storage binds persist datasets like `final_dataset.xlsx`.
+- [ ] Database credentials (`SUPABASE_URL`, `SUPABASE_KEY`) are passed correctly.
+- [ ] Container health check is active and returns status green.

@@ -1,0 +1,122 @@
+{
+  "info": {
+    "name": "HELPDESK.AI API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection covering the main FastAPI endpoints for tickets and AI analysis."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "baseUrl": [
+    { "key": "default", "value": "http://localhost:8000" }
+  ],
+  "variable": [
+    { "key": "company_id", "value": "{{company_id}}" },
+    { "key": "client_id", "value": "{{client_id}}" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "List Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Company-Id", "value": "{{company_id}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets"]
+            }
+          }
+        },
+        {
+          "name": "Get Ticket by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Company-Id", "value": "{{company_id}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tickets/{{ticket_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "{{ticket_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Save Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Company-Id", "value": "{{company_id}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"your_user_id\",\n  \"subject\": \"Login API 500 on peak hours\",\n  \"description\": \"Authentication endpoint fails with 500 when traffic spikes.\",\n  \"category\": \"Software\",\n  \"subcategory\": \"API\",\n  \"priority\": \"High\",\n  \"assigned_team\": \"Backend\",\n  \"status\": \"Open\",\n  \"auto_resolve\": false,\n  \"is_duplicate\": false,\n  \"confidence\": 0.77,\n  \"sla_breach_at\": \"2026-06-02T17:00:00Z\",\n  \"metadata\": {},\n  \"entities\": [],\n  \"solution_steps\": [],\n  \"needs_review\": false,\n  \"routing_confidence\": 0.8\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tickets/save",
+              "host": ["{{baseUrl}}"],
+              "path": ["tickets", "save"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "Analyze Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Company-Id", "value": "{{company_id}}" },
+              { "key": "X-Client-Id", "value": "{{client_id}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Login endpoint returns 500 between 09:00 and 11:00 WIB.\",\n  \"confidence_threshold\": 0.2,\n  \"duplicate_sensitivity\": 0.85\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/analyze_ticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "analyze_ticket"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
