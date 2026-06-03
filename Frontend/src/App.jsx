@@ -31,6 +31,7 @@ import AuthCallback from './pages/AuthCallback';
 import AdminProtectedRoute from './components/shared/AdminProtectedRoute';
 import MasterAdminProtectedRoute from './components/shared/MasterAdminProtectedRoute';
 import ProtectedRoute from './components/shared/ProtectedRoute';
+import { ThemeProvider } from './components/shared/ThemeProvider';
 
 // ---------------------------------------------------------------------------
 // Lazily-loaded layouts
