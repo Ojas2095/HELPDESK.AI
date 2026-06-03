@@ -129,14 +129,26 @@ class AutoCloseService:
         try:
             logger.info("Starting auto-close job...")
 
-            # Fetch all resolved tickets
-            response = self.supabase.table("tickets").select(
-                "id, company_id, status, updated_at"
-            ).eq("status", "resolved").execute()
+            # Fetch resolved tickets in paginated batches to avoid memory exhaustion
+            BATCH_SIZE = 100
+            resolved_tickets = []
+            start = 0
 
-            resolved_tickets = response.data if response.data else []
+            while True:
+                response = self.supabase.table("tickets").select(
+                    "id, company_id, status, updated_at"
+                ).eq("status", "resolved").range(start, start + BATCH_SIZE - 1).execute()
+
+                batch = response.data if response.data else []
+                resolved_tickets.extend(batch)
+                logger.info(f"Fetched batch of {len(batch)} resolved tickets (offset {start})")
+
+                if len(batch) < BATCH_SIZE:
+                    break
+                start += BATCH_SIZE
+
             stats["processed_count"] = len(resolved_tickets)
-            logger.info(f"Found {len(resolved_tickets)} resolved tickets")
+            logger.info(f"Found {len(resolved_tickets)} resolved tickets total")
 
             # Group by company
             company_tickets: Dict[str, List] = {}
