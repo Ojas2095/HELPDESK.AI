@@ -11,6 +11,7 @@ Format: "N/period" where period is second|minute|hour|day
 
 import os
 import logging
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ def _parse_limit(env_key: str, default: str) -> str:
     parts = raw.split("/")
     if len(parts) == 2:
         count_str, period = parts
-        valid_periods = {"second", "minute", "hour", "day"}
+        valid_periods: set[str] = {"second", "minute", "hour", "day"}
         try:
             int(count_str)
             if period in valid_periods:
@@ -63,7 +64,7 @@ RATE_LIMIT_TICKETS: str = _parse_limit("RATE_LIMIT_TICKETS", _DEFAULT_TICKETS)
 RATE_LIMIT_AUTH: str = _parse_limit("RATE_LIMIT_AUTH", _DEFAULT_AUTH)
 
 
-def get_all() -> dict:
+def get_all() -> Dict[str, str]:
     """Return all current rate limit settings as a dict."""
     return {
         "ai": RATE_LIMIT_AI,
@@ -81,7 +82,7 @@ def get_retry_after_seconds(limit_str: str) -> int:
         "5/minute"  → 60
         "100/hour"  → 3600
     """
-    period_seconds = {
+    period_seconds: Dict[str, int] = {
         "second": 1,
         "minute": 60,
         "hour": 3600,
