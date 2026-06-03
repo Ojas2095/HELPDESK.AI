@@ -1,5 +1,6 @@
 """
-HTTP Security Headers middleware for FastAPI (issue #637).
+[DEPRECATED] HTTP Security Headers middleware for FastAPI (issue #637).
+Use backend.security_middleware instead.
 
 Adds standard Helmet-equivalent headers to every response:
   - X-Content-Type-Options

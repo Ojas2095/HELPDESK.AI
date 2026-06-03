@@ -131,7 +131,6 @@ from backend.services.spam_service import SpamService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
 from backend.sla_predictor import get_sla_estimate
-from backend.sanitization import get_security_headers
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 from backend.sanitization import sanitize_text
 

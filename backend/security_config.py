@@ -1,6 +1,7 @@
 """
-Consolidated Security and CORS configuration for HELPDESK.AI Backend.
+[DEPRECATED] Consolidated Security and CORS configuration for HELPDESK.AI Backend.
 Resolves Issue #637 by standardizing Helmet headers and CORS policy.
+Use backend/security_middleware instead.
 """
 import os
 import logging

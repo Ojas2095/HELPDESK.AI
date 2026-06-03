@@ -1,5 +1,6 @@
 """
-ASGI Middleware for enforcing security headers (Helmet-equivalent).
+[DEPRECATED] ASGI Middleware for enforcing security headers (Helmet-equivalent).
+Use backend/security_middleware instead.
 
 This module provides a configurable SecurityHeadersMiddleware that adds
 Content-Security-Policy, X-Content-Type-Options, X-Frame-Options,
