@@ -2029,6 +2029,14 @@ async def get_tickets(
         query = query.eq("company_id", company_scope)
         
     res = query.execute()
+    # Decrypt PII fields for display (Issue #1376)
+    for ticket in res.data:
+        for field in ("subject", "description"):
+            if ticket.get(field):
+                try:
+                    ticket[field] = decrypt_pii(ticket[field])
+                except Exception:
+                    pass  # back compat: decrypt fails for legacy plaintext
     return res.data
 
 def trigger_webhook_for_new_ticket(company_id: str, ticket: dict) -> None:
@@ -2442,6 +2450,10 @@ async def create_ticket(
         except Exception:
             pass
 
+    # Encrypt PII fields before storing (Issue #1376)
+    for field in ("subject", "description"):
+        if data.get(field):
+            data[field] = encrypt_pii(data[field])
     res = supabase.table("tickets").insert(data).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Failed to create ticket")
@@ -2519,6 +2531,13 @@ async def get_ticket_by_id(
         raise HTTPException(status_code=404, detail="Ticket not found")
     if company_scope and res.data.get("company_id") != company_scope:
         raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+    # Decrypt PII fields for display (Issue #1376)
+    for field in ("subject", "description"):
+        if res.data.get(field):
+            try:
+                res.data[field] = decrypt_pii(res.data[field])
+            except Exception:
+                pass  # back compat
     return res.data
 
 
