@@ -312,6 +312,14 @@ class DuplicateService:
         """
         self.load()
 
+        # Validate the threshold up front so a bad override is reported
+        # even when the model is unavailable (degraded mode).
+        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
+        if active_threshold is not None and not (0.0 <= active_threshold <= 1.0):
+            raise ValueError(
+                f"threshold must be between 0.0 and 1.0, got {active_threshold!r}"
+            )
+
         # If model is not available, return no duplicate found
         if not self.is_available():
             print(
@@ -323,8 +331,6 @@ class DuplicateService:
                 "similarity": 0.0,
             }
 
-        # Use provided threshold or default to global constant
-        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
         use_default_threshold = threshold is None
 
         # Try the result cache only when using the default threshold so we
