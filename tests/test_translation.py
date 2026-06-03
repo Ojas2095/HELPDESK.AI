@@ -5,7 +5,7 @@ Covers: BCP-47 validation, duplicate model removal, all-None body rejection,
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock
 from fastapi.testclient import TestClient
 
 from backend.routes.translation import (
@@ -219,3 +219,22 @@ class TestTranslationService:
             result = translate_ticket({"subject": "hello"}, target_lang="es")
             assert "subject" in result["translations"]
             mock.assert_called_once_with("hello", target_lang="es")
+
+    def test_translate_ticket_description_sets_original_language(self):
+        with patch("backend.services.translation_service.translate_text") as mock:
+            mock.return_value = {"translated": "hola", "source_lang": "es", "target_lang": "en", "cached": False}
+            result = translate_ticket({"description": "hola"}, target_lang="en")
+            assert result["original_language"] == "es"
+            assert result["translations"]["description"]["translated"] == "hola"
+
+    def test_translate_text_non_200_response_falls_back(self):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"responseStatus": 403, "responseDetails": "quota exceeded"}
+
+        with patch("backend.services.translation_service._requests_lib.get", return_value=mock_response):
+            result = translate_text("hello", target_lang="es", source_lang="en")
+
+        assert result["translated"] == "hello"
+        assert result["source_lang"] == "en"
+        assert result["target_lang"] == "es"

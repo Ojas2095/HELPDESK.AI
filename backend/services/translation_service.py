@@ -5,6 +5,7 @@ Translation helpers for locale detection, MyMemory API fallback, and ticket tran
 from __future__ import annotations
 
 import logging
+import re
 from typing import Optional
 from functools import lru_cache
 
@@ -21,7 +22,7 @@ MAX_CACHE_SIZE = 1000
 MAX_TEXT_LENGTH = 5000
 
 # BCP-47 language tag regex
-_LANG_TAG_RE = re.compile(r"^[a-zA-Z]{2,3}(?:-[a-zA-Z]{2,8})*$")
+_LANG_TAG_RE = re.compile(r"^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$")
 
 # Supported languages for translation
 SUPPORTED_LANGUAGES = {
@@ -190,7 +191,7 @@ def translate_text(
 
         # Non-200 API status
         details = data.get("responseDetails", "Unknown error")
-        logger.warning("[TranslationService] API returned status %s: %s", status, details)
+        logger.warning("[TranslationService] API returned status %s: %s", data.get("responseStatus"), details)
         return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
 
     except _requests_lib.exceptions.Timeout:
@@ -247,7 +248,7 @@ def translate_ticket(ticket_data: dict, target_lang: str = "en") -> dict:
         desc_result = translate_text(ticket_data["description"], target_lang=target_lang)
         result["translations"]["description"] = desc_result
         if not result["original_language"]:
-            result["original_language"] = description_result["source_lang"]
+            result["original_language"] = desc_result["source_lang"]
 
     if "messages" in ticket_data:
         translated_messages = []

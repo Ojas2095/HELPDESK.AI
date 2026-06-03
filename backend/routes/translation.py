@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/translation", tags=["translation"])
 
 # BCP-47 language tag regex (covers "en", "en-US", "zh-Hant", "pt-BR", etc.)
-_LANG_TAG_RE = re.compile(r"^[a-zA-Z]{2,3}(?:-[a-zA-Z]{2,8})*$")
+_LANG_TAG_RE = re.compile(r"^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$")
 
 
 class TranslateTextRequest(BaseModel):
