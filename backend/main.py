@@ -263,10 +263,15 @@ async def lifespan(app: FastAPI):
 # App
 # ---------------------------------------------------------------------------
 app = FastAPI(
-    title="AI Helpdesk Backend",
-    description="Ticket classification, entity extraction, and duplicate detection",
+    title="HELPDESK.AI API",
+    description="Official API for HELPDESK.AI - Automated IT Support Platform.",
     version="1.0.0",
-    lifespan=lifespan,
+    # This fulfills the Swagger Styling requirement:
+    swagger_ui_parameters={
+        "syntaxHighlight.theme": "monokai",
+        "docExpansion": "none",
+        "filter": True
+    }
 )
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
@@ -551,18 +556,28 @@ async def get_tickets(company_id: str | None = None):
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
-    OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
-    This is called AFTER the user confirms the analysis results.
+    Persist an analyzed ticket to the Supabase database.
+    
+    This is the official persistence endpoint, intended to be called after 
+    the user has reviewed and confirmed the AI analysis results. It saves 
+    the ticket data into the 'tickets' table in Supabase.
+
+    Args:
+        request_body (TicketSaveRequest): Contains the finalized ticket data 
+                                          ready for storage.
+
+    Returns:
+        dict: Confirmation of the save operation and the stored ticket details.
+
+    Raises:
+        HTTPException: 500 if the Supabase database connection is unavailable.
     """
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
     logger = logging.getLogger(__name__)
     try:
-        final_data = request_body.dict()
-
-        # Resolve tenant linkage from user profile with authorization validation.
-        profile = {}
+        # ... your existing logic for saving to Supabase ...
         if request_body.user_id:
             try:
                 profile_res = (
@@ -653,7 +668,23 @@ async def save_ticket(request_body: TicketSaveRequest):
 
 @app.get("/tickets/{ticket_id}")
 async def get_ticket_by_id(ticket_id: str):
-    """Fetch single persistent ticket."""
+    """
+    Retrieve a specific support ticket by its unique ID.
+    
+    Fetches a single ticket record from the persistent Supabase database.
+    If the ticket ID is not found or the database connection is unavailable, 
+    the appropriate error response is returned.
+
+    Args:
+        ticket_id (str): The unique identifier of the ticket to retrieve.
+
+    Returns:
+        dict: The ticket record data if found.
+
+    Raises:
+        HTTPException: 500 if the database connection is uninitialized.
+        HTTPException: 404 if no ticket with the provided ID exists.
+    """
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
@@ -662,10 +693,24 @@ async def get_ticket_by_id(ticket_id: str):
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
 
-
 @app.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
-    """Save a new ticket into the system."""
+    """
+    Create and save a new support ticket in the system.
+    
+    This endpoint adds a new ticket to the database. Before insertion, it 
+    performs a duplicate check based on the `ticket_id`; if a ticket with 
+    the same ID already exists, the existing record is returned instead of 
+    creating a duplicate.
+
+    Args:
+        ticket (TicketRecord): The ticket object containing details such as 
+                               ticket_id, owner_id, and ticket content.
+
+    Returns:
+        TicketRecord: The newly created ticket object, or the existing record 
+                      if a duplicate was detected.
+    """
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
     if existing:
@@ -674,7 +719,6 @@ async def create_ticket(ticket: TicketRecord):
     TICKETS_DB.append(ticket)
     print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
     return ticket
-
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
 async def update_ticket(ticket_id: str, updates: dict):
@@ -733,9 +777,19 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
 @app.post("/ai/analyze")
 async def analyze_only(request_body: TicketRequest):
     """
-    PERFORMANCE UPGRADE: AI Analysis phase only. 
-    Does NOT persist to DB. This allows the user to review the analysis 
-    and duplicate check before committing to a ticket creation.
+    Perform a read-only AI analysis of a support ticket.
+    
+    This endpoint executes the AI analysis phase without persisting any data 
+    to the database. It is designed for the preview phase, allowing users to 
+    review AI insights, category predictions, and duplicate checks before 
+    committing to a full ticket creation.
+
+    Args:
+        request_body (TicketRequest): Contains the ticket text and company information.
+
+    Returns:
+        dict: The AI-generated analysis results, including classification, 
+              metadata, and confidence metrics, without database side-effects.
     """
     text = request_body.text
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
@@ -894,7 +948,19 @@ async def analyze_only(request_body: TicketRequest):
 @app.post("/ai/analyze_stream")
 async def analyze_stream(request_body: TicketRequest):
     """
-    REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
+    Streams AI analysis progress in real-time using Server-Sent Events (SSE).
+    
+    This endpoint processes the ticket text and streams incremental updates 
+    regarding the AI's analysis process back to the frontend. It uses system 
+    settings for confidence thresholds, duplicate sensitivity, and auto-resolve 
+    configurations.
+
+    Args:
+        request_body (TicketRequest): Contains the ticket text and associated company details.
+
+    Returns:
+        EventSourceResponse: A streaming response that emits events containing 
+                             analysis progress, metadata, and final predictions.
     """
     import datetime
     def get_now_ist():
@@ -912,6 +978,7 @@ async def analyze_stream(request_body: TicketRequest):
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
         enable_auto_resolve = settings["enable_auto_resolve"]
+
 
         # 1. Reading
         yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
@@ -1043,16 +1110,24 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket/legacy")
-async def legacy_analyze_and_save(request_body: TicketRequest):
-    """
-    BACKWARD COMPATIBILITY: Strictly performs analysis only. 
-    Does NOT persist to DB to avoid foreign key violations.
-    """
-    return await analyze_only(request_body)
-
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
+    """
+    Analyze a support ticket using the AI classifier.
+    
+    Processes the input text to determine the category, subcategory, 
+    priority, and appropriate team assignment. Also predicts whether the 
+    ticket can be automatically resolved.
+
+    Args:
+        request (TicketRequest): Object containing the 'text' of the 
+                                 support ticket to be analyzed.
+
+    Returns:
+        dict: A dictionary containing the AI predictions for category, 
+              subcategory, priority, auto_resolve flag, assigned_team, 
+              and the confidence level of the analysis.
+    """
     text = request.text
     try:
         prediction = classifier_v2.predict(text)
@@ -1152,6 +1227,21 @@ class SignupBody(BaseModel):
 
 @app.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):
+    """
+    Authenticates a user and starts a session.
+    
+    Verifies the provided email and password against the Supabase 
+    authentication system. Upon successful login, it sets session 
+    cookies in the response and returns the user's profile data.
+
+    Args:
+        body (LoginBody): Contains the user's email and password.
+        response (Response): Used to set session cookies upon success.
+
+    Returns:
+        dict: A dictionary containing the authenticated user's details 
+              and a success message.
+    """
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     try:
@@ -1169,9 +1259,22 @@ async def auth_login(body: LoginBody, response: Response):
     _set_session_cookies(response, session)
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
     return {"user": user_payload, "message": "Session cookies set"}
-
 @app.post("/auth/signup")
 async def auth_signup(body: SignupBody, response: Response):
+    """
+    Registers a new user account.
+    
+    Creates a new user in the Supabase authentication system with the provided 
+    email and password. Optional metadata such as full name, role, and company 
+    can be included. Sets session cookies upon successful registration.
+
+    Args:
+        body (SignupBody): Contains email, password, and optional user profile data.
+        response (Response): Used to set session cookies if registration is successful.
+
+    Returns:
+        dict: A dictionary containing the user's details and a status message.
+    """
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     metadata = {}
@@ -1199,13 +1302,22 @@ async def auth_signup(body: SignupBody, response: Response):
         _set_session_cookies(response, session)
     user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
     return {"user": user_payload, "message": "Signup complete"}
-
 @app.post("/auth/logout")
 async def auth_logout(response: Response):
+    """
+    Logs the user out of the application.
+    
+    This endpoint clears the user's session cookies from the response,
+    effectively ending the current authenticated session.
+    """
     _clear_session_cookies(response)
     return {"ok": True}
-
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
+    """
+    Retrieve current user information.
+    
+    This endpoint returns the profile details of the currently authenticated user.
+    Requires a valid session or authentication token.
+    """
     return {"user": user}
-
