@@ -114,3 +114,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 ---
 *Happy coding, and let’s drive the future of Intelligent Enterprise Support together!*
+
+
+## API Integration Security (Issue #1549)
+Encrypt integration payloads with AES-256 and validate keys before communicating with third-party APIs.
