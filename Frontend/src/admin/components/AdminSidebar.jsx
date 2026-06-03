@@ -35,26 +35,16 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
 
     return (
         <aside 
-            className={`${isMobile ? 'w-full h-full' : 'fixed left-0 top-0 h-full'} z-40 transition-all duration-300 overflow-hidden flex flex-col`}
-            style={{
-                width: isMobile ? '100%' : (isCollapsed ? '80px' : '260px'),
-                background: '#ffffff',
-                borderRight: '1px solid #f0fdf4',
-                boxShadow: '2px 0 12px rgba(0,0,0,0.04)'
-            }}
+            className={`${isMobile ? 'w-full h-full' : 'fixed left-0 top-0 h-full'} z-40 transition-all duration-300 overflow-hidden flex flex-col bg-white border-r border-green-50 shadow-[2px_0_12px_rgba(0,0,0,0.04)]`}
+            style={{ width: isMobile ? '100%' : (isCollapsed ? '80px' : '260px') }}
         >
             {/* Logo Section */}
-            <div className="p-6 border-b border-gray-50 flex items-center" style={{ justifyContent: showLabels ? 'space-between' : 'center', padding: isCollapsed && !isMobile ? '24px 16px' : '24px 32px' }}>
+            <div className={`p-6 border-b border-gray-50 flex items-center ${showLabels ? 'justify-between' : 'justify-center'} ${isCollapsed && !isMobile ? 'py-6 px-4' : 'py-6 px-8'}`}>
                 <div className="flex items-center gap-3">
                     <img 
                         src="/favicon.png" 
                         alt="HelpDesk.ai Logo" 
-                        style={{ 
-                            height: showLabels ? '32px' : '32px', 
-                            width: showLabels ? 'auto' : '32px',
-                            objectFit: 'contain',
-                            borderRadius: showLabels ? '0' : '8px'
-                        }} 
+                        className={`h-8 object-contain ${showLabels ? 'w-auto rounded-none' : 'w-8 rounded-lg'}`}
                     />
                     {showLabels && (
                         <div className="animate-in fade-in duration-500 flex flex-col justify-center">
@@ -65,17 +55,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                 {!isMobile && onToggleCollapse && (
                     <button
                         onClick={onToggleCollapse}
-                        style={{
-                            background: '#f0fdf4', border: '1px solid #d1fae5',
-                            borderRadius: '8px', padding: '4px', cursor: 'pointer',
-                            color: '#15803d', display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', transition: 'all 0.2s ease',
-                            position: isCollapsed ? 'absolute' : 'relative',
-                            right: isCollapsed ? '-12px' : 'auto',
-                            top: isCollapsed ? '28px' : 'auto',
-                            zIndex: 50, boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
-                        }}
-                        className="hover:bg-emerald-100"
+                        className={`bg-green-50 border border-green-100 rounded-lg p-1 cursor-pointer text-green-700 flex items-center justify-center transition-all duration-200 hover:bg-green-100 z-50 shadow-sm ${isCollapsed ? 'absolute -right-3 top-7' : 'relative'}`}
                     >
                         {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
                     </button>
@@ -85,7 +65,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
             {/* Navigation Links */}
             <nav className="flex-1 px-3 py-8 space-y-1.5 overflow-y-auto custom-scrollbar">
                 {showLabels && (
-                    <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#9ca3af', fontWeight: 600, paddingLeft: '14px', marginBottom: '16px' }} className="uppercase">
+                    <p className="text-[10px] tracking-[0.14em] text-gray-400 font-semibold pl-3.5 mb-4 uppercase">
                         CORE MODULES
                     </p>
                 )}
@@ -94,16 +74,11 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                         key={item.path}
                         to={item.path}
                         onClick={isMobile ? onClose : undefined}
-                        style={({ isActive }) => ({
-                            display: 'flex', alignItems: 'center', gap: '12px',
-                            borderRadius: '10px', padding: isCollapsed && !isMobile ? '10px' : '9px 14px',
-                            color: isActive ? '#15803d' : '#6b7280',
-                            background: isActive ? '#f0fdf4' : 'transparent',
-                            fontWeight: isActive ? 600 : 500,
-                            textDecoration: 'none', transition: 'all 0.2s ease',
-                            justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
-                        })}
-                        className="group hover:bg-gray-50 relative"
+                        className={({ isActive }) => 
+                            `group relative flex items-center gap-3 rounded-xl transition-all duration-200 no-underline hover:bg-gray-50 ` +
+                            `${isCollapsed && !isMobile ? 'p-2.5 justify-center' : 'py-2 px-3.5 justify-start'} ` +
+                            `${isActive ? 'text-green-700 bg-green-50 font-semibold' : 'text-gray-500 bg-transparent font-medium'}`
+                        }
                     >
                         <item.icon size={20} className="shrink-0 transition-transform group-hover:scale-110" />
                         {showLabels && (
@@ -113,7 +88,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                         )}
                         {/* Tooltip for collapsed mode */}
                         {isCollapsed && !isMobile && (
-                            <div className="absolute left-full ml-3 bg-gray-900 text-white text-xs py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-lg" style={{ top: '50%', transform: 'translateY(-50%)' }}>
+                            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-lg">
                                 {item.label}
                             </div>
                         )}
@@ -126,16 +101,11 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                 <NavLink
                     to="/admin/settings"
                     onClick={isMobile ? onClose : undefined}
-                    style={({ isActive }) => ({
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        borderRadius: '10px', padding: isCollapsed && !isMobile ? '10px' : '9px 14px',
-                        color: isActive ? '#15803d' : '#6b7280',
-                        background: isActive ? '#f0fdf4' : 'transparent',
-                        fontWeight: isActive ? 600 : 500,
-                        textDecoration: 'none', transition: 'all 0.2s ease',
-                        justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
-                    })}
-                    className="group hover:bg-gray-50"
+                    className={({ isActive }) => 
+                        `group flex items-center gap-3 rounded-xl transition-all duration-200 no-underline hover:bg-gray-50 ` +
+                        `${isCollapsed && !isMobile ? 'p-2.5 justify-center' : 'py-2 px-3.5 justify-start'} ` +
+                        `${isActive ? 'text-green-700 bg-green-50 font-semibold' : 'text-gray-500 bg-transparent font-medium'}`
+                    }
                 >
                     <Settings size={20} className="shrink-0 group-hover:rotate-45 transition-transform duration-300" />
                     {showLabels && <span className="text-sm tracking-tight animate-in fade-in duration-300">Settings</span>}
@@ -143,15 +113,8 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
 
                 <button
                     onClick={handleLogout}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: '12px',
-                        borderRadius: '10px', padding: isCollapsed && !isMobile ? '10px' : '9px 14px',
-                        color: '#6b7280', background: 'transparent',
-                        fontWeight: 500, border: 'none', cursor: 'pointer',
-                        transition: 'all 0.2s ease', width: '100%',
-                        justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
-                    }}
-                    className="group hover:bg-red-50 hover:text-red-600"
+                    className={`group flex items-center gap-3 rounded-xl transition-all duration-200 w-full hover:bg-red-50 hover:text-red-600 text-gray-500 bg-transparent font-medium border-none cursor-pointer ` +
+                               `${isCollapsed && !isMobile ? 'p-2.5 justify-center' : 'py-2 px-3.5 justify-start'}`}
                 >
                     <LogOut size={20} className="shrink-0 group-hover:translate-x-1 transition-transform" />
                     {showLabels && <span className="text-sm tracking-tight animate-in fade-in duration-300">Logout</span>}

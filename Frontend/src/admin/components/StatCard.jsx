@@ -6,27 +6,23 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
  */
 const StatCard = ({ label, value, subtitle, icon: Icon, trend, color = 'indigo', customIcon }) => {
     const semanticColors = {
-        indigo: { bg: '#EEF2FF', text: '#6366f1' },
-        amber: { bg: '#FFF7ED', text: '#f97316' },
-        emerald: { bg: '#F0FDF4', text: '#16a34a' },
-        red: { bg: '#EFF6FF', text: '#3b82f6' },
-        slate: { bg: '#F8FAFC', text: '#64748B' }
+        indigo: 'bg-indigo-50 text-indigo-500',
+        amber: 'bg-orange-50 text-orange-500',
+        emerald: 'bg-green-50 text-green-600',
+        red: 'bg-blue-50 text-blue-500',
+        slate: 'bg-slate-50 text-slate-500'
     };
     const currentStyle = semanticColors[color] || semanticColors.slate;
 
     return (
-        <div style={{
-            background: '#ffffff', borderRadius: '16px', border: '1px solid #F0FDF4',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04)',
-            padding: '24px 28px', transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden'
-        }} className="hover:shadow-lg hover:-translate-y-1 group">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div className="bg-white rounded-2xl border border-green-50 shadow-sm p-6 px-7 transition-all duration-300 relative overflow-hidden hover:shadow-lg hover:-translate-y-1 group">
+            <div className="flex justify-between items-start">
                 <div>
-                    <p style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>
+                    <p className="text-[11px] text-gray-400 tracking-widest font-semibold uppercase mb-2">
                         {label}
                     </p>
                     <div className="flex items-baseline gap-2">
-                        <p style={{ fontSize: '36px', fontWeight: 800, color: '#0f1f12', lineHeight: 1, letterSpacing: '-0.03em', margin: '8px 0 6px' }}>
+                        <p className="text-4xl font-extrabold text-gray-900 leading-none tracking-tight mt-2 mb-1.5">
                             {value}
                         </p>
                         {trend && (
@@ -36,14 +32,9 @@ const StatCard = ({ label, value, subtitle, icon: Icon, trend, color = 'indigo',
                             </span>
                         )}
                     </div>
-                    {subtitle && <p style={{ fontSize: '12px', color: '#9ca3af' }}>{subtitle}</p>}
+                    {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
                 </div>
-                <div style={{
-                    background: currentStyle.bg, color: currentStyle.text,
-                    padding: '10px', borderRadius: '12px', width: '40px', height: '40px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'transform 0.5s ease'
-                }} className="group-hover:scale-110">
+                <div className={`${currentStyle} p-2.5 rounded-xl w-10 h-10 flex items-center justify-center transition-transform duration-500 group-hover:scale-110`}>
                     {customIcon || (Icon && <Icon size={20} />)}
                 </div>
             </div>
