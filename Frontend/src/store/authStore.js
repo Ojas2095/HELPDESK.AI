@@ -31,14 +31,13 @@ const useAuthStore = create(
                 }
 
                 // Priority 2: Use Auth Metadata (Instant fallback)
-                const isMasterAdmin = user.email === 'masteradmin@helpdesk.ai';
-
+                // Role is determined server-side via the profiles table, never from email.
                 const instantProfile = {
                     id: user.id,
                     email: user.email,
-                    full_name: isMasterAdmin ? 'Master Admin' : (metadata.full_name || 'User'),
-                    role: isMasterAdmin ? 'master_admin' : (metadata.role || 'user'),
-                    status: isMasterAdmin ? 'active' : 'pending_email_verification',
+                    full_name: metadata.full_name || 'User',
+                    role: metadata.role || 'user',
+                    status: 'pending_email_verification',
                     company: metadata.company || ''
                 };
 
