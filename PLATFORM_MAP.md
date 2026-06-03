@@ -31,6 +31,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Admin Users** | Workforce management. | Invite-only onboarding, user role auditing. |
 | **Admin Analytics** | Performance dashboard. | Sentiment heatmaps, tech-stack recurring issue analysis. |
 | **Admin Settings** | Organizational configuration. | Custom branding, SLA threshold definitions. |
+| **API Token Management** | Secure API credential hub. | Scoped token creation, IP allowlisting, one-time secret display, revocation, rotation, and usage analytics. |
 | **Admin Profile** | Managerial settings. | Administrative credentials and settings. |
 
 ## 👑 Layer 4: Master Admin Portal

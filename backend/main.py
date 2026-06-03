@@ -1483,3 +1483,98 @@ async def auth_logout(response: Response):
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
 
+
+# ---------------------------------------------------------------------------
+# API Token Management  (#1592)
+# ---------------------------------------------------------------------------
+
+from backend.auth.token_manager import TokenManager
+from backend.models.api_token import (
+    APITokenCreateRequest,
+    APITokenRevokeRequest,
+)
+
+
+def _get_token_manager() -> TokenManager:
+    if supabase is None:
+        raise HTTPException(status_code=503, detail="Database unavailable.")
+    return TokenManager(supabase)
+
+
+@app.post("/api-tokens", tags=["API Tokens"], summary="Create a new API token")
+async def create_api_token(
+    body: APITokenCreateRequest,
+    request: Request,
+    user: dict = Depends(get_current_user),
+    manager: TokenManager = Depends(_get_token_manager),
+):
+    """
+    Generate a scoped API token for the authenticated admin's company.
+    The raw secret is returned **once** in this response — store it securely.
+    """
+    try:
+        token = manager.create_token(
+            owner_id=user["id"],
+            company_id=user.get("company_id", ""),
+            name=body.name,
+            scopes=body.scopes,
+            expires_in_days=body.expires_in_days or 90,
+            allowed_ips=body.allowed_ips,
+        )
+        return token
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/api-tokens", tags=["API Tokens"], summary="List tokens for the caller's company")
+async def list_api_tokens(
+    user: dict = Depends(get_current_user),
+    manager: TokenManager = Depends(_get_token_manager),
+):
+    return manager.list_tokens(company_id=user.get("company_id", ""))
+
+
+@app.delete("/api-tokens/{token_id}", tags=["API Tokens"], summary="Revoke a token")
+async def revoke_api_token(
+    token_id: str,
+    body: APITokenRevokeRequest,
+    user: dict = Depends(get_current_user),
+    manager: TokenManager = Depends(_get_token_manager),
+):
+    manager.revoke_token(
+        token_id=token_id,
+        company_id=user.get("company_id", ""),
+        revoked_by=user["id"],
+        reason=body.reason,
+    )
+    return {"status": "revoked", "token_id": token_id}
+
+
+@app.post("/api-tokens/{token_id}/rotate", tags=["API Tokens"], summary="Rotate a token")
+async def rotate_api_token(
+    token_id: str,
+    user: dict = Depends(get_current_user),
+    manager: TokenManager = Depends(_get_token_manager),
+):
+    """Revoke the existing token and issue a replacement with identical scopes."""
+    try:
+        new_token = manager.rotate_token(
+            token_id=token_id,
+            company_id=user.get("company_id", ""),
+            owner_id=user["id"],
+        )
+        return new_token
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@app.get("/api-tokens/{token_id}/usage", tags=["API Tokens"], summary="Get usage statistics")
+async def get_token_usage(
+    token_id: str,
+    user: dict = Depends(get_current_user),
+    manager: TokenManager = Depends(_get_token_manager),
+):
+    return manager.get_usage_summary(
+        token_id=token_id,
+        company_id=user.get("company_id", ""),
+    )
