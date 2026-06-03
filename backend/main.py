@@ -2579,6 +2579,24 @@ async def get_ticket_audit_logs(ticket_id: str, company_id: str, current_user: d
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
+    profile = _get_authenticated_profile(current_user)
+    user_id = _get_auth_user_id(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
+    # Fetch target ticket to verify company scope and ownership
+    res = supabase.table("tickets").select("id, user_id, company_id").eq("id", ticket_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket_row = res.data
+    if company_scope and str(ticket_row.get("company_id")) != company_scope:
+        raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+
+    role = str(profile.get("role") or "").lower()
+    is_admin = role in TENANT_ADMIN_ROLES or _is_master_ticket_reader(profile)
+    if not is_admin and str(ticket_row.get("user_id")) != user_id:
+        raise HTTPException(status_code=403, detail="User not authorized to view this ticket's history")
+
     try:
         service = AuditLogService(supabase)
         return service.get_ticket_audit_logs(ticket_id, company_id)
