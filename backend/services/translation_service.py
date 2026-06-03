@@ -5,6 +5,7 @@ Translation helpers for locale detection, MyMemory API fallback, and ticket tran
 from __future__ import annotations
 
 import logging
+import re
 from typing import Optional
 from functools import lru_cache
 
@@ -155,6 +156,16 @@ def translate_text(
     if not text or not text.strip():
         return {"translated": "", "source_lang": source_lang, "target_lang": target_lang, "cached": False}
 
+    # Boundary validation: check if text exceeds MAX_TEXT_LENGTH
+    if len(text) > MAX_TEXT_LENGTH:
+        logger.warning(
+            "[TranslationService] Text length (%d) exceeds MAX_TEXT_LENGTH (%d); truncating.",
+            len(text),
+            MAX_TEXT_LENGTH,
+        )
+        text = text[:MAX_TEXT_LENGTH]
+        return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
+
     # Auto-detect language if not provided
     if not source_lang:
         detected_locale, _confidence = detect_locale(text)
@@ -190,7 +201,11 @@ def translate_text(
 
         # Non-200 API status
         details = data.get("responseDetails", "Unknown error")
-        logger.warning("[TranslationService] API returned status %s: %s", status, details)
+        logger.warning(
+            "[TranslationService] API returned status %s: %s",
+            response.status_code,
+            details,
+        )
         return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
 
     except _requests_lib.exceptions.Timeout:
@@ -247,7 +262,7 @@ def translate_ticket(ticket_data: dict, target_lang: str = "en") -> dict:
         desc_result = translate_text(ticket_data["description"], target_lang=target_lang)
         result["translations"]["description"] = desc_result
         if not result["original_language"]:
-            result["original_language"] = description_result["source_lang"]
+            result["original_language"] = desc_result["source_lang"]
 
     if "messages" in ticket_data:
         translated_messages = []
