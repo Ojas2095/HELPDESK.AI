@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Star, CheckCircle2, X, Loader2, MessageSquare } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
+import { ticketService } from '../../services/ticketService';
 
 /**
  * CSATModal — shown when a ticket is resolved and no rating has been given yet.
@@ -31,15 +31,7 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
         setLoading(true);
         setError('');
         try {
-            const { error: upError } = await supabase
-                .from('tickets')
-                .update({
-                    csat_rating: selected,
-                    csat_comment: comment.trim() || null,
-                })
-                .eq('id', ticketId);
-
-            if (upError) throw upError;
+            await ticketService.submitCSATRating(ticketId, selected, comment);
             setSubmitted(true);
             setTimeout(() => { onSubmit?.(selected); }, 1800);
         } catch (err) {

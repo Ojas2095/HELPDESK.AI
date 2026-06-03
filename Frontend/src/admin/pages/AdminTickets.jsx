@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from "../../store/authStore";
-import useToastStore from "../../store/toastStore";
-import { supabase } from "../../lib/supabaseClient";
+import { useAdminTickets } from "../../hooks/useAdminTickets";
 import {
     Search,
     Filter,
@@ -30,122 +29,27 @@ const AdminTickets = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuthStore();
-    const { showToast } = useToastStore();
-
-    // Data State
-    const [tickets, setTickets] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [isUpdating, setIsUpdating] = useState(null); // ID of ticket being updated
-
     // Filter States
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
     const [teamFilter, setTeamFilter] = useState('All');
-    const [agents, setAgents] = useState([]); // All staff/admins in the company
 
-    const fetchInitialData = async () => {
-        setLoading(true);
-        try {
-            const { profile } = useAuthStore.getState();
-            
-            // 1. Fetch Agents for this company
-            if (profile?.company) {
-                const { data: agentData } = await supabase
-                    .from('profiles')
-                    .select('id, full_name, role')
-                    .eq('company', profile.company)
-                    .in('role', ['admin', 'super_admin', 'agent']);
-                setAgents(agentData || []);
-            }
-
-            // 2. Fetch Tickets (Join with both Creator and Assignee)
-            fetchTickets();
-        } catch (err) {
-            console.error("Initialization error:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchTickets = async () => {
-        setError(null);
-        try {
-            const { profile } = useAuthStore.getState();
-            
-            // Join with profiles for both user_id (creator) and assigned_agent_id (assignee)
-            let query = supabase
-                .from('tickets')
-                .select(`
-                    *,
-                    creator:profiles!tickets_user_id_fkey(full_name, email, profile_picture),
-                    assignee:profiles!tickets_assigned_agent_id_fkey(full_name, email, profile_picture)
-                `);
-
-            if (profile?.role === 'admin' && profile?.company) {
-                query = query.eq('company', profile.company);
-            }
-
-            if (statusFilter !== 'All') query = query.eq('status', statusFilter.toLowerCase());
-            if (categoryFilter !== 'All') query = query.eq('category', categoryFilter);
-            if (priorityFilter !== 'All') query = query.eq('priority', priorityFilter.toLowerCase());
-            if (teamFilter !== 'All') query = query.eq('assigned_team', teamFilter);
-
-            let { data, error: sbError } = await query.order('created_at', { ascending: false });
-
-            if (sbError) {
-                // Secondary check: If the FK alias fails, try a simpler select
-                console.warn("Retrying fetch without relationship aliases...");
-                const basicQuery = supabase.from('tickets').select('*, profiles(full_name, email)');
-                const { data: basicData, error: basicError } = await basicQuery.eq('company', profile?.company).order('created_at', { ascending: false });
-                if (basicError) throw basicError;
-                setTickets(basicData || []);
-            } else {
-                setTickets(data || []);
-            }
-        } catch (err) {
-            console.error("Admin fetch error:", err);
-            setError(err.message);
-        }
-    };
-
-    useEffect(() => {
-        fetchInitialData();
-
-        // 4. Real-time subscription to ticket changes
-        const { profile } = useAuthStore.getState();
-        const channel = supabase
-            .channel('admin_tickets_realtime')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'tickets',
-                    filter: profile?.company ? `company=eq.${profile.company}` : undefined
-                },
-                (payload) => {
-                    console.log("Admin tickets sync event:", payload.eventType, payload.new);
-                    if (payload.eventType === 'INSERT') {
-                        setTickets(prev => [payload.new, ...prev]);
-                        showToast(`New Incident Reported: #${payload.new.id}`, "success");
-                        // Play a subtle sound or visual cue if needed
-                    } else if (payload.eventType === 'UPDATE') {
-                        setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
-                    } else if (payload.eventType === 'DELETE') {
-                        setTickets(prev => prev.filter(t => t.id === payload.old.id));
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-     
-    }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
+    const { 
+        tickets, 
+        agents, 
+        loading, 
+        error, 
+        isUpdating, 
+        handleUpdateTicket, 
+        retry 
+    } = useAdminTickets({
+        status: statusFilter,
+        category: categoryFilter,
+        priority: priorityFilter,
+        team: teamFilter
+    });
 
     // Seed search from URL
     useEffect(() => {
@@ -153,28 +57,6 @@ const AdminTickets = () => {
         const q = params.get('q');
         if (q) setSearchQuery(decodeURIComponent(q));
     }, [location.search]);
-
-    const handleUpdateTicket = async (id, updates) => {
-        setIsUpdating(id);
-        try {
-            const { error: upError } = await supabase
-                .from('tickets')
-                .update(updates)
-                .eq('id', id);
-
-            if (upError) throw upError;
-
-            // Optimistic update already handled if real-time is fast, 
-            // but manual update ensures immediate feedback
-            setTickets(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-            showToast("System synchronization successful.", "success");
-        } catch (err) {
-            console.error("Update failed:", err);
-            showToast("Update failed: " + err.message, "error");
-        } finally {
-            setIsUpdating(null);
-        }
-    };
 
     const categories = ['All', 'Network', 'Hardware', 'Software', 'Access', 'Account'];
     const priorities = ['All', 'Low', 'Medium', 'High'];
@@ -280,7 +162,7 @@ const AdminTickets = () => {
                     <div className="p-12 text-center text-red-500 space-y-4">
                         <AlertCircle className="mx-auto w-12 h-12" />
                         <p className="font-bold uppercase tracking-widest text-xs">{error}</p>
-                        <button onClick={fetchTickets} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Retry</button>
+                        <button onClick={retry} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Retry</button>
                     </div>
                 )}
 

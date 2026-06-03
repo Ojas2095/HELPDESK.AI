@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabaseClient";
+import React from "react";
 import {
     Users, Building2, Bell, ShieldCheck,
     Activity, Database, Zap
@@ -7,66 +6,14 @@ import {
 import useToastStore from "../../store/toastStore";
  
 import { motion } from "framer-motion";
+import { useMasterDashboard } from "../../hooks/useMasterDashboard";
 
 /**
  * MasterAdminDashboard (Overview)
  * The main high-level landing page for the Master Admin.
  */
 function MasterAdminDashboard() {
-    const [stats, setStats] = useState({
-        totalUsers: 0,
-        totalAdmins: 0,
-        totalCompanies: 0,
-        pendingRequests: 0
-    });
-    const [loading, setLoading] = useState(true);
-    const { showToast } = useToastStore();
-
-    useEffect(() => {
-        fetchStats();
-
-        // Single channel for multiple table updates to reduce WebSocket overhead
-        const channel = supabase.channel('dashboard_vitals')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => fetchStats())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, () => fetchStats())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_requests' }, () => fetchStats())
-            .subscribe((status) => {
-                if (status === 'SUBSCRIBED') {
-                    console.log("Dashboard real-time connected.");
-                }
-            });
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, []);
-
-    const fetchStats = async () => {
-        try {
-            const [
-                { count: uCount },
-                { count: aCount },
-                { count: cCount },
-                { count: rCount }
-            ] = await Promise.all([
-                supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'user'),
-                supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'admin'),
-                supabase.from('companies').select('*', { count: 'exact', head: true }),
-                supabase.from('admin_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending')
-            ]);
-
-            setStats({
-                totalUsers: uCount || 0,
-                totalAdmins: aCount || 0,
-                totalCompanies: cCount || 0,
-                pendingRequests: rCount || 0
-            });
-        } catch (err) {
-            console.error("Dashboard stats error:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { stats, loading } = useMasterDashboard();
 
     const statCards = [
         { label: "Total Users", value: stats.totalUsers, icon: <Users />, color: "emerald", growth: "Network" },
@@ -158,7 +105,7 @@ function MasterAdminDashboard() {
                         Global configuration settings for AI processing and enterprise tenant policies.
                     </p>
                     <button
-                        onClick={() => showToast("Read-Only: Platform Config Engine is restricted for security. Use CLI for overrides.", "warning")}
+                        onClick={() => useToastStore.getState().showToast("Read-Only: Platform Config Engine is restricted for security. Use CLI for overrides.", "warning")}
                         className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20"
                     >
                         Access Engine Settings
