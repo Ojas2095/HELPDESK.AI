@@ -20,6 +20,39 @@ except ImportError:
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+
+# -- Image format validation by magic bytes -----------------------------------
+
+_KNOWN_IMAGE_SIGNATURES = [
+    (b"\xff\xd8\xff", "JPEG"),           # JPEG
+    (b"\x89PNG\r\n\x1a\n", "PNG"),     # PNG
+    (b"GIF87a", "GIF"),                     # GIF87a
+    (b"GIF89a", "GIF"),                     # GIF89a
+    (b"RIFF", "WEBP"),                      # WebP (needs WEBP tag at offset 8)
+    (b"BM", "BMP"),                         # BMP
+    (b"II*\x00", "TIFF"),                  # TIFF (little-endian)
+    (b"MM\x00*", "TIFF"),                  # TIFF (big-endian)
+]
+
+
+def _validate_image_signature(data: bytes) -> bool:
+    """Check the leading bytes of *data* match a known image file signature.
+
+    Returns True if the format is recognised, False otherwise.
+    """
+    if len(data) < 4:
+        return False
+
+    for magic, fmt in _KNOWN_IMAGE_SIGNATURES:
+        if data[:len(magic)] == magic:
+            if fmt == "WEBP":
+                # WebP RIFF container must have "WEBP" at offset 8
+                return len(data) >= 12 and data[8:12] == b"WEBP"
+            return True
+
+    return False
+
+
 class GeminiService:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY")
@@ -64,7 +97,28 @@ class GeminiService:
                     "detected_problem": ""
                 }
 
+            # Validate magic bytes (file signature) to prevent non-image data
+            # from being passed to PIL's format detection
+            if not _validate_image_signature(image_bytes):
+                return {
+                    "image_description": "[Invalid Image] Unsupported or unrecognized image format.",
+                    "ocr_text": "",
+                    "detected_problem": ""
+                }
+
+            # Decompression bomb protection: limit total pixels PIL will allocate
+            Image.MAX_IMAGE_PIXELS = 50_000_000  # 50 megapixels
+
             img = Image.open(io.BytesIO(image_bytes))
+
+            # Verify PIL respected the pixel limit
+            width, height = img.size
+            if width * height > 50_000_000:
+                return {
+                    "image_description": "[Image Too Large] Image dimensions exceed maximum supported resolution (50MP).",
+                    "ocr_text": "",
+                    "detected_problem": ""
+                }
 
             prompt = (
                 "Analyze this screenshot from a user reporting a technical issue. "
