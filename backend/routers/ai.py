@@ -1,0 +1,493 @@
+
+import json
+import uuid
+import datetime
+import traceback
+import asyncio
+from pathlib import Path
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import StreamingResponse
+from fastapi.encoders import jsonable_encoder
+from backend.dependencies import (
+    limiter, get_system_settings,
+    classifier_service, classifier_v3, classifier_v2,
+    ner_service, duplicate_service, rag_service,
+    gemini_service, ocr_service
+)
+from backend.models import (
+    TicketRequest, TicketResponse, EntityInfo, DuplicateInfo,
+    TroubleshootRequest, TroubleshootResponse,
+    BugReportAnalysisRequest, BugReportAnalysisResponse
+)
+
+router = APIRouter(prefix="/ai", tags=["ai"])
+
+CORRECTIONS_LOG_PATH = Path(__file__).parent.parent / "data" / "corrections_log.json"
+@router.post("/troubleshoot", response_model=TroubleshootResponse)
+async def troubleshoot(request: TroubleshootRequest):
+    """Get dynamic troubleshooting steps from Gemini."""
+    if not gemini_service or not gemini_service._initialized:
+        return TroubleshootResponse(
+            step_text="AI Troubleshooting is currently unavailable.",
+            options=["Continue to tracking"],
+            is_final=True
+        )
+    
+    result = gemini_service.get_troubleshooting_step(
+        request.text,
+        request.history,
+        request.category
+    )
+    return TroubleshootResponse(**result)
+
+
+@router.post("/analyze_bug", response_model=BugReportAnalysisResponse)
+async def analyze_bug(request: BugReportAnalysisRequest):
+    """Analyze a bug report using Gemini to generate a Probable Cause."""
+    if not gemini_service or not gemini_service._initialized:
+        return BugReportAnalysisResponse(
+            probable_cause="AI Diagnostics are currently unavailable."
+        )
+    
+    cause = gemini_service.analyze_bug_report(
+        request.bug_title,
+        request.description,
+        request.steps_to_reproduce,
+        request.console_errors
+    )
+    return BugReportAnalysisResponse(probable_cause=cause)
+
+
+
+@router.post("/log_correction")
+async def log_correction(raw_request: Request):
+    """Log an admin correction when the AI prediction differs from the human decision."""
+    try:
+        body = await raw_request.json()
+    except Exception as e:
+        print(f"[CORRECTION ERROR] Could not parse request body: {e}")
+        return {"status": "error", "message": "Invalid JSON body"}
+
+    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
+
+    ticket_id = str(body.get("ticket_id", "unknown"))
+    original_text = str(body.get("original_text", ""))
+    ocr_text = str(body.get("ocr_text", ""))
+    confidence = float(body.get("confidence") or 0.0)
+    original_prediction = body.get("original_prediction") or {}
+    corrected_prediction = body.get("corrected_prediction") or {}
+
+    # Only log if something actually changed
+    changed_fields = [
+        field for field in ["category", "subcategory", "priority", "assigned_team"]
+        if original_prediction.get(field) != corrected_prediction.get(field)
+    ]
+
+    if not changed_fields:
+        return {"status": "no_change", "message": "Prediction matches correction, nothing logged."}
+
+    entry = {
+        "ticket_id": ticket_id,
+        "original_text": original_text,
+        "ocr_text": ocr_text,
+        "original_prediction": original_prediction,
+        "corrected_prediction": corrected_prediction,
+        "changed_fields": changed_fields,
+        "confidence": confidence,
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+    }
+
+    try:
+        if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
+            with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+        else:
+            logs = []
+
+        logs.append(entry)
+
+        with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=2)
+
+        print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
+        return {"status": "saved", "changed_fields": changed_fields}
+
+    except Exception as e:
+        print(f"[CORRECTION ERROR] Could not save: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@router.post("/analyze_ticket", response_model=TicketResponse)
+@limiter.limit("10/minute")
+async def analyze_ticket(request_body: TicketRequest, request: Request):
+    """
+    Main endpoint for analyzing a new ticket using the cascade of local AI models.
+    """
+    text = request_body.text
+
+    settings = get_system_settings(request_body.company)
+    confidence_threshold = settings["ai_confidence_threshold"]
+    duplicate_sensitivity = settings["duplicate_sensitivity"]
+    enable_auto_resolve = settings["enable_auto_resolve"]
+    
+    # Grab client metadata
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    origin_host = request.headers.get("origin", "unknown")
+    
+    env_metadata = {
+        "ip": client_ip,
+        "user_agent": user_agent,
+        "origin": origin_host
+    }
+
+    # --- Layer 1: Local OCR (CPU, no API required) ---
+    local_ocr_text = ""
+    if request_body.image_base64 and ocr_service:
+        print("[AI] Extracting text via local OCR...")
+        local_ocr_text = ocr_service.extract_text(request_body.image_base64)
+        if local_ocr_text:
+            text = f"{text} {local_ocr_text}".strip()
+            print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
+
+    # Initalize Timeline
+    return await analyze_only(request_body)
+
+@router.post("/analyze")
+async def analyze_only(request_body: TicketRequest):
+    """
+    PERFORMANCE UPGRADE: AI Analysis phase only. 
+    Does NOT persist to DB. This allows the user to review the analysis 
+    and duplicate check before committing to a ticket creation.
+    """
+    text = request_body.text
+    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
+    settings = get_system_settings(request_body.company)
+    confidence_threshold = settings["ai_confidence_threshold"]
+    duplicate_sensitivity = settings["duplicate_sensitivity"]
+    enable_auto_resolve = settings["enable_auto_resolve"]
+    
+    # --- Context & Environment ---
+    import datetime
+    def get_now_ist():
+        return datetime.datetime.utcnow().isoformat() + "Z"
+
+    env_metadata = {
+        "timestamp": get_now_ist(),
+        "model_version": "3.0.0-PRO",
+        "api_endpoint": "/analyze"
+    }
+    
+    timeline = {"received": get_now_ist()}
+
+    # --- Vision Logic (OCR Awareness) ---
+    gemini_analysis = {
+        "ocr_text": request_body.image_text or "",
+        "image_description": ""
+    }
+    
+    if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+        try:
+            print("[AI] Detecting visual context via Gemini...")
+            vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+            gemini_analysis.update(vision_result)
+        except Exception as e:
+            print(f"[VISION ERROR] {e}")
+
+    summary = text[:100] + ("…" if len(text) > 100 else "") 
+
+    # --- Classification ---
+    try:
+        classification_v3_res = classifier_v3.predict(text)
+        if "error" in classification_v3_res:
+            # Fallback to V1
+            classification = classifier_service.predict(text)
+        else:
+            # Parse V3 output
+            cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
+            sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
+            pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
+            conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
+            
+            from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
+            assigned_team = TEAM_MAP.get(cat, "General Support")
+            auto_resolve = sub in AUTO_RESOLVE_SUBS
+            
+            classification = {
+                "category": cat,
+                "subcategory": sub,
+                "priority": pri,
+                "auto_resolve": auto_resolve,
+                "assigned_team": assigned_team,
+                "confidence": float(conf)
+            }
+    except Exception as e:
+        traceback.print_exc()
+        classification = {
+            "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
+            "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+        }
+
+    timeline["ai_analyzed"] = get_now_ist()
+    timeline["triaged"] = get_now_ist()
+
+    # --- NER ---
+    try:
+        entities = ner_service.extract_entities(text)
+    except Exception:
+        entities = []
+    
+    timeline["metadata_harvested"] = get_now_ist()
+
+    # --- Duplicate detection ---
+    try:
+        dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+    except Exception:
+        dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+
+    # --- RAG Knowledge Base Check ---
+    rag_match = None
+    try:
+        rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+        if rag_match:
+            classification["auto_resolve"] = True
+            classification["assigned_team"] = "Auto-Resolve AI"
+            classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
+            print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
+    except Exception as e:
+        print(f"[RAG ERROR] {e}")
+
+    # --- Reasoning ---
+    decision_factors = []
+    if classification["confidence"] > confidence_threshold:
+        decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
+    if entities:
+        decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
+    if dup_result["is_duplicate"]:
+        decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
+    if rag_match:
+        decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+
+    reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
+    if (
+        enable_auto_resolve
+        and classification["confidence"] >= confidence_threshold
+        and classification["auto_resolve"]
+    ):
+        classification["auto_resolve"] = True
+    else:
+        classification["auto_resolve"] = False
+    if classification["auto_resolve"]:
+        reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
+    
+    timeline["routed"] = get_now_ist()
+    
+    # --- Gemini Summary ---
+    if gemini_service and gemini_service._initialized:
+        summary = gemini_service.get_summary(text)
+    
+    # Convert priority to SLA breached timestamp (for preview)
+    hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
+    sla_hours = hours_map.get(classification["priority"], 72)
+    sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+
+    return TicketResponse(
+        ticket_id=str(uuid.uuid4()), # Temporary ID
+        summary=summary,
+        category=classification["category"],
+        subcategory=classification["subcategory"],
+        priority=classification["priority"],
+        auto_resolve=classification["auto_resolve"],
+        assigned_team=classification["assigned_team"],
+        entities=[EntityInfo(**e) for e in entities],
+        duplicate_ticket=DuplicateInfo(**dup_result),
+        confidence=classification["confidence"],
+        needs_review=classification["confidence"] < confidence_threshold,
+        reasoning=reasoning,
+        decision_factors=decision_factors,
+        image_description=gemini_analysis["image_description"],
+        ocr_text=gemini_analysis["ocr_text"],
+        image_url=request_body.image_url,
+        highlights=entities, # Use entities as highlights for now
+        timeline=timeline,
+        env_metadata=env_metadata,
+        sla_breach_at=sla_breach_dt.isoformat() + "Z"
+    )
+
+@router.post("/analyze_stream")
+async def analyze_stream(request_body: TicketRequest):
+    """
+    REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
+    """
+    import datetime
+    def get_now_ist():
+        return datetime.datetime.utcnow().isoformat() + "Z"
+
+    async def event_generator():
+        text = request_body.text
+        env_metadata = {
+            "timestamp": get_now_ist(),
+            "model_version": "3.0.0-PRO",
+            "api_endpoint": "/analyze_stream"
+        }
+        timeline = {"received": get_now_ist()} 
+        settings = get_system_settings(request_body.company)
+        confidence_threshold = settings["ai_confidence_threshold"]
+        duplicate_sensitivity = settings["duplicate_sensitivity"]
+        enable_auto_resolve = settings["enable_auto_resolve"]
+
+        # 1. Reading
+        yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.5)
+
+        gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
+        if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+            try:
+                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                gemini_analysis.update(vision_result)
+            except Exception as e:
+                pass
+
+        summary = text[:100] + ("…" if len(text) > 100 else "") 
+
+        # 2. NER
+        yield f"data: {json.dumps({'step': 'Extracting technical entities', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.2)
+        try:
+            entities = ner_service.extract_entities(text)
+        except Exception:
+            entities = []
+        timeline["metadata_harvested"] = get_now_ist()
+
+        # 3. Classification
+        yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.2)
+        try:
+            classification_v3_res = classifier_v3.predict(text)
+            if "error" in classification_v3_res:
+                classification = classifier_service.predict(text)
+            else:
+                cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
+                sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
+                pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
+                conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
+                
+                from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
+                assigned_team = TEAM_MAP.get(cat, "General Support")
+                auto_resolve = sub in AUTO_RESOLVE_SUBS
+                
+                classification = {
+                    "category": cat,
+                    "subcategory": sub,
+                    "priority": pri,
+                    "auto_resolve": auto_resolve,
+                    "assigned_team": assigned_team,
+                    "confidence": float(conf)
+                }
+        except Exception as e:
+            classification = {
+                "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
+                "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+            }
+        timeline["ai_analyzed"] = get_now_ist()
+        timeline["triaged"] = get_now_ist()
+
+        # 4. Duplicates
+        yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.2)
+        try:
+            dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+        except Exception:
+            dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+
+        # 5. RAG / Solutions
+        yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.2)
+        rag_match = None
+        try:
+            rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+            if rag_match:
+                classification["auto_resolve"] = True
+                classification["assigned_team"] = "Auto-Resolve AI"
+                classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
+        except Exception as e:
+            pass
+
+        decision_factors = []
+        if classification["confidence"] > confidence_threshold:
+            decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
+        if entities:
+            decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
+        if dup_result["is_duplicate"]:
+            decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
+        if rag_match:
+            decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+
+        if not enable_auto_resolve:
+            classification["auto_resolve"] = False
+        reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
+        if classification["auto_resolve"]:
+            reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
+        
+        timeline["routed"] = get_now_ist()
+
+        if gemini_service and gemini_service._initialized:
+            summary = gemini_service.get_summary(text)
+        
+        hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
+        sla_hours = hours_map.get(classification["priority"], 72)
+        sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+
+        ticket_response_dict = {
+            "ticket_id": str(uuid.uuid4()),
+            "summary": summary,
+            "category": classification["category"],
+            "subcategory": classification["subcategory"],
+            "priority": classification["priority"],
+            "auto_resolve": classification["auto_resolve"],
+            "assigned_team": classification["assigned_team"],
+            "entities": [e for e in entities],
+            "duplicate_ticket": dup_result,
+            "confidence": classification["confidence"],
+            "needs_review": classification["confidence"] < confidence_threshold,
+            "reasoning": reasoning,
+            "decision_factors": decision_factors,
+            "image_description": gemini_analysis["image_description"],
+            "ocr_text": gemini_analysis["ocr_text"],
+            "image_url": request_body.image_url,
+            "highlights": entities,
+            "timeline": timeline,
+            "env_metadata": env_metadata,
+            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+        }
+
+        # 6. Final Result
+        yield f"data: {json.dumps({'step': 'done', 'result': jsonable_encoder(ticket_response_dict)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@router.post("/analyze_ticket/legacy")
+async def legacy_analyze_and_save(request_body: TicketRequest):
+    """
+    BACKWARD COMPATIBILITY: Strictly performs analysis only. 
+    Does NOT persist to DB to avoid foreign key violations.
+    """
+    return await analyze_only(request_body)
+
+@router.post("/analyze-v2")
+async def analyze_ticket_v2(request: TicketRequest):
+    text = request.text
+    try:
+        prediction = classifier_v2.predict(text)
+        return {
+            "status": "success",
+            "category": prediction["category"]["prediction"],
+            "subcategory": prediction["sub_category"]["prediction"],
+            "priority": prediction["priority"]["prediction"],
+            "auto_resolve": prediction["auto_resolve"]["prediction"].lower() == "true",
+            "assigned_team": prediction["assigned_team"]["prediction"],
+            "confidence": prediction["category"]["confidence"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
