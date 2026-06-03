@@ -21,39 +21,92 @@ class MockResult:
 class MockSupabaseTable:
     def __init__(self, name):
         self.name = name
+        self.is_single = False
+        self.filters = {}
 
     def select(self, *args, **kwargs):
         return self
 
     def eq(self, field, value):
+        self.filters[field] = value
         return self
 
     def order(self, *args, **kwargs):
         return self
 
+    def limit(self, *args, **kwargs):
+        return self
+
+    def offset(self, *args, **kwargs):
+        return self
+
+    def maybeSingle(self):
+        self.is_single = True
+        return self
+
     def single(self):
+        self.is_single = True
+        return self
+
+    def insert(self, data):
+        self.insert_data = data
         return self
 
     def execute(self):
-        if self.name == "tickets":
-            return MockResult([
-                {"id": "ticket-123", "company_id": "companyA", "subject": "Ticket A"},
-                {"id": "ticket-456", "company_id": "companyA", "subject": "Ticket A2"}
-            ])
-        elif self.name == "profiles":
-            return MockResult([
-                {"id": "user123", "company_id": "companyA", "role": "user"}
-            ])
-        return MockResult([])
+        if hasattr(self, "insert_data"):
+            data = self.insert_data
+            res_data = [data] if isinstance(data, dict) else data
+            for item in res_data:
+                if "id" not in item:
+                    item["id"] = "new-ticket-id"
+            return MockResult(res_data)
 
-    def insert(self, data):
-        # Allow returning inserted data structure for test
-        res_data = [data] if isinstance(data, dict) else data
-        # Ensure ID exists on returned record
-        for item in res_data:
-            if "id" not in item:
-                item["id"] = "new-ticket-id"
-        return MockResult(res_data)
+        if self.name == "tickets":
+            # Check ID filter to extract mock company info
+            ticket_id = self.filters.get("id")
+            if ticket_id and isinstance(ticket_id, str) and ticket_id.startswith("mock-ticket-"):
+                parts = ticket_id.split("-")
+                company_id = parts[2] if len(parts) >= 3 else "companyA"
+                data = [{"id": ticket_id, "company_id": company_id, "subject": "Ticket A"}]
+            else:
+                company_filter = self.filters.get("company_id")
+                company_id = company_filter if company_filter else "companyA"
+                data = [
+                    {"id": "ticket-123", "company_id": company_id, "subject": "Ticket A"},
+                    {"id": "ticket-456", "company_id": company_id, "subject": "Ticket A2"}
+                ]
+        elif self.name == "profiles":
+            user_id = self.filters.get("id")
+            company_id = "companyA"
+            role = "user"
+            
+            if user_id and isinstance(user_id, str):
+                if user_id.startswith("mock-user-"):
+                    parts = user_id.split("-")
+                    company_id = parts[2] if len(parts) >= 3 else "companyA"
+                    role = "admin" if "admin" in user_id else "user"
+                elif user_id.startswith("mock-token-"):
+                    parts = user_id.split("-")
+                    company_id = parts[2] if len(parts) >= 3 else "companyA"
+                    role = "master_admin" if company_id == "master" else (parts[3] if len(parts) >= 4 else "user")
+                    user_id = parts[4] if len(parts) >= 5 else user_id
+                else:
+                    if "companyB" in user_id:
+                        company_id = "companyB"
+                    role = "admin" if "admin" in user_id else "user"
+            else:
+                user_id = "user123"
+                
+            data = [
+                {"id": user_id, "company_id": company_id, "role": role, "company": company_id}
+            ]
+        else:
+            data = []
+
+        if self.is_single:
+            data = data[0] if data else None
+
+        return MockResult(data)
 
 class MockSupabaseClient:
     def __init__(self):
