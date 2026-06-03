@@ -80,6 +80,8 @@ class NotificationRoutingMiddleware:
                     "digest_frequency": response.data.get("digest_frequency", "daily")
                 }
         except Exception as e:
+            import logging
+            logging.exception(e)
             logger.warning(f"Could not fetch company settings for {company_id}: {str(e)}")
 
         # Fail-open: allow notifications if settings unavailable

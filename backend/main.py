@@ -79,6 +79,8 @@ def get_system_settings(company_id: str) -> dict:
         if res.data:
             return {**defaults, **res.data}
     except Exception as e:
+        import logging
+        logging.exception(e)
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
 class TicketRequest(BaseModel):
@@ -229,11 +231,11 @@ async def lifespan(app: FastAPI):
         print(f"[WARNING] NER not loaded: {e}")
     try:
         duplicate_service.load()
-    except Exception as e:
+    except (ValueError, IOError) as e:
         print(f"[WARNING] Duplicate service not loaded: {e}")
     try:
         rag_service.load()
-    except Exception as e:
+    except RuntimeError as e:
         print(f"[WARNING] RAG service not loaded: {e}")
     
     if gemini_service:
@@ -485,7 +487,7 @@ async def log_correction(raw_request: Request):
     """Log an admin correction when the AI prediction differs from the human decision."""
     try:
         body = await raw_request.json()
-    except Exception as e:
+    except (ValueError, IOError) as e:
         print(f"[CORRECTION ERROR] Could not parse request body: {e}")
         return {"status": "error", "message": "Invalid JSON body"}
 
@@ -534,6 +536,8 @@ async def log_correction(raw_request: Request):
         return {"status": "saved", "changed_fields": changed_fields}
 
     except Exception as e:
+        import logging
+        logging.exception(e)
         print(f"[CORRECTION ERROR] Could not save: {e}")
         return {"status": "error", "message": str(e)}
 
@@ -654,6 +658,8 @@ async def save_ticket(request_body: TicketSaveRequest):
         return response
 
     except Exception as e:
+        import logging
+        logging.exception(e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -774,7 +780,7 @@ async def analyze_only(request_body: TicketRequest):
             print("[AI] Detecting visual context via Gemini...")
             vision_result = gemini_service.analyze_image(request_body.image_base64, text)
             gemini_analysis.update(vision_result)
-        except Exception as e:
+        except ValueError as e:
             print(f"[VISION ERROR] {e}")
 
     summary = text[:100] + ("…" if len(text) > 100 else "") 
@@ -805,6 +811,8 @@ async def analyze_only(request_body: TicketRequest):
                 "confidence": float(conf)
             }
     except Exception as e:
+        import logging
+        logging.exception(e)
         traceback.print_exc()
         classification = {
             "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
@@ -837,7 +845,7 @@ async def analyze_only(request_body: TicketRequest):
             classification["assigned_team"] = "Auto-Resolve AI"
             classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
             print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
-    except Exception as e:
+    except RuntimeError as e:
         print(f"[RAG ERROR] {e}")
 
     # --- Reasoning ---
@@ -928,7 +936,7 @@ async def analyze_stream(request_body: TicketRequest):
             try:
                 vision_result = gemini_service.analyze_image(request_body.image_base64, text)
                 gemini_analysis.update(vision_result)
-            except Exception as e:
+            except ValueError as e:
                 pass
 
         summary = text[:100] + ("…" if len(text) > 100 else "") 
@@ -968,6 +976,8 @@ async def analyze_stream(request_body: TicketRequest):
                     "confidence": float(conf)
                 }
         except Exception as e:
+            import logging
+            logging.exception(e)
             classification = {
                 "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
                 "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
@@ -993,7 +1003,7 @@ async def analyze_stream(request_body: TicketRequest):
                 classification["auto_resolve"] = True
                 classification["assigned_team"] = "Auto-Resolve AI"
                 classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
-        except Exception as e:
+        except RuntimeError as e:
             pass
 
         decision_factors = []
@@ -1072,6 +1082,8 @@ async def analyze_ticket_v2(request: TicketRequest):
             "confidence": prediction["category"]["confidence"]
         }
     except Exception as e:
+        import logging
+        logging.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------------------------------------------------------------

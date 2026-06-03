@@ -52,9 +52,9 @@ class DuplicateService:
                             embedding = self.model.encode(text, convert_to_tensor=True)
                             self._tickets.append((item["ticket_id"], embedding, text))
                     print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
-                except Exception as e:
+                except (ValueError, IOError) as e:
                     print(f"[DuplicateService] Error loading storage: {e}")
-        except Exception as e:
+        except RuntimeError as e:
             allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
             self._load_failed = True
             print(f"[DuplicateService] Failed to load model: {e}")
@@ -84,7 +84,7 @@ class DuplicateService:
             with open(self.storage_file, "w") as f:
                 json.dump(data, f, indent=2)
             print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
-        except Exception as e:
+        except RuntimeError as e:
             print(f"[DuplicateService] Failed to save to disk: {e}")
 
     def add_ticket(self, ticket_id: str, text: str):

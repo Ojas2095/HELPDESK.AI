@@ -22,7 +22,7 @@ class GeminiService:
                 self.client = genai.Client(api_key=self.api_key)
                 self._initialized = True
                 print(f"[GeminiService] Connected to Google GenAI API (Model: {self.model_name})")
-            except Exception as e:
+            except ValueError as e:
                 print(f"[GeminiService] Initialization Error: {e}")
         else:
             print("[GeminiService] WARNING: GEMINI_API_KEY not found in environment.")
@@ -72,6 +72,8 @@ class GeminiService:
             }
 
         except Exception as e:
+            import logging
+            logging.exception(e)
             print(f"[GeminiService] Image Analysis Error: {e}")
             return {
                 "image_description": f"Error analyzing image: {str(e)}",
@@ -99,6 +101,8 @@ class GeminiService:
             )
             return response.text.strip().replace("\n", " ")
         except Exception as e:
+            import logging
+            logging.exception(e)
             print(f"[GeminiService] Summarization Error: {e}")
             return ticket_text[:100] + ("…" if len(ticket_text) > 100 else "")
 
@@ -138,6 +142,8 @@ class GeminiService:
                 "highlights": highlights
             }
         except Exception as e:
+            import logging
+            logging.exception(e)
             print(f"[GeminiService] Reasoning Error: {e}")
             return {"reasoning": "", "highlights": []}
 
@@ -187,6 +193,8 @@ class GeminiService:
                 "is_final": final_match.group(1).lower() == "true" if final_match else False
             }
         except Exception as e:
+            import logging
+            logging.exception(e)
             print(f"[GeminiService] Troubleshooting Error: {e}")
             return {
                 "step_text": "I encountered an error. Let's try one more basic check.",
@@ -220,5 +228,7 @@ class GeminiService:
             )
             return response.text.strip()
         except Exception as e:
+            import logging
+            logging.exception(e)
             print(f"[GeminiService] Bug Analysis Error: {e}")
             return f"Diagnostic analysis failed: {str(e)}"

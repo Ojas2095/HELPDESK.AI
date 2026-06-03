@@ -64,6 +64,8 @@ class AutoCloseService:
                     "auto_close_enabled": response.data.get("auto_close_enabled", True)
                 }
         except Exception as e:
+            import logging
+            logging.exception(e)
             logger.warning(f"Could not fetch settings for company {company_id}: {str(e)}. Using defaults.")
         
         # Fall back to defaults
@@ -97,6 +99,8 @@ class AutoCloseService:
             logger.info(f"Closed ticket {ticket_id} for company {company_id}")
             return True
         except Exception as e:
+            import logging
+            logging.exception(e)
             stats["error_count"] += 1
             logger.error(f"Failed to close ticket {ticket_id}: {str(e)}")
             return False
@@ -180,6 +184,8 @@ class AutoCloseService:
                             stats["error_count"] += 1
 
                 except Exception as e:
+                    import logging
+                    logging.exception(e)
                     logger.error(f"Error processing company {company_id}: {str(e)}")
                     stats["error_count"] += len(tickets)
 
@@ -190,6 +196,8 @@ class AutoCloseService:
             return stats
 
         except Exception as e:
+            import logging
+            logging.exception(e)
             logger.error(f"Fatal error in auto-close job: {str(e)}")
             stats["error_count"] += 1
             return stats
@@ -211,6 +219,8 @@ class AutoCloseService:
             return tickets
 
         except Exception as e:
+            import logging
+            logging.exception(e)
             logger.error(f"Error in test_query: {str(e)}")
             return []
 

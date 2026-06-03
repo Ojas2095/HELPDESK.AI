@@ -116,6 +116,8 @@ def seed_company_settings():
                 logger.debug(f"Created settings for company {company_id}")
                 
             except Exception as e:
+                import logging
+                logging.exception(e)
                 error_count += 1
                 logger.error(f"Failed to create settings for company {company_id}: {str(e)}")
         
@@ -130,6 +132,8 @@ def seed_company_settings():
             return {"status": "partial", "created_count": created_count, "error_count": error_count}
     
     except Exception as e:
+        import logging
+        logging.exception(e)
         logger.error(f"Fatal error during seed: {str(e)}")
         return {"status": "error", "message": str(e)}
 
@@ -167,6 +171,8 @@ def verify_seed():
             return False
     
     except Exception as e:
+        import logging
+        logging.exception(e)
         logger.error(f"Verification failed: {str(e)}")
         return False
 

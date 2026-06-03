@@ -20,7 +20,7 @@ def download_image(url, output_path):
             with urllib.request.urlopen(req) as response, open(output_path, 'wb') as out_file:
                 out_file.write(response.read())
             return True
-    except Exception as e:
+    except IOError as e:
         print(f"Failed to download {url}: {e}")
     return False
 
@@ -41,7 +41,7 @@ def smart_crop_face(image_path, output_path, target_size=(400, 400)):
                 break # Just get first page image
         else:
             img = cv2.imread(image_path)
-    except Exception as e:
+    except ValueError as e:
         print(f"Error loading image or PDF {image_path}: {e}")
         return False
         

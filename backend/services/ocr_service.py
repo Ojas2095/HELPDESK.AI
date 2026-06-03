@@ -49,5 +49,7 @@ class OCRService:
             print(f"[OCRService] Extracted {len(extracted)} chars from image.")
             return extracted
         except Exception as e:
+            import logging
+            logging.exception(e)
             print(f"[OCRService] Error during OCR: {e}")
             return ""
