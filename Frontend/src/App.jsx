@@ -5,7 +5,7 @@ import {
   Navigate,
   useLocation
 } from "react-router-dom";
-import React, { useEffect } from "react";
+import React, { useEffect, Suspense } from "react";
 import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
@@ -14,79 +14,79 @@ import BugReportWidget from "./components/shared/BugReportWidget";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
 
 // Auth Components
-import Login from "./pages/Login";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Signup from "./pages/Signup";
-import AdminSignup from "./pages/AdminSignup";
-import AdminLobby from "./pages/AdminLobby";
-import UserLobby from "./pages/UserLobby";
-import LandingPage from "./pages/LandingPage";
-import ContactSales from "./pages/ContactSales";
+const Login = React.lazy(() => import("./pages/Login"));
+const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+const Signup = React.lazy(() => import("./pages/Signup"));
+const AdminSignup = React.lazy(() => import("./pages/AdminSignup"));
+const AdminLobby = React.lazy(() => import("./pages/AdminLobby"));
+const UserLobby = React.lazy(() => import("./pages/UserLobby"));
+const LandingPage = React.lazy(() => import("./pages/LandingPage"));
+const ContactSales = React.lazy(() => import("./pages/ContactSales"));
 
 // Legacy components
-import DuplicateDetection from "./user/pages/DuplicateDetection";
-import AutoResolveChat from "./user/pages/AutoResolveChat";
-import Resolved from "./user/pages/Resolved";
-import TicketTracking from "./user/pages/TicketTracking";
+const DuplicateDetection = React.lazy(() => import("./user/pages/DuplicateDetection"));
+const AutoResolveChat = React.lazy(() => import("./user/pages/AutoResolveChat"));
+const Resolved = React.lazy(() => import("./user/pages/Resolved"));
+const TicketTracking = React.lazy(() => import("./user/pages/TicketTracking"));
 // Layouts
-import UserLayout from "./user/UserLayout";
-import AdminLayout from "./admin/layout/AdminLayout";
+const UserLayout = React.lazy(() => import("./user/UserLayout"));
+const AdminLayout = React.lazy(() => import("./admin/layout/AdminLayout"));
 
 // User Pages
-import Dashboard from "./user/pages/Dashboard";
-import CreateTicket from "./user/pages/CreateTicket";
-import MyTickets from "./user/pages/MyTickets";
-import TicketResult from "./user/pages/TicketResult";
-import Profile from "./user/pages/Profile";
-import TicketDetail from "./user/pages/TicketDetail";
+const Dashboard = React.lazy(() => import("./user/pages/Dashboard"));
+const CreateTicket = React.lazy(() => import("./user/pages/CreateTicket"));
+const MyTickets = React.lazy(() => import("./user/pages/MyTickets"));
+const TicketResult = React.lazy(() => import("./user/pages/TicketResult"));
+const Profile = React.lazy(() => import("./user/pages/Profile"));
+const TicketDetail = React.lazy(() => import("./user/pages/TicketDetail"));
 import TicketProcessing from "./user/pages/AIProcessing"; // Renamed generic import just in case, but keeping AIProcessing
-import AIProcessing from "./user/pages/AIProcessing";
-import AIUnderstanding from "./user/pages/AIUnderstanding";
-import Notifications from "./user/pages/Notifications";
-import Help from "./user/pages/Help";
-import DocsPortal from "./docs/pages/DocsPortal";
+const AIProcessing = React.lazy(() => import("./user/pages/AIProcessing"));
+const AIUnderstanding = React.lazy(() => import("./user/pages/AIUnderstanding"));
+const Notifications = React.lazy(() => import("./user/pages/Notifications"));
+const Help = React.lazy(() => import("./user/pages/Help"));
+const DocsPortal = React.lazy(() => import("./docs/pages/DocsPortal"));
 
 // New Showcase Pages
-import ApiReference from "./pages/ApiReference";
-import Changelog from "./pages/Changelog";
-import StatusPage from "./pages/StatusPage";
-import AboutUs from "./pages/AboutUs";
-import Careers from "./pages/Careers";
-import CookiePolicy from "./pages/legal/CookiePolicy";
+const ApiReference = React.lazy(() => import("./pages/ApiReference"));
+const Changelog = React.lazy(() => import("./pages/Changelog"));
+const StatusPage = React.lazy(() => import("./pages/StatusPage"));
+const AboutUs = React.lazy(() => import("./pages/AboutUs"));
+const Careers = React.lazy(() => import("./pages/Careers"));
+const CookiePolicy = React.lazy(() => import("./pages/legal/CookiePolicy"));
 
 // NEW Admin Pages (Refactored)
-import AdminDashboard from "./admin/pages/AdminDashboard";
-import AdminTickets from "./admin/pages/AdminTickets";
-import AdminTicketDetail from "./admin/pages/AdminTicketDetail";
-import AdminUsers from "./admin/pages/AdminUsers";
-import AdminAnalytics from "./admin/pages/AdminAnalytics";
-import AdminProfile from "./admin/pages/AdminProfile";
-import AdminSettings from "./admin/pages/AdminSettings";
-import MasterBugReports from "./master-admin/pages/MasterBugReports";
+const AdminDashboard = React.lazy(() => import("./admin/pages/AdminDashboard"));
+const AdminTickets = React.lazy(() => import("./admin/pages/AdminTickets"));
+const AdminTicketDetail = React.lazy(() => import("./admin/pages/AdminTicketDetail"));
+const AdminUsers = React.lazy(() => import("./admin/pages/AdminUsers"));
+const AdminAnalytics = React.lazy(() => import("./admin/pages/AdminAnalytics"));
+const AdminProfile = React.lazy(() => import("./admin/pages/AdminProfile"));
+const AdminSettings = React.lazy(() => import("./admin/pages/AdminSettings"));
+const MasterBugReports = React.lazy(() => import("./master-admin/pages/MasterBugReports"));
 
 // Feature Pages
-import AutoCategorizationFeature from "./pages/features/AutoCategorizationFeature";
-import PriorityDetectionFeature from "./pages/features/PriorityDetectionFeature";
-import SmartResolutionFeature from "./pages/features/SmartResolutionFeature";
+const AutoCategorizationFeature = React.lazy(() => import("./pages/features/AutoCategorizationFeature"));
+const PriorityDetectionFeature = React.lazy(() => import("./pages/features/PriorityDetectionFeature"));
+const SmartResolutionFeature = React.lazy(() => import("./pages/features/SmartResolutionFeature"));
 
 // Legal Pages
-import TermsOfService from "./pages/legal/TermsOfService";
-import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
-import Security from "./pages/legal/Security";
+const TermsOfService = React.lazy(() => import("./pages/legal/TermsOfService"));
+const PrivacyPolicy = React.lazy(() => import("./pages/legal/PrivacyPolicy"));
+const Security = React.lazy(() => import("./pages/legal/Security"));
 import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
 import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedRoute";
 import ProtectedRoute from "./components/shared/ProtectedRoute";
 import useAuthStore from "./store/authStore";
-import NotApproved from "./pages/NotApproved";
+const NotApproved = React.lazy(() => import("./pages/NotApproved"));
 
 // Master Admin Components
-import MasterAdminLogin from "./pages/MasterAdminLogin";
-import MasterAdminLayout from "./master-admin/layout/MasterAdminLayout";
-import MasterAdminDashboard from "./master-admin/pages/MasterAdminDashboard";
-import PendingAdminRequests from "./master-admin/pages/PendingAdminRequests";
-import AllCompanies from "./master-admin/pages/AllCompanies";
-import AllAdmins from "./master-admin/pages/AllAdmins";
+const MasterAdminLogin = React.lazy(() => import("./pages/MasterAdminLogin"));
+const MasterAdminLayout = React.lazy(() => import("./master-admin/layout/MasterAdminLayout"));
+const MasterAdminDashboard = React.lazy(() => import("./master-admin/pages/MasterAdminDashboard"));
+const PendingAdminRequests = React.lazy(() => import("./master-admin/pages/PendingAdminRequests"));
+const AllCompanies = React.lazy(() => import("./master-admin/pages/AllCompanies"));
+const AllAdmins = React.lazy(() => import("./master-admin/pages/AllAdmins"));
 
 
 function TitleUpdater() {
@@ -169,7 +169,8 @@ function AppLayout() {
   // but we still need to handle role-based navigation here
   return (
     <>
-      <Routes>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <Routes>
         <Route path="/knowledge-check" element={<DuplicateDetection />} />
         <Route path="/auto-resolve" element={<AutoResolveChat />} />
         <Route path="/resolved" element={<Resolved />} />
@@ -211,6 +212,7 @@ function AppLayout() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+        </Suspense>
     </>
   );
 }
@@ -232,7 +234,8 @@ function App() {
         <ScrollToTop />
         <Toaster />
         <BugReportWidget />
-        <Routes>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <Routes>
           <Route path="/" element={<DocsPortal />} />
           <Route path="/docs" element={<Navigate to="/" replace />} />
           <Route path="/api-reference" element={<ApiReference />} />
@@ -240,6 +243,7 @@ function App() {
           <Route path="/status" element={<StatusPage />} />
           <Route path="*" element={<DocsPortal />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     );
   }
@@ -250,7 +254,8 @@ function App() {
       <ScrollToTop />
       <Toaster />
       <BugReportWidget />
-      <Routes>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -298,6 +303,7 @@ function App() {
           <Route path="/*" element={<AppLayout />} />
         </Route>
       </Routes>
+        </Suspense>
     </BrowserRouter>
   );
 }
