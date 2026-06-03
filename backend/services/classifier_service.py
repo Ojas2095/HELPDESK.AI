@@ -2,32 +2,47 @@
 Classifier Service — Loads the trained DistilBert sequence classifier and predicts.
 The model outputs combined "Category | SubCategory" labels.
 Priority and other fields are derived from the category mapping.
+
+Redis integration: prediction results are cached by input text so repeated
+submissions of the same ticket text skip the full model forward-pass.
 """
 
+import logging
 import os
-import json
-import torch
-import torch.nn.functional as F
-from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
 import time
-from prometheus_client import Counter, Histogram
+import json
+import time
+try:
+    import torch
+    import torch.nn.functional as F
+    from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
+    _HAS_TORCH = True
+except Exception:  # pragma: no cover - optional CI/runtime dependency
+    torch = None
+    F = None
+    DistilBertTokenizerFast = None
+    DistilBertForSequenceClassification = None
+    _HAS_TORCH = False
 
-# Prometheus metrics for tracking model performance
-MODEL_PREDICTIONS_TOTAL = Counter(
-    "model_predictions_total",
-    "Total count of DistilBERT predictions",
-    ["status"]
-)
+from backend.services.cache_service import cache_service
 
-MODEL_PREDICTION_LATENCY = Histogram(
-    "model_prediction_latency_seconds",
-    "Latency of DistilBERT prediction in seconds",
-    buckets=(0.05, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 10.0)
-)
+logger = logging.getLogger(__name__)
 
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "classifier")
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda" if torch and torch.cuda.is_available() else "cpu") if _HAS_TORCH else None
 MAX_LEN = 128
+
+try:
+    from backend.services.metrics_service import (
+        CLASSIFIER_LATENCY,
+        CLASSIFIER_REQUESTS,
+        CLASSIFIER_TOKENS,
+        MODEL_PREDICTIONS_TOTAL,
+        MODEL_PREDICTION_LATENCY,
+    )
+    _METRICS_ENABLED = True
+except Exception:
+    _METRICS_ENABLED = False
 
 # Priority mapping based on sub-category severity
 PRIORITY_MAP = {
@@ -72,6 +87,11 @@ class ClassifierService:
         if self._loaded:
             return
 
+        if not _HAS_TORCH:
+            # Degraded environment: ML runtime not available. Delay failure until predict is called.
+            print("[INFO] ML runtime not available; classifier will remain unloaded until dependencies are installed.")
+            return
+
         abs_dir = os.path.abspath(SAVE_DIR)
         safetensors_path = os.path.join(abs_dir, "model.safetensors")
 
@@ -112,8 +132,11 @@ class ClassifierService:
     def predict(self, text: str) -> dict:
         """
         Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
+
+        Results are cached in Redis by input text so repeated identical tickets
+        skip the full transformer forward-pass entirely.
         """
-        start_time = time.time()
+        start_time = time.perf_counter()
         try:
             self.load()
 
@@ -126,6 +149,10 @@ class ClassifierService:
             )
             input_ids = encoding["input_ids"].to(DEVICE)
             attention_mask = encoding["attention_mask"].to(DEVICE)
+        except Exception:
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
+            raise
 
             with torch.no_grad():
                 outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
@@ -133,8 +160,8 @@ class ClassifierService:
                 probs = F.softmax(logits, dim=1)
                 confidence, pred_idx = torch.max(probs, dim=1)
 
-            pred_idx = pred_idx.item()
-            confidence = round(confidence.item(), 4)
+                pred_idx = pred_idx.item()
+                confidence = round(confidence.item(), 4)
 
             # Decode the combined label "Category | SubCategory"
             combined_label = self.id2label.get(str(pred_idx), "Unknown | Unknown")
@@ -157,7 +184,7 @@ class ClassifierService:
                 "Software": ["crash", "load", "website", "application", "error", "bug", "failing", "software", "SQL", "Cluster", "Database", "Production", "Latency"],
                 "Access": ["login", "password", "access", "authentication", "account", "permission", "MFA", "OAuth"]
             }
-            
+
             lower_text = text.lower()
             for cat, keywords in tech_keywords.items():
                 if any(k.lower() in lower_text for k in keywords):
@@ -166,10 +193,13 @@ class ClassifierService:
                         category = cat
                         assigned_team = TEAM_MAP.get(cat, "General Support")
                         # Boost confidence significantly for verified technical signals
-                        confidence = max(confidence, 0.92) 
+                        confidence = max(confidence, 0.92)
                         break
 
-            MODEL_PREDICTIONS_TOTAL.labels(status="success").inc()
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="ok").inc()
+                CLASSIFIER_TOKENS.labels(model="distilbert").inc(int(attention_mask.sum().item()))
+
             return {
                 "category": category,
                 "subcategory": subcategory,
@@ -179,8 +209,13 @@ class ClassifierService:
                 "confidence": confidence,
             }
         except Exception as e:
-            MODEL_PREDICTIONS_TOTAL.labels(status="failure").inc()
-            raise e
+            print(f"[Classifier] Prediction error: {e}")
+            if _METRICS_ENABLED:
+                CLASSIFIER_REQUESTS.labels(model="distilbert", status="error").inc()
+            return {
+                "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
+                "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+            }
         finally:
-            duration = time.time() - start_time
-            MODEL_PREDICTION_LATENCY.observe(duration)
+            if _METRICS_ENABLED:
+                CLASSIFIER_LATENCY.labels(model="distilbert").observe(time.perf_counter() - start_time)

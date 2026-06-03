@@ -1,88 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 
 const BackToTop = () => {
     const [isVisible, setIsVisible] = useState(false);
-    const location = useLocation();
+    const visibilityCount = useRef(0);
 
     useEffect(() => {
-        const handleScroll = () => {
-            const path = location.pathname;
-            let scrolled = 0;
-
-            if (path.startsWith('/admin')) {
-                const adminMain = document.getElementById('admin-main-content');
-                if (adminMain) {
-                    scrolled = adminMain.scrollTop;
-                } else {
-                    scrolled = window.scrollY;
-                }
-            } else if (path.startsWith('/master-admin')) {
-                const masterAdminMain = document.getElementById('master-admin-content');
-                if (masterAdminMain) {
-                    scrolled = masterAdminMain.scrollTop;
-                } else {
-                    scrolled = window.scrollY;
-                }
-            } else {
-                scrolled = window.scrollY;
+        const toggleVisibility = () => {
+            const shouldShow = window.scrollY > 300;
+            if (shouldShow && !isVisible) {
+                visibilityCount.current += 1;
             }
-
-            setIsVisible(scrolled > 300);
+            setIsVisible(shouldShow);
         };
 
-        // Use capture phase to listen to all scroll events in the document
-        document.addEventListener('scroll', handleScroll, true);
-        
-        // Initial run to check position
-        handleScroll();
+        window.addEventListener('scroll', toggleVisibility);
+        return () => window.removeEventListener('scroll', toggleVisibility);
+    }, [isVisible]);
 
-        return () => {
-            document.removeEventListener('scroll', handleScroll, true);
-        };
-    }, [location.pathname]);
-
-    const scrollToTop = () => {
-        const path = location.pathname;
-        let scrollTarget = window;
-
-        if (path.startsWith('/admin')) {
-            const adminMain = document.getElementById('admin-main-content');
-            if (adminMain) scrollTarget = adminMain;
-        } else if (path.startsWith('/master-admin')) {
-            const masterAdminMain = document.getElementById('master-admin-content');
-            if (masterAdminMain) scrollTarget = masterAdminMain;
-        }
-
-        scrollTarget.scrollTo({
+    const scrollToTop = useCallback(() => {
+        window.scrollTo({
             top: 0,
             behavior: 'smooth'
         });
-    };
+    }, []);
 
     return (
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
             {isVisible && (
                 <motion.button
-                    initial={{ opacity: 0, scale: 0.5, y: 15 }}
+                    key={`backtotop-${isVisible}`}
+                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.5, y: 15 }}
-                    whileHover={{ scale: 1.1, translateY: -2 }}
+                    exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={scrollToTop}
-                    className="fixed bottom-6 right-6 z-[9999] w-11 h-11 rounded-full
-                               bg-white/85 dark:bg-gray-800/85 backdrop-blur-md
-                               border border-slate-200/50 dark:border-gray-700/50
-                               text-emerald-600 dark:text-emerald-400
-                               shadow-lg hover:shadow-emerald-500/20 hover:border-emerald-500/30
-                               flex items-center justify-center
-                               focus:outline-none transition-all cursor-pointer"
-                    title="Back to Top"
+                    className="fixed bottom-20 right-4 md:bottom-24 md:right-6 z-50 flex items-center justify-center p-3 rounded-full shadow-lg border transition-all cursor-pointer bg-[#13ec80] hover:bg-[#0fd472] text-[#111814] border-[#13ec80]/50 hover:shadow-[#13ec80]/20 dark:bg-[#1a2e24] dark:hover:bg-[#223d30] dark:text-[#13ec80] dark:border-[#2a4034] dark:hover:border-[#13ec80]/50 dark:hover:shadow-slate-950/40"
                     aria-label="Back to Top"
                 >
-                    <ChevronUp className="w-5 h-5 stroke-[2.5]" />
+                    <ArrowUp className="w-5 h-5 animate-pulse" />
                 </motion.button>
             )}
         </AnimatePresence>

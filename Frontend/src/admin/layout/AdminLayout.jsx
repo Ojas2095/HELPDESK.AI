@@ -1,36 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import useKeyboardShortcuts from '../../hooks/useKeyboardShortcuts';
+import ShortcutsHelpModal from '../../admin/components/ShortcutsHelpModal';
 
 /**
  * AdminLayout Component
  * Master framework for the administrative zone.
  * Enforces a fixed-sidebar architecture with a centered, high-density content terminal.
+ * Integrates global keyboard shortcuts (Issue #911).
  */
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
-    return (
-        <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
-            {/* Master Navigation Column (Responsive) */}
-            <div 
-                className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
-                style={{ width: isSidebarCollapsed ? '80px' : '260px' }}
-            >
-                <AdminSidebar isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
-            </div>
+    // Single hook call — handles G+key navigation, Ctrl+K search, Ctrl+/ and ?
+    // shortcuts-help toggle, and Escape to close the help modal.
+    const { showHelp, setShowHelp } = useKeyboardShortcuts({}, { isAdmin: true });
 
-            {/* Viewport Execution Layer */}
-            <div className="flex-1 flex flex-col min-w-0 relative h-full">
-                {/* Global Command Header */}
-                <AdminHeader 
-                    onMobileNavToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} 
-                    isSidebarCollapsed={isSidebarCollapsed}
-                    onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                />
+  return (
+    <div className='flex h-screen bg-[#f8faf9] overflow-hidden font-sans'>
+      {/* Master Navigation Column (Responsive) */}
+      <div
+        className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
+        style={{ width: isSidebarCollapsed ? '80px' : '260px' }}
+      >
+        <AdminSidebar
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+      </div>
+
+      {/* Viewport Execution Layer */}
+      <div className='flex-1 flex flex-col min-w-0 relative h-full'>
+        {/* Global Command Header */}
+        <AdminHeader
+          onMobileNavToggle={() => setIsMobileNavOpen(!isMobileNavOpen)}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
 
                 {/* Operational Workspace */}
                 <main id="admin-main-content" className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
@@ -41,8 +52,23 @@ const AdminLayout = () => {
                 </main>
             </div>
 
-            {/* Real-time System Notifications */}
-            <NotificationToast />
+      {/* Real-time System Notifications */}
+      <NotificationToast />
+
+            {/* Keyboard Shortcuts Help Modal */}
+            <ShortcutsHelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} isAdmin={true} />
+
+            {/* Keyboard Shortcuts Help Modal */}
+            <KeyboardShortcutsModal
+                isOpen={isShortcutsModalOpen}
+                onClose={() => setShortcutsModalOpen(false)}
+            />
+
+            {/* Keyboard Shortcuts Legend Modal */}
+            <KeyboardLegend isOpen={showLegend} onClose={closeLegend} />
+
+            {/* Keyboard Shortcuts Help Overlay */}
+            <KeyboardShortcutsHelp open={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
 
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
@@ -50,7 +76,7 @@ const AdminLayout = () => {
                     className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 lg:hidden flex transition-opacity duration-300"
                     onClick={() => setIsMobileNavOpen(false)}
                 >
-                    <div
+                    <div 
                         className="w-[85%] max-w-[280px] h-full shadow-2xl animate-in slide-in-from-left duration-300"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -59,7 +85,9 @@ const AdminLayout = () => {
                 </div>
             )}
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 export default AdminLayout;

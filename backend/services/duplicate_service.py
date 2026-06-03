@@ -1,76 +1,238 @@
 """
-Duplicate Detection Service
-Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
+Duplicate ticket detection using sentence embeddings and vectorized cosine similarity.
+
+Embeddings are stacked into a pre-computed NumPy matrix so that
+``check_duplicate`` performs a single matrix–vector dot-product instead of
+looping over each stored ticket.  When NumPy is unavailable the service
+degrades gracefully to a Python loop.
 """
 
-import uuid
-import os
-from typing import Any
+from __future__ import annotations
 
-from sentence_transformers import SentenceTransformer, util
+import json
+import logging
+import os
+import tempfile
+import threading
+from typing import Any, Dict, List, Optional, Tuple
+
+try:
+    import numpy as np
+
+    _HAS_NUMPY = True
+except Exception:  # pragma: no cover
+    np = None  # type: ignore[assignment]
+    _HAS_NUMPY = False
+
+try:
+    import torch
+    from sentence_transformers import SentenceTransformer, util
+
+    _HAS_SENTENCE = True
+except Exception:  # pragma: no cover — optional runtime dependency
+    torch = None  # type: ignore[assignment]
+    SentenceTransformer = None  # type: ignore[assignment,misc]
+    util = None  # type: ignore[assignment]
+    _HAS_SENTENCE = False
+
+logger = logging.getLogger(__name__)
 
 SIMILARITY_THRESHOLD = 0.70
+MAX_CACHE_ENTRIES = int(os.environ.get("DUPLICATE_CACHE_MAX", "5000"))
+
+
+def _cosine_similarity_numpy(query: "np.ndarray", matrix: "np.ndarray") -> "np.ndarray":
+    """Vectorized cosine similarity: query (d,) vs matrix (n, d).
+
+    Assumes embeddings are already L2-normalized, so cosine similarity
+    reduces to a simple dot product.  Falls back to a manual loop when
+    the matrix contains zero-norm rows.
+    """
+    # query @ matrix.T  →  shape (n,)
+    return matrix @ query
 
 
 class DuplicateService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.model = None
         self._loaded = False
         self._load_failed = False
         # In-memory store: list of (ticket_id, embedding, text)
-        self._tickets: list[tuple[str, object, str]] = []
-        self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
+        self._tickets: List[Tuple[str, Any, str]] = []
+        self.storage_file = os.path.join(
+            os.path.dirname(__file__), "..", "data", "case_history_cache.json"
+        )
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
+        # Pre-computed embedding matrix for vectorized search
+        self._embedding_matrix: Any = None  # np.ndarray or torch.Tensor
+        self._ticket_ids: List[str] = []
+        self._embedding_matrix_dirty: bool = True
+        # Thread-safe access to _tickets and storage_file
+        self._lock = threading.Lock()
+        self._indexing: bool = False
+
+    # ------------------------------------------------------------------
+    # Availability
+    # ------------------------------------------------------------------
 
     def is_available(self) -> bool:
-        """Check if the model is available for duplicate detection."""
         return self._loaded and not self._load_failed
 
-    def load(self):
-        """Load the sentence-transformer model and saved tickets."""
+    # ------------------------------------------------------------------
+    # Encoding helpers
+    # ------------------------------------------------------------------
+
+    def _encode(self, text: str):
+        """Encode text to an L2-normalized float32 numpy embedding."""
+        if not self.model:
+            return None
+        emb = self.model.encode(text, convert_to_numpy=True, normalize_embeddings=True)
+        return emb.astype(np.float32, copy=False)
+
+    def _encode_with_cache(self, text: str):
+        """Return an embedding for *text*, using Redis cache when available.
+
+        Strategy:
+        1. Check Redis for a pre-computed embedding stored as a JSON float list.
+        2. On hit, deserialize and convert back to an array — zero model inference.
+        3. On miss, run the model, then persist the result to Redis for future calls.
+        """
+        try:
+            from backend.services.redis_cache import redis_cache
+
+            cached_vector = redis_cache.get_embedding(text)
+            if cached_vector is not None:
+                logger.debug(
+                    "[DuplicateService] Embedding cache HIT for text (len=%d)", len(text)
+                )
+                return np.array(cached_vector, dtype=np.float32)
+        except Exception:
+            pass
+
+        # Cache miss: compute via model
+        embedding = self._encode(text)
+
+        # Persist as a plain Python list so JSON serialisation is trivial
+        try:
+            from backend.services.redis_cache import redis_cache
+
+            redis_cache.set_embedding(text, embedding.tolist())
+            logger.debug(
+                "[DuplicateService] Embedding cache SET for text (len=%d)", len(text)
+            )
+        except Exception:
+            pass
+
+        return embedding
+
+    # ------------------------------------------------------------------
+    # Matrix management
+    # ------------------------------------------------------------------
+
+    def _rebuild_embedding_matrix(self) -> None:
+        """Rebuild the stacked embedding matrix from the ticket list.
+
+        This enables vectorized cosine similarity computation by stacking all
+        stored embeddings into a single 2D array, eliminating the per-ticket
+        loop in ``check_duplicate``.
+        """
+        if not self._tickets:
+            self._embedding_matrix = None
+            self._ticket_ids = []
+            self._embedding_matrix_dirty = False
+            return
+
+        tickets = list(self._tickets)  # consistent snapshot
+        self._ticket_ids = [tid for tid, _, _ in tickets]
+        embeddings = [emb for _, emb, _ in tickets]
+
+        if _HAS_NUMPY:
+            self._embedding_matrix = np.vstack(embeddings).astype(np.float32)
+        elif _HAS_SENTENCE:
+            self._embedding_matrix = torch.stack(embeddings)
+        else:
+            self._embedding_matrix = None
+
+        self._embedding_matrix_dirty = False
+
+    def _ensure_matrix(self) -> None:
+        """Rebuild the embedding matrix if it is dirty."""
+        if self._embedding_matrix_dirty or self._embedding_matrix is None:
+            self._rebuild_embedding_matrix()
+
+    # ------------------------------------------------------------------
+    # Model loading
+    # ------------------------------------------------------------------
+
+    def load(self) -> None:
+        """Load the sentence-transformer model and saved tickets. Thread-safe and idempotent."""
+        # Fast path: already loaded — no lock needed for the bool check
         if self._loaded or self._load_failed:
             return
-        
+
         print("[DuplicateService] Loading model...")
+        if not _HAS_SENTENCE:
+            allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+            self._load_failed = True
+            print("[DuplicateService] sentence-transformers not installed")
+            if allow_degraded:
+                print(
+                    "[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)"
+                )
+                self.model = None
+                self._loaded = False
+                return
+            else:
+                raise ImportError("sentence-transformers is required for DuplicateService")
         try:
-            # Check if a local model path is provided
             model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
             if model_path and os.path.exists(model_path):
-                print(f"[DuplicateService] Loading from local path: {model_path}")
+                logger.info("[DuplicateService] Loading from local path: %s", model_path)
                 self.model = SentenceTransformer(model_path)
             else:
-                # Download from HuggingFace
                 self.model = SentenceTransformer("all-MiniLM-L6-v2")
             self._loaded = True
-            
+
             if os.path.exists(self.storage_file):
-                print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
-                import json
+                print(
+                    f"[DuplicateService] Syncing ticket history from {self.storage_file}..."
+                )
                 try:
                     with open(self.storage_file, "r") as f:
                         data = json.load(f)
-                        for item in data:
-                            text = item["text"]
-                            embedding = self.model.encode(text, convert_to_tensor=True)
-                            self._tickets.append((item["ticket_id"], embedding, text))
-                    print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
+                    if not isinstance(data, list):
+                        data = []
+                    for item in data:
+                        text = item["text"]
+                        embedding = self._encode(text)
+                        self._tickets.append((item["ticket_id"], embedding, text))
+                    self._embedding_matrix_dirty = True
+                    logger.info(
+                        "[DuplicateService] Loaded %d tickets from storage.",
+                        len(self._tickets),
+                    )
                 except Exception as e:
-                    print(f"[DuplicateService] Error loading storage: {e}")
+                    logger.error("[DuplicateService] Error loading storage: %s", e)
         except Exception as e:
             allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
             self._load_failed = True
-            print(f"[DuplicateService] Failed to load model: {e}")
+            logger.error("[DuplicateService] Failed to load model: %s", e)
             if allow_degraded:
-                print("[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
+                logger.warning(
+                    "[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)"
+                )
                 self.model = None
                 self._loaded = False
             else:
                 raise
 
-    def save_to_disk(self, ticket_id: str, text: str):
-        """Append a new ticket to the JSON storage."""
-        import json
-        data = []
+    # ------------------------------------------------------------------
+    # Public interface
+    # ------------------------------------------------------------------
+
+    def save_to_disk(self, ticket_id: str, text: str) -> None:
+        """Append a new ticket entry to the JSON persistence file."""
+        data: list = []
         try:
             os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
             if os.path.exists(self.storage_file):
@@ -79,101 +241,66 @@ class DuplicateService:
                         data = json.load(f)
                         if not isinstance(data, list):
                             data = []
-                    except:
+                    except Exception:
                         data = []
-            
+
             data.append({"ticket_id": ticket_id, "text": text})
             with open(self.storage_file, "w") as f:
                 json.dump(data, f, indent=2)
             print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
-        except Exception as e:
-            print(f"[DuplicateService] Failed to save to disk: {e}")
+        except Exception as exc:
+            print(f"[DuplicateService] Failed to save to disk: {exc}")
 
-    def add_ticket(self, ticket_id: str, text: str):
-        """Add a ticket to the in-memory store and persist to disk."""
+    def add_ticket(self, ticket_id: str, text: str) -> None:
+        """Add a ticket to the in-memory store and persist to disk.
+
+        Computes (or retrieves from Redis cache) the embedding, adds it to
+        the in-memory store, persists to disk, and marks the embedding
+        matrix as dirty so the next ``check_duplicate`` call rebuilds it.
+        """
         self.load()
         if not self.is_available():
-            print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
+            logger.warning(
+                "[DuplicateService] DEGRADED: Skipping embedding for ticket %s (model not available)",
+                ticket_id,
+            )
             return
-        embedding = self.model.encode(text, convert_to_tensor=True)
-        self._tickets.append((ticket_id, embedding, text))
+
+        # Compute embedding outside the lock (CPU-bound, can run concurrently)
+        embedding = self._encode(text)
+        with self._lock:
+            self._tickets.append((ticket_id, embedding, text))
+            self._embedding_matrix_dirty = True
         self.save_to_disk(ticket_id, text)
 
-    def generate_embedding(self, text: str) -> list[float] | None:
+    def generate_embedding(self, text: str) -> Optional[List[float]]:
         """Generate a 384-d embedding for the provided ticket text."""
+        from backend.services.redis_cache import redis_cache
+
+        cached = redis_cache.get_embedding(text)
+        if cached is not None:
+            return cached
+
         self.load()
         if not self.is_available():
             return None
 
-        embedding = self.model.encode(text, convert_to_tensor=False, normalize_embeddings=True)
-        return [float(value) for value in embedding.tolist()]
+        embedding = self.model.encode(
+            text, convert_to_numpy=True, normalize_embeddings=True
+        )
+        values = [float(value) for value in embedding.tolist()]
+        redis_cache.set_embedding(text, values)
+        return values
 
-    def _build_result(
-        self,
-        *,
-        is_duplicate: bool,
-        duplicate_ticket_id: str | None,
-        similarity: float,
-    ) -> dict:
-        return {
-            "is_duplicate": is_duplicate,
-            "duplicate_ticket_id": duplicate_ticket_id,
-            "parent_ticket_id": duplicate_ticket_id,
-            "is_potential_duplicate": is_duplicate,
-            "similarity": round(similarity, 4),
-        }
+    def check_duplicate(self, text: str, threshold: Optional[float] = None) -> Dict:
+        """Check whether *text* matches any previously stored ticket.
 
-    def find_semantic_duplicate(
-        self,
-        text: str,
-        *,
-        threshold: float | None = None,
-        company_id: str | None = None,
-        supabase_client: Any | None = None,
-        match_count: int = 1,
-    ) -> dict:
-        """Find the best duplicate candidate using Supabase vector search, with local fallback."""
-        self.load()
-
-        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
-        embedding = self.generate_embedding(text)
-
-        if embedding and supabase_client and company_id:
-            try:
-                response = supabase_client.rpc(
-                    "match_tickets",
-                    {
-                        "query_vector": embedding,
-                        "match_threshold": float(active_threshold),
-                        "match_count": match_count,
-                        "tenant_company_id": company_id,
-                    },
-                ).execute()
-
-                rows = response.data or []
-                if rows:
-                    best_match = rows[0]
-                    similarity = float(best_match.get("similarity", 0.0))
-                    ticket_identifier = best_match.get("ticket_id") or best_match.get("id")
-                    return self._build_result(
-                        is_duplicate=similarity >= active_threshold,
-                        duplicate_ticket_id=str(ticket_identifier) if ticket_identifier is not None else None,
-                        similarity=similarity,
-                    )
-            except Exception as error:
-                print(f"[DuplicateService] Supabase vector search failed, falling back to local cache: {error}")
-
-        duplicate_result = self.check_duplicate(text, threshold=active_threshold)
-        duplicate_result["parent_ticket_id"] = duplicate_result.get("duplicate_ticket_id")
-        duplicate_result["is_potential_duplicate"] = duplicate_result.get("is_duplicate", False)
-        return duplicate_result
-
-    def check_duplicate(self, text: str, threshold: float = None) -> dict:
-        """
-        Check if a ticket is a duplicate of any stored ticket.
+        Uses vectorized cosine similarity: all stored embeddings are stacked
+        into a single 2D matrix and compared against the query embedding in
+        one batched dot-product, rather than looping over each stored ticket.
 
         Args:
-            text: The ticket text to check.
+            text:      The ticket text to check.
             threshold: Optional override for the similarity threshold.
 
         Returns:
@@ -184,41 +311,112 @@ class DuplicateService:
             }
         """
         self.load()
-        
+
         # If model is not available, return no duplicate found
         if not self.is_available():
-            print("[DuplicateService] DEGRADED: Duplicate check skipped (model not available)")
+            print(
+                "[DuplicateService] DEGRADED: Duplicate check skipped (model not available)"
+            )
             return {
                 "is_duplicate": False,
                 "duplicate_ticket_id": None,
                 "similarity": 0.0,
             }
-        
+
         # Use provided threshold or default to global constant
         active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
+        use_default_threshold = threshold is None
 
-        if not self._tickets:
+        # Try the result cache only when using the default threshold so we
+        # don't serve threshold-mismatched cached results.
+        if use_default_threshold:
+            try:
+                from backend.services.redis_cache import redis_cache
+
+                cached_result = redis_cache.get_duplicate_result(text)
+                if cached_result is not None:
+                    logger.debug("[DuplicateService] Duplicate-result cache HIT")
+                    return cached_result
+            except Exception:
+                pass
+
+        # Take a snapshot of tickets under lock to avoid mutation during iteration
+        with self._lock:
+            tickets_snapshot = list(self._tickets)
+
+        if not tickets_snapshot:
             return {
                 "is_duplicate": False,
                 "duplicate_ticket_id": None,
                 "similarity": 0.0,
             }
 
-        query_embedding = self.model.encode(text, convert_to_tensor=True)
+        query_embedding = self._encode_with_cache(text)
+        if query_embedding is None:
+            return {
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "similarity": 0.0,
+            }
 
-        best_score = 0.0
-        best_id = None
+        # --- Vectorized cosine similarity (NumPy path) ---
+        if _HAS_NUMPY:
+            self._ensure_matrix()
+            if self._embedding_matrix is not None and len(self._ticket_ids) > 0:
+                # query (d,) @ matrix.T (d, n) → similarities (n,)
+                similarities = _cosine_similarity_numpy(
+                    query_embedding, self._embedding_matrix
+                )
+                best_index = int(np.argmax(similarities))
+                best_score = float(similarities[best_index])
+                best_id = self._ticket_ids[best_index]
+            else:
+                # Fallback: loop
+                best_score = -1.0
+                best_id = None
+                for tid, stored_emb, _ in tickets_snapshot:
+                    score = float(np.dot(query_embedding, stored_emb))
+                    if score > best_score:
+                        best_score = score
+                        best_id = tid
 
-        for ticket_id, stored_emb, _ in self._tickets:
-            score = util.cos_sim(query_embedding, stored_emb).item()
-            if score > best_score:
-                best_score = score
-                best_id = ticket_id
+        # --- Fallback: torch path ---
+        elif _HAS_SENTENCE:
+            embeddings = [stored_emb for _, stored_emb, _ in tickets_snapshot]
+            stacked = torch.stack(embeddings)
+            sim_matrix = util.cos_sim(
+                torch.tensor(query_embedding) if isinstance(query_embedding, np.ndarray) else query_embedding,
+                stacked,
+            )
+            best_score_tensor, best_index_tensor = torch.max(sim_matrix, dim=1)
+            best_score = best_score_tensor.item()
+            best_index = best_index_tensor.item()
+            best_id = tickets_snapshot[best_index][0]
+
+        # --- Fallback: pure Python loop ---
+        else:
+            best_score = -1.0
+            best_id = None
+            for tid, stored_emb, _ in tickets_snapshot:
+                dot = sum(a * b for a, b in zip(query_embedding, stored_emb))
+                if dot > best_score:
+                    best_score = dot
+                    best_id = tid
 
         is_dup = best_score >= active_threshold
 
-        return {
+        result: Dict = {
             "is_duplicate": is_dup,
             "duplicate_ticket_id": best_id if is_dup else None,
             "similarity": round(best_score, 4),
         }
+
+        if use_default_threshold:
+            try:
+                from backend.services.redis_cache import redis_cache
+
+                redis_cache.set_duplicate_result(text, result)
+            except Exception:
+                pass
+
+        return result

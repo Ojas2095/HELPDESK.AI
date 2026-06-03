@@ -9,11 +9,13 @@
         },
         "enable": true,
         "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
         "type": "dashboard"
       }
     ]
   },
+  "description": "HELPDESK.AI service telemetry — HTTP request latency & throughput, AI inference latency, API throughput, token counts, and host resources.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -23,151 +25,387 @@
   "panels": [
     {
       "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 0
-      },
-      "id": 1,
-      "title": "Model Prediction Throughput (Requests / sec)",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(model_predictions_total[1m])) by (status)",
-          "legendFormat": "Predictions: {{status}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
-          },
-          "unit": "reqps"
-        }
-      }
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 100,
+      "title": "HTTP Request Metrics",
+      "type": "row"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
-      "id": 2,
-      "title": "DistilBERT Model Inference Latency",
-      "type": "timeseries",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "seconds",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 1},
+      "id": 101,
+      "options": {
+        "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "title": "HTTP Request Latency (p50 / p95 / p99)",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(model_prediction_latency_seconds_bucket[5m])) by (le))",
-          "legendFormat": "p95 Latency",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(model_prediction_latency_seconds_bucket[5m])) by (le))",
-          "legendFormat": "p99 Latency",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(model_prediction_latency_seconds_sum[5m])) / sum(rate(model_prediction_latency_seconds_count[5m]))",
-          "legendFormat": "Avg Latency",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99",
           "refId": "C"
         }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth"
-          },
-          "unit": "s"
-        }
-      }
+      "type": "timeseries"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 8
-      },
-      "id": 3,
-      "title": "Backend CPU Usage",
-      "type": "timeseries",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "req/s",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 1},
+      "id": 102,
+      "options": {
+        "legend": {"calcs": ["mean"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "title": "HTTP Request Rate (by status code)",
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total[1m]) * 100",
-          "legendFormat": "CPU Usage",
+          "expr": "sum by (status) (rate(http_requests_total[1m]))",
+          "legendFormat": "{{status}}",
           "refId": "A"
         }
       ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
+          "color": {"mode": "palette-classic"},
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "smooth"
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
           },
-          "unit": "percent"
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 9},
+      "id": 103,
+      "options": {
+        "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "title": "HTTP In-Flight Requests",
+      "targets": [
+        {
+          "expr": "http_requests_in_progress",
+          "legendFormat": "{{handler}}",
+          "refId": "A"
         }
-      }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "req/s",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 9},
+      "id": 104,
+      "options": {
+        "legend": {"calcs": ["mean"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "title": "HTTP Request Rate (by handler)",
+      "targets": [
+        {
+          "expr": "sum by (handler) (rate(http_requests_total[1m]))",
+          "legendFormat": "{{handler}}",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
     },
     {
       "collapsed": false,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      },
-      "id": 4,
-      "title": "Backend Memory Usage (Resident Set Size)",
-      "type": "timeseries",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 17},
+      "id": 200,
+      "title": "AI Inference Metrics",
+      "type": "row"
+    },
+    {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${DS_PROMETHEUS}"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "seconds",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 18},
+      "id": 1,
+      "options": {
+        "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "title": "DistilBERT Inference Latency (p50 / p95 / p99)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(ai_classifier_inference_latency_seconds_bucket[5m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ai_classifier_inference_latency_seconds_bucket[5m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(ai_classifier_inference_latency_seconds_bucket[5m])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "req/s",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 18},
+      "id": 2,
+      "options": {
+        "legend": {"calcs": ["mean"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "title": "Classifier Request Rate (by status)",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(ai_classifier_inference_requests_total[1m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "tokens/s",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 26},
+      "id": 3,
+      "options": {
+        "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "title": "Token Throughput (input tokens / sec)",
+      "targets": [
+        {
+          "expr": "sum by (model) (rate(ai_classifier_input_tokens_total[1m]))",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 34},
+      "id": 300,
+      "title": "Host Resources",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisLabel": "bytes",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 35},
+      "id": 4,
+      "options": {
+        "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "title": "Process Memory (RSS)",
       "targets": [
         {
           "expr": "process_resident_memory_bytes",
-          "legendFormat": "Memory RSS",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "fieldConfig": {
         "defaults": {
+          "color": {"mode": "palette-classic"},
           "custom": {
+            "axisLabel": "CPU seconds/sec",
             "drawStyle": "line",
-            "lineInterpolation": "smooth"
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
           },
-          "unit": "bytes"
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 35},
+      "id": 5,
+      "options": {
+        "legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      },
+      "title": "Process CPU Usage",
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total[1m])",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
         }
-      }
+      ],
+      "type": "timeseries"
     }
   ],
-  "schemaVersion": 36,
+  "refresh": "10s",
+  "schemaVersion": 38,
   "style": "dark",
-  "tags": [
-    "helpdesk",
-    "monitoring",
-    "ai"
-  ],
-  "title": "FastAPI AI Helpdesk Performance Telemetry",
-  "timezone": "browser",
+  "tags": ["helpdesk-ai", "fastapi", "ai-inference", "prometheus", "http-metrics"],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": false, "text": "Prometheus", "value": "Prometheus"},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "HELPDESK.AI — Service Telemetry",
+  "uid": "helpdesk-ai-telemetry",
+  "version": 2,
   "weekStart": ""
 }
