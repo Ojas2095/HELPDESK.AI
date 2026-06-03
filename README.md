@@ -188,3 +188,7 @@ Helpdesk.ai is now available as a native Android application. It features a comp
 <div align="center">
 Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team. 
 </div>
+
+
+## Healthcheck Endpoint verification (Issue #1547)
+Run locally using curl http://localhost:5000/health to verify service status before pushing to main.
