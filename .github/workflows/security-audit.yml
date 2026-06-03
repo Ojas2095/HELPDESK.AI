@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main, gssoc ]
 
+permissions:
+  contents: read
+
 jobs:
   security-audit:
     name: Run Tenant Isolation Security Tests
