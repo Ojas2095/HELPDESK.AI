@@ -137,26 +137,57 @@ async def create_ticket_from_voice(
 async def voice_health():
     """Check if the voice transcription service is available."""
     try:
-        from backend.services.voice_service import _whisper_model
-
+        # Import the voice_service module first to check if it exists
+        import backend.services.voice_service as voice_service
+        
+        # Use hasattr to safely check if _whisper_model attribute exists
+        if not hasattr(voice_service, '_whisper_model'):
+            logger.warning("voice_service module exists but _whisper_model attribute is missing")
+            return {
+                "status": "unavailable",
+                "model_loaded": False,
+                "message": "Voice service not properly initialized.",
+                "max_audio_size_mb": MAX_UPLOAD_SIZE // (1024 * 1024),
+                "supported_formats": ["webm", "wav", "mp3", "ogg", "m4a", "flac"],
+            }
+        
+        # Now safely access the model
+        _whisper_model = voice_service._whisper_model
         model_loaded = _whisper_model is not None
+        
         return {
-            "status": "ok",
+            "status": "ok" if model_loaded else "degraded",
             "model_loaded": model_loaded,
             "max_audio_size_mb": MAX_UPLOAD_SIZE // (1024 * 1024),
             "supported_formats": ["webm", "wav", "mp3", "ogg", "m4a", "flac"],
         }
-    except ImportError:
+        
+    except ImportError as e:
+        logger.error(f"Failed to import voice_service: {e}")
         return {
             "status": "unavailable",
             "model_loaded": False,
-            "message": "Whisper package not installed.",
+            "message": "Whisper package not installed. Voice features disabled.",
+            "max_audio_size_mb": MAX_UPLOAD_SIZE // (1024 * 1024),
+            "supported_formats": ["webm", "wav", "mp3", "ogg", "m4a", "flac"],
         }
-    except AttributeError:
+    except AttributeError as e:
+        logger.error(f"Attribute error in voice health check: {e}")
         return {
             "status": "unavailable",
             "model_loaded": False,
-            "message": "Whisper model not available.",
+            "message": "Whisper model not properly initialized.",
+            "max_audio_size_mb": MAX_UPLOAD_SIZE // (1024 * 1024),
+            "supported_formats": ["webm", "wav", "mp3", "ogg", "m4a", "flac"],
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error in voice health check: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "model_loaded": False,
+            "message": f"Health check failed: {str(e)}",
+            "max_audio_size_mb": MAX_UPLOAD_SIZE // (1024 * 1024),
+            "supported_formats": ["webm", "wav", "mp3", "ogg", "m4a", "flac"],
         }
 
 
