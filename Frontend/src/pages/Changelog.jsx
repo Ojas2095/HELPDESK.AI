@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Rocket,
   Sparkles,
@@ -6,8 +7,8 @@ import {
   ShieldCheck,
   CalendarDays,
   GitCommitHorizontal,
+  ArrowLeft,
 } from "lucide-react";
-
 import { motion } from "framer-motion";
 
 const releases = [
@@ -32,7 +33,6 @@ const releases = [
       "Fixed mobile sidebar overlap on smaller devices",
     ],
   },
-
   {
     version: "v2.0.2",
     date: "May 10, 2026",
@@ -51,7 +51,6 @@ const releases = [
       "Fixed navbar responsiveness on tablets",
     ],
   },
-
   {
     version: "v2.0.0",
     date: "April 28, 2026",
@@ -92,19 +91,14 @@ const Section = ({
 }) => {
   return (
     <div className="mb-8">
-
       <div className="flex items-center gap-3 mb-4">
-        <div
-          className={`p-2 rounded-xl ${glow}`}
-        >
+        <div className={`p-2 rounded-xl ${glow}`}>
           {icon}
         </div>
-
         <h3 className="text-2xl font-semibold text-white">
           {title}
         </h3>
       </div>
-
       <div className="space-y-3">
         {items.map((item, index) => (
           <motion.div
@@ -115,7 +109,6 @@ const Section = ({
             <span className="text-green-400 mt-1">
               •
             </span>
-
             <p>{item}</p>
           </motion.div>
         ))}
@@ -125,17 +118,34 @@ const Section = ({
 };
 
 const Changelog = () => {
+  const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-[#021510] overflow-hidden text-white relative">
-
+    <div className="min-h-screen bg-[#021510] overflow-hidden text-white relative pb-20">
       {/* Background Glow Effects */}
-      <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-green-500/10 blur-[120px]" />
+      <div className="absolute top-0 left-0 w-[400px] h-[400px] bg-green-500/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-emerald-400/10 blur-[120px] pointer-events-none" />
 
-      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-emerald-400/10 blur-[120px]" />
+      {/* Header */}
+      <header className="w-full bg-[#021510]/80 border-b border-white/10 sticky top-0 z-50 backdrop-blur-md">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+            <img src="/favicon.png" alt="HELPDESK.AI Logo" className="w-7 h-7 object-contain" />
+            <div className="flex items-baseline gap-2">
+              <h1 className="text-xl font-black tracking-tighter text-white italic">HELPDESK.AI</h1>
+              <span className="px-2 py-0.5 text-[10px] font-black bg-green-500/20 text-green-400 rounded-md uppercase tracking-wider border border-green-500/30">Changelog</span>
+            </div>
+          </div>
+          <button 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-xs font-bold text-gray-300 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3.5 py-2 rounded-xl border border-white/10"
+          >
+            <ArrowLeft size={14} /> Back to Home
+          </button>
+        </div>
+      </header>
 
       {/* Hero Section */}
       <section className="relative z-10 px-6 pt-24 pb-16">
-
         <motion.div
           initial="hidden"
           animate="visible"
@@ -143,12 +153,9 @@ const Changelog = () => {
           transition={{ duration: 0.7 }}
           className="max-w-6xl mx-auto text-center"
         >
-
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-5 py-2 rounded-full text-green-400 mb-8 backdrop-blur-md">
-
             <GitCommitHorizontal size={16} />
-
             <span className="text-sm font-medium tracking-wide">
               PRODUCT RELEASE NOTES
             </span>
@@ -156,7 +163,6 @@ const Changelog = () => {
 
           {/* Heading */}
           <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
-
             Platform
             <span className="text-green-400">
               {" "}Changelog
@@ -165,26 +171,21 @@ const Changelog = () => {
 
           {/* Description */}
           <p className="text-gray-400 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed">
-
             Stay updated with the latest platform improvements,
             AI enhancements, security patches, and feature
             releases across HelpDesk.AI.
           </p>
-
         </motion.div>
       </section>
 
       {/* Timeline */}
       <section className="relative z-10 px-6 pb-24">
-
         <div className="max-w-5xl mx-auto relative">
-
           {/* Vertical Line */}
           <div className="absolute left-4 top-0 w-[2px] h-full bg-gradient-to-b from-green-500/70 via-green-500/20 to-transparent" />
 
           {/* Release Cards */}
           <div className="space-y-16">
-
             {releases.map((release, index) => (
               <motion.div
                 key={index}
@@ -198,12 +199,9 @@ const Changelog = () => {
                 }}
                 className="relative pl-14"
               >
-
                 {/* Timeline Dot */}
                 <div className="absolute left-0 top-8">
-
                   <div className="w-8 h-8 rounded-full bg-green-500 border-4 border-[#021510] shadow-[0_0_25px_rgba(34,197,94,0.8)]" />
-
                 </div>
 
                 {/* Card */}
@@ -216,15 +214,12 @@ const Changelog = () => {
                   }}
                   className="relative bg-white/5 border border-white/10 backdrop-blur-xl rounded-3xl p-8 md:p-10 shadow-2xl overflow-hidden"
                 >
-
                   {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent pointer-events-none" />
 
                   {/* Header */}
                   <div className="relative flex flex-wrap items-center justify-between gap-4 mb-10">
-
                     <div className="flex items-center gap-4 flex-wrap">
-
                       {/* Version */}
                       <div className="bg-green-500 text-black font-bold px-5 py-2 rounded-full text-sm shadow-lg">
                         {release.version}
@@ -237,25 +232,20 @@ const Changelog = () => {
 
                       {/* Status */}
                       <div className="flex items-center gap-2 text-green-400 text-sm">
-
                         <ShieldCheck size={16} />
-
                         {release.status}
                       </div>
                     </div>
 
                     {/* Date */}
                     <div className="flex items-center gap-2 text-gray-400">
-
                       <CalendarDays size={18} />
-
                       <span>{release.date}</span>
                     </div>
                   </div>
 
                   {/* Sections */}
                   <div className="relative">
-
                     <Section
                       title="New Features"
                       glow="bg-green-500/20"
@@ -282,7 +272,6 @@ const Changelog = () => {
                       }
                       items={release.fixes}
                     />
-
                   </div>
                 </motion.div>
               </motion.div>
