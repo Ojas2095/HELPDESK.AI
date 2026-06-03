@@ -10,6 +10,7 @@ import {
 import useAdminStore from '../store/adminStore';
 import { Card, CardContent } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
+import SSOConfig from '../../pages/AdminSettings/SSOConfig';
 
 /**
  * AdminSettings Page
@@ -169,6 +170,9 @@ const AdminSettings = () => {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* 5. Enterprise Single Sign-On */}
+                <SSOConfig />
             </div>
         </div>
     );

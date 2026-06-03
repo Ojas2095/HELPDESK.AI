@@ -3,7 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
  
 import { motion } from "framer-motion";
 import useAuthStore from "../store/authStore";
-import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft, Building2, ShieldCheck, KeyRound } from "lucide-react";
+import { API_CONFIG } from "../config";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -14,9 +15,41 @@ function Login() {
 
   const [isMagicLink, setIsMagicLink] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [isSSO, setIsSSO] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
 
   const navigate = useNavigate();
   const { login, signInWithMagicLink, loading, user, profile } = useAuthStore();
+
+  const handleSSO = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError("Please enter your corporate email address");
+      return;
+    }
+    setError("");
+    setSsoLoading(true);
+    try {
+      const res = await fetch(`${API_CONFIG.BACKEND_URL}/auth/sso/resolve?email=${encodeURIComponent(email)}`);
+      if (!res.ok) {
+        throw new Error("Could not connect to authentication resolver.");
+      }
+      const data = await res.json();
+      if (data.sso_enabled) {
+        if (data.protocol === "saml") {
+          window.location.href = `${API_CONFIG.BACKEND_URL}/auth/sso/saml/login?provider_id=${data.provider_id}&frontend_origin=${window.location.origin}`;
+        } else if (data.protocol === "oauth" || data.protocol === "oidc") {
+          window.location.href = `${API_CONFIG.BACKEND_URL}/auth/sso/oauth/login?provider=${data.provider_name}&company_id=${data.company_id}&frontend_origin=${window.location.origin}`;
+        }
+      } else {
+        setError("Single Sign-On is not configured for your domain name. Please use email/password or contact your IT Admin.");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to connect to SSO resolver. Please try again later.");
+    } finally {
+      setSsoLoading(false);
+    }
+  };
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -99,7 +132,7 @@ function Login() {
     }
   };
 
-  const currentSubmitHandler = isMagicLink ? handleMagicLink : handleLogin;
+  const currentSubmitHandler = isSSO ? handleSSO : (isMagicLink ? handleMagicLink : handleLogin);
 
   return (
     <div className="min-h-screen flex" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -275,7 +308,7 @@ function Login() {
               </div>
 
               {/* Password Field */}
-              {!isMagicLink && (
+              {!isMagicLink && !isSSO && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                   <div className="flex justify-between items-center mb-2">
                     <label
@@ -326,10 +359,16 @@ function Login() {
                 </motion.div>
               )}
 
+              {isSSO && (
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5 mt-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Redirecting to corporate Single Sign-On portal
+                </p>
+              )}
+
               {/* Sign In Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || ssoLoading}
                 className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                 style={{
                   background: 'linear-gradient(135deg, #16a34a, #22c55e)',
@@ -346,8 +385,8 @@ function Login() {
                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(34,160,69,0.35)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(34,160,69,0.3)'; }}
               >
-                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-                {!loading && (isMagicLink ? "Send Magic Link" : "Sign In")}
+                {(loading || ssoLoading) && <Loader2 className="w-5 h-5 animate-spin" />}
+                {!(loading || ssoLoading) && (isSSO ? "Continue with SSO" : (isMagicLink ? "Send Magic Link" : "Sign In"))}
               </button>
 
               {/* Divider */}
@@ -357,27 +396,73 @@ function Login() {
                 <div className="flex-grow" style={{ borderTop: '1px solid #e5e7eb' }}></div>
               </div>
 
-              {/* Magic Link Toggle */}
-              <button
-                type="button"
-                onClick={() => { setIsMagicLink(!isMagicLink); setError(""); }}
-                className="w-full flex items-center justify-center gap-2 transition-all"
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #d1fae5',
-                  color: '#15803d',
-                  borderRadius: '12px',
-                  padding: '13px',
-                  fontWeight: 500,
-                  fontSize: '15px',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
-              >
-                {isMagicLink ? "Sign in with Password" : "Sign in with Magic Link"}
-              </button>
+              {/* Toggles */}
+              {isSSO ? (
+                <button
+                  type="button"
+                  onClick={() => { setIsSSO(false); setIsMagicLink(false); setError(""); }}
+                  className="w-full flex items-center justify-center gap-2 transition-all"
+                  style={{
+                    background: '#ffffff',
+                    border: '1.5px solid #d1fae5',
+                    color: '#15803d',
+                    borderRadius: '12px',
+                    padding: '13px',
+                    fontWeight: 500,
+                    fontSize: '15px',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                >
+                  <KeyRound className="w-4 h-4 text-emerald-600" /> Sign in with Password
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { setIsMagicLink(!isMagicLink); setIsSSO(false); setError(""); }}
+                    className="w-full flex items-center justify-center gap-2 transition-all"
+                    style={{
+                      background: '#ffffff',
+                      border: '1.5px solid #d1fae5',
+                      color: '#15803d',
+                      borderRadius: '12px',
+                      padding: '13px',
+                      fontWeight: 500,
+                      fontSize: '15px',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                  >
+                    {isMagicLink ? "Sign in with Password" : "Sign in with Magic Link"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setIsSSO(true); setIsMagicLink(false); setError(""); }}
+                    className="w-full flex items-center justify-center gap-2 transition-all mt-3"
+                    style={{
+                      background: '#ffffff',
+                      border: '1.5px solid #e5e7eb',
+                      color: '#374151',
+                      borderRadius: '12px',
+                      padding: '13px',
+                      fontWeight: 500,
+                      fontSize: '15px',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                  >
+                    <Building2 className="w-4 h-4 text-emerald-600" /> Sign in with Enterprise SSO
+                  </button>
+                </>
+              )}
 
               {/* Create Account */}
               <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '32px' }}>
