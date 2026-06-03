@@ -677,17 +677,24 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(ticket_id: str, updates: dict, user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
+    # Protect sensitive fields from being overwritten
+    updates.pop("ticket_id", None)
+    updates.pop("owner_id", None)
+
+    user_id = user.get("id") or user.get("sub")
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
+            if str(ticket.owner_id) != str(user_id):
+                raise HTTPException(status_code=403, detail="Not authorized to modify this ticket")
             # Convert to dict, update, then back to model
             ticket_dict = ticket.dict()
             ticket_dict.update(updates)
             updated_ticket = TicketRecord(**ticket_dict)
             TICKETS_DB[i] = updated_ticket
             return updated_ticket
-    
+
     raise HTTPException(status_code=404, detail="Ticket not found")
 
 
