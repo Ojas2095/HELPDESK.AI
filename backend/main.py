@@ -255,8 +255,39 @@ async def lifespan(app: FastAPI):
 
     if strict_mode and not classifier_loaded_flag:
         raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
-    yield
-    print("[Shutdown] Cleaning up ...")
+    gdpr_task = None
+    try:
+        if supabase:
+            try:
+                from backend.services.gdpr_service import load as load_gdpr_service, GdprService
+                gdpr_service = load_gdpr_service(supabase)
+                
+                async def run_gdpr_lifecycle_loop(service: GdprService, interval_seconds: int = 86400) -> None:
+                    while True:
+                        try:
+                            print("[Startup-GDPR] Running daily automated privacy lifecycle sweeps...")
+                            service.cleanup_expired_attachments()
+                            service.archive_old_tickets()
+                            service.cleanup_inactive_accounts()
+                        except Exception as e:
+                            print(f"[WARNING-GDPR] Automated lifecycle sweeps failed: {e}")
+                        await asyncio.sleep(interval_seconds)
+                        
+                gdpr_interval = int(os.environ.get("GDPR_LIFECYCLE_INTERVAL_SECONDS", "86400"))
+                gdpr_task = asyncio.create_task(run_gdpr_lifecycle_loop(gdpr_service, interval_seconds=gdpr_interval))
+                print(f"[Startup] GDPR lifecycle automated sweeps enabled ({gdpr_interval}s interval).")
+            except Exception as e:
+                print(f"[WARNING] GDPR service initialization failed: {e}")
+
+        yield
+    finally:
+        if gdpr_task:
+            gdpr_task.cancel()
+            try:
+                await gdpr_task
+            except asyncio.CancelledError:
+                pass
+        print("[Shutdown] Cleaning up ...")
 
 
 # ---------------------------------------------------------------------------
@@ -1138,6 +1169,96 @@ async def get_current_user(request: Request) -> dict:
     if hasattr(user, "dict"):
         return user.dict()
     return dict(user)
+
+
+# ---------------------------------------------------------------------------
+# GDPR & User Data Privacy endpoints
+# ---------------------------------------------------------------------------
+@app.get("/api/privacy/preferences")
+async def get_privacy_preferences(user: dict = Depends(get_current_user)):
+    user_id = user["id"]
+    from backend.services.gdpr_service import load as load_gdpr_service
+    gdpr_service = load_gdpr_service(supabase)
+    return gdpr_service.get_privacy_preferences(user_id)
+
+@app.post("/api/privacy/preferences")
+async def update_privacy_preferences(body: dict, user: dict = Depends(get_current_user)):
+    user_id = user["id"]
+    from backend.services.gdpr_service import load as load_gdpr_service
+    gdpr_service = load_gdpr_service(supabase)
+    return gdpr_service.update_privacy_preferences(user_id, body)
+
+@app.get("/api/privacy/requests")
+async def get_privacy_requests(user: dict = Depends(get_current_user)):
+    user_id = user["id"]
+    from backend.services.gdpr_service import load as load_gdpr_service
+    gdpr_service = load_gdpr_service(supabase)
+    return gdpr_service.get_privacy_requests(user_id)
+
+@app.post("/api/privacy/export")
+async def request_data_export(body: dict, user: dict = Depends(get_current_user)):
+    user_id = user["id"]
+    export_format = body.get("format", "json").lower()
+    from backend.services.gdpr_service import load as load_gdpr_service
+    gdpr_service = load_gdpr_service(supabase)
+    
+    gdpr_service.submit_privacy_request(user_id, "export")
+    export_data = gdpr_service.generate_user_data_export(user_id)
+    
+    if export_format == "csv":
+        stream = gdpr_service.export_to_csv_zip_stream(export_data)
+        return StreamingResponse(
+            stream,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=user_export_{user_id[:8]}.csv"}
+        )
+    else:
+        return JSONResponse(
+            content=export_data,
+            headers={"Content-Disposition": f"attachment; filename=user_export_{user_id[:8]}.json"}
+        )
+
+@app.post("/api/privacy/delete-request")
+async def request_account_deletion(user: dict = Depends(get_current_user)):
+    user_id = user["id"]
+    from backend.services.gdpr_service import load as load_gdpr_service
+    gdpr_service = load_gdpr_service(supabase)
+    req = gdpr_service.submit_privacy_request(user_id, "deletion")
+    return {"message": "Account deletion request submitted. Your data will be deleted after the 30-day confirmation window.", "request": req}
+
+# Admin privacy endpoints
+@app.get("/api/admin/privacy/requests")
+async def admin_get_privacy_requests(user: dict = Depends(get_current_user)):
+    role = user.get("user_metadata", {}).get("role", "user")
+    if role not in ["admin", "super_admin", "master_admin"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    from backend.services.gdpr_service import load as load_gdpr_service
+    gdpr_service = load_gdpr_service(supabase)
+    return gdpr_service.get_all_privacy_requests()
+
+@app.post("/api/admin/privacy/requests/{request_id}/approve")
+async def admin_approve_privacy_request(request_id: str, body: dict, user: dict = Depends(get_current_user)):
+    role = user.get("user_metadata", {}).get("role", "user")
+    if role not in ["admin", "super_admin", "master_admin"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    from backend.services.gdpr_service import load as load_gdpr_service
+    gdpr_service = load_gdpr_service(supabase)
+    
+    res = supabase.table("privacy_requests").select("*").eq("id", request_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Request not found")
+    req = res.data[0]
+    
+    req_user_id = req["user_id"]
+    req_type = req["request_type"]
+    
+    if req_type == "deletion":
+        gdpr_service.execute_account_deletion_anonymization(req_user_id)
+        
+    updated_req = gdpr_service.update_privacy_request_status(request_id, "Completed", admin_notes=body.get("admin_notes", "Approved and processed by Admin"))
+    return {"status": "Completed", "request": updated_req}
+
 
 class LoginBody(BaseModel):
     email: str
