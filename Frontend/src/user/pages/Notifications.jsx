@@ -46,7 +46,7 @@ const NotificationsPage = () => {
           notifications.map((notif) => (
             <Card
               key={notif.id}
-              onClick={() => navigate(`/ticket/${notif.ticketId}`)}
+              onClick={() => notif.ticketId && navigate(`/ticket/${notif.ticketId}`)}
               className={`p-6 rounded-2xl border transition-all cursor-pointer group flex gap-5 items-start ${!notif.read ? 'border-emerald-200 bg-emerald-50/20 shadow-sm' : 'border-gray-100 hover:border-gray-200'}`}
             >
               <div
@@ -69,9 +69,11 @@ const NotificationsPage = () => {
                   {notif.message}
                 </p>
                 <div className='flex items-center gap-3 mt-4'>
-                  <span className='text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-100'>
-                    Ticket #{formatTicketId(notif.ticketId)}
-                  </span>
+                  {notif.ticketId && (
+                    <span className='text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-100'>
+                      Ticket #{formatTicketId(notif.ticketId)}
+                    </span>
+                  )}
                   {!notif.read && (
                     <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse'></span>
                   )}
