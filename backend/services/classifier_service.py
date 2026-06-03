@@ -86,6 +86,8 @@ class ClassifierService:
         """
         Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
         """
+        if not text or not text.strip():
+            raise ValueError("Input text cannot be empty or whitespace only")
         self.load()
 
         encoding = self.tokenizer(
