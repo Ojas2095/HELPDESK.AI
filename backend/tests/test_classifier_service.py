@@ -1,14 +1,18 @@
 import sys
-from unittest.mock import MagicMock
-
-# Mock heavy/missing dependencies
-sys.modules["torch"] = MagicMock()
-sys.modules["torch.nn"] = MagicMock()
-sys.modules["torch.nn.functional"] = MagicMock()
-sys.modules["transformers"] = MagicMock()
-
 import unittest
-from services.classifier_service import ClassifierService
+from unittest.mock import MagicMock, patch
+
+# Mock heavy/missing dependencies during import using patch.dict to prevent leakage
+mock_modules = {
+    "torch": MagicMock(),
+    "torch.nn": MagicMock(),
+    "torch.nn.functional": MagicMock(),
+    "transformers": MagicMock(),
+}
+
+with patch.dict(sys.modules, mock_modules):
+    # Import matching the package-qualified namespace
+    from backend.services.classifier_service import ClassifierService
 
 class TestClassifierService(unittest.TestCase):
     def setUp(self):
