@@ -3036,6 +3036,7 @@ async def analyze_stream(request: Request, request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+# Refactored: Renamed duplicate /ai/analyze_ticket route to /ai/analyze_ticket/legacy (Issue #1427)
 @app.post("/ai/analyze_ticket/legacy", deprecated=True)
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
@@ -3047,7 +3048,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
 
     The duplicate endpoints /ai/analyze_ticket/legacy and /ai/analyze both
     delegate to analyze_only(), making /ai/analyze_ticket/legacy unnecessary.
-    See: https://github.com/ritesh-1918/HELPDESK.AI/issues/751
+    See: https://github.com/ritesh-1918/HELPDESK.AI/issues/751 and https://github.com/ritesh-1918/HELPDESK.AI/issues/1427
     """
     result = await analyze_only(request_body)
     # Wrap with deprecation warning
