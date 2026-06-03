@@ -1,15 +1,21 @@
 /**
- * useWebSocket — auto-reconnecting WebSocket hook with heartbeat support.
+ * useWebSocket — auto-reconnecting WebSocket hook with bidirectional heartbeat.
  *
- * Connects to the backend WebSocket endpoint for real-time ticket updates.
- * Automatically re-establishes the connection on drop with exponential backoff.
+ * Heartbeat protocol (client-initiated):
+ *   Client sends  {"type": "ping"}  every PING_INTERVAL_MS.
+ *   Server echoes {"type": "pong"}  immediately.
+ *   If no pong arrives within PONG_TIMEOUT_MS the hook treats the connection
+ *   as dead and triggers exponential-backoff reconnection.
+ *
+ * Heartbeat protocol (server-initiated):
+ *   Server sends  {"type": "ping"}  every ~30 s.
+ *   Client echoes {"type": "pong"}  immediately.
+ *   If the server receives no pong it disconnects the client.
  *
  * Usage:
- *   import useWebSocket from "../../hooks/useWebSocket";
+ *   const { isConnected, sendMessage, lastMessage, connectionError } =
+ *     useWebSocket(companyId);
  *
- *   const { isConnected, sendMessage, lastMessage } = useWebSocket(companyId);
- *
- *   // lastMessage updates on every incoming message → use in a useEffect
  *   useEffect(() => {
  *     if (lastMessage?.type === "ticket_update") {
  *       store.addTicket(lastMessage.ticket);
@@ -24,8 +30,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 // ---------------------------------------------------------------------------
 
 const WS_BASE_URL = import.meta.env.VITE_WS_URL || "ws://localhost:7860";
-const PING_INTERVAL_MS = 25_000; // slightly < server-side 30s so pong arrives first
-const PONG_TIMEOUT_MS = 12_000; // slightly > server-side 10s timeout
+const PING_INTERVAL_MS = 25_000;     // slightly < server-side 30 s so pong arrives first
+const PONG_TIMEOUT_MS = 12_000;      // if no pong within 12 s, treat connection as dead
 const MAX_RECONNECT_DELAY_MS = 30_000;
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
 
@@ -40,13 +46,11 @@ export default function useWebSocket(companyId) {
 
   const wsRef = useRef(null);
   const pingTimerRef = useRef(null);
-  const pongTimeoutRef = useRef(null);
+  const pongTimeoutRef = useRef(null);  // armed after each outgoing ping, cancelled on pong
   const reconnectTimerRef = useRef(null);
   const reconnectAttemptRef = useRef(0);
   const mountedRef = useRef(true);
   const companyIdRef = useRef(companyId);
-
-  // Keep a ref to latest companyId so the effect closure always has it
 
   // ---- Cleanup helpers ---------------------------------------------------
 
@@ -77,20 +81,7 @@ export default function useWebSocket(companyId) {
     }
   }, [clearTimers]);
 
-  // ---- Start heartbeat timers (called after connect) --------------------
-
-  const startHeartbeat = useCallback(() => {
-    // Periodic pings
-    pingTimerRef.current = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "ping" }));
-      }
-    }, PING_INTERVAL_MS);
-  }, []);
-
-  // ---- WebSocket lifecycle & Reconnection ---------------------------------
-
-  const connectRef = useRef(null);
+  // ---- Reconnect scheduling ---------------------------------------------
 
   const scheduleReconnect = useCallback(() => {
     if (!mountedRef.current || !companyIdRef.current) return;
@@ -102,12 +93,55 @@ export default function useWebSocket(companyId) {
     );
     reconnectAttemptRef.current = attempt + 1;
 
-    setConnectionError(`Reconnecting in ${Math.round(delay / 1000)}s...`);
+    setConnectionError(`Reconnecting in ${Math.round(delay / 1000)}s…`);
 
     reconnectTimerRef.current = setTimeout(() => {
       if (mountedRef.current && connectRef.current) connectRef.current();
     }, delay);
   }, []);
+
+  // ---- Heartbeat ---------------------------------------------------------
+
+  /**
+   * Start the client-side heartbeat loop.
+   *
+   * Every PING_INTERVAL_MS:
+   *  1. Send {"type": "ping"} to the server.
+   *  2. Arm a PONG_TIMEOUT_MS deadline timer.
+   *  3. When the server echoes {"type": "pong"} (handled in onmessage),
+   *     the deadline is cancelled.
+   *  4. If the deadline fires, the connection is dead — force a reconnect.
+   */
+  const startHeartbeat = useCallback((socket) => {
+    pingTimerRef.current = setInterval(() => {
+      if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+      // Send the keepalive ping
+      socket.send(JSON.stringify({ type: "ping" }));
+
+      // Arm the pong deadline
+      if (pongTimeoutRef.current) {
+        clearTimeout(pongTimeoutRef.current);
+      }
+      pongTimeoutRef.current = setTimeout(() => {
+        // No pong received within PONG_TIMEOUT_MS — connection is silently dead
+        pongTimeoutRef.current = null;
+        if (mountedRef.current) {
+          setIsConnected(false);
+          clearTimers();
+          if (socket) {
+            socket.onclose = null; // prevent double-reconnect from onclose
+            socket.close();
+          }
+          scheduleReconnect();
+        }
+      }, PONG_TIMEOUT_MS);
+    }, PING_INTERVAL_MS);
+  }, [clearTimers, scheduleReconnect]);
+
+  // ---- WebSocket lifecycle -----------------------------------------------
+
+  const connectRef = useRef(null);
 
   const connect = useCallback(() => {
     cleanup();
@@ -133,26 +167,36 @@ export default function useWebSocket(companyId) {
       setIsConnected(true);
       setConnectionError(null);
       reconnectAttemptRef.current = 0;
-      startHeartbeat();
+      startHeartbeat(socket);
     };
 
     socket.onmessage = (event) => {
       if (!mountedRef.current) return;
+      let data;
       try {
-        const data = JSON.parse(event.data);
-
-        // Respond to server pings immediately
-        if (data.type === "ping") {
-          if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: "pong" }));
-          }
-          return;
-        }
-
-        setLastMessage(data);
+        data = JSON.parse(event.data);
       } catch {
-        // ignore malformed frames
+        return; // ignore malformed frames
       }
+
+      // Server echoes our ping — cancel the pong deadline timer
+      if (data.type === "pong") {
+        if (pongTimeoutRef.current) {
+          clearTimeout(pongTimeoutRef.current);
+          pongTimeoutRef.current = null;
+        }
+        return;
+      }
+
+      // Server-initiated ping — echo back immediately so server records liveness
+      if (data.type === "ping") {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "pong" }));
+        }
+        return;
+      }
+
+      setLastMessage(data);
     };
 
     socket.onclose = (event) => {
@@ -160,7 +204,7 @@ export default function useWebSocket(companyId) {
       setIsConnected(false);
       clearTimers();
 
-      // Don't reconnect on clean closes (1000 = normal, 400x = intentional)
+      // Don't reconnect on clean closes (1000 = normal, 400x = intentional server policy)
       if (event.code === 1000 || (event.code >= 4000 && event.code < 5000)) {
         return;
       }
@@ -169,7 +213,7 @@ export default function useWebSocket(companyId) {
     };
 
     socket.onerror = () => {
-      // onclose fires immediately after onerror, so reconnect is handled there
+      // onclose fires immediately after onerror; reconnect is handled there
     };
   }, [cleanup, clearTimers, startHeartbeat, scheduleReconnect]);
 
@@ -179,16 +223,11 @@ export default function useWebSocket(companyId) {
 
   // ---- Send helper -------------------------------------------------------
 
-  const sendMessage = useCallback(
-    (msg) => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          typeof msg === "string" ? msg : JSON.stringify(msg)
-        );
-      }
-    },
-    []
-  );
+  const sendMessage = useCallback((msg) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(typeof msg === "string" ? msg : JSON.stringify(msg));
+    }
+  }, []);
 
   // ---- Main effect -------------------------------------------------------
 
