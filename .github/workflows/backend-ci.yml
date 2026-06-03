@@ -16,6 +16,9 @@ on:
       - main
       - gssoc
 
+permissions:
+  contents: read
+
 jobs:
   smoke-test:
     name: Smoke Test & Unit Tests
