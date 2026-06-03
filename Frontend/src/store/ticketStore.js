@@ -27,6 +27,19 @@ const useTicketStore = create(
                 tickets: state.tickets.map(t => t.id === ticketId ? { ...t, ...updates } : t)
             })),
 
+            addTicket: (ticket) => set((state) => {
+                if (state.tickets.some(t => t.id === ticket.id)) return state;
+                return { tickets: [...state.tickets, ticket] };
+            }),
+
+            updateTicket: (ticketId, updates) => set((state) => ({
+                tickets: state.tickets.map(t => t.id === ticketId ? { ...t, ...updates } : t)
+            })),
+
+            removeTicket: (ticketId) => set((state) => ({
+                tickets: state.tickets.filter(t => t.id !== ticketId)
+            })),
+
             reset: () => set({
                 aiTicket: null,
                 activeTicket: null,
