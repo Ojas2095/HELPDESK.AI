@@ -24,6 +24,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+CACHE_TTL_SECONDS = int(os.getenv("NOTIFICATION_CACHE_TTL_SECONDS", "300"))  # 5 minutes default
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -55,7 +57,7 @@ class NotificationRoutingMiddleware:
             os.getenv("SUPABASE_URL"),
             os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         )
-        self._settings_cache: Dict[str, Dict] = {}
+        self._settings_cache: Dict[str, Dict] = {}  # {company_id: {"data": ..., "cached_at": datetime}}
         self.log_level = os.getenv("NOTIFICATION_ROUTING_LOG_LEVEL", "info").lower()
 
     def _fetch_system_settings(self, company_id: str) -> Dict:
@@ -99,9 +101,15 @@ class NotificationRoutingMiddleware:
         Returns:
             Dict with company notification preferences
         """
-        if company_id not in self._settings_cache:
-            self._settings_cache[company_id] = self._fetch_system_settings(company_id)
-        return self._settings_cache[company_id]
+        cached = self._settings_cache.get(company_id)
+        if cached:
+            age = (datetime.now(timezone.utc) - cached["cached_at"]).total_seconds()
+            if age < CACHE_TTL_SECONDS:
+                return cached["data"]
+            logger.info(f"Cache expired for company {company_id}, re-fetching settings")
+        settings = self._fetch_system_settings(company_id)
+        self._settings_cache[company_id] = {"data": settings, "cached_at": datetime.now(timezone.utc)}
+        return settings
 
     def should_send_email_notification(self, company_id: str, notification_type: NotificationType) -> bool:
         """
@@ -222,7 +230,7 @@ class NotificationRoutingMiddleware:
         """
         if company_id in self._settings_cache:
             del self._settings_cache[company_id]
-            logger.info(f"Invalidated settings cache for company {company_id}")
+            logger.info(f"Invalidated settings cache for company {company_id} (TTL: {CACHE_TTL_SECONDS}s)")
 
 
 # Singleton instance
