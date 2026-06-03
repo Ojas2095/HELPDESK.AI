@@ -216,6 +216,77 @@ class TestUpdateTicketAuth:
                                 headers={"Authorization": "Bearer test-token"})
         assert response.status_code in (200, 204)
 
+    @patch("main.supabase")
+    def test_update_ticket_rejects_non_owner(self, mock_supabase):
+        """PATCH must reject authenticated users who do not own the ticket."""
+        profile = {
+            "id": "test-user-id-123",
+            "company_id": "test-company-id",
+            "company": "Test Company",
+            "role": "user",
+        }
+        ticket = {
+            "id": "ticket-123",
+            "user_id": "other-user-id",
+            "company_id": "test-company-id",
+        }
+
+        profile_query = MagicMock()
+        profile_query.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(data=profile)
+        ticket_query = MagicMock()
+        ticket_query.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(data=ticket)
+
+        mock_supabase.table.side_effect = [ticket_query, profile_query]
+
+        response = client.patch(
+            "/tickets/ticket-123",
+            json={"status": "closed"},
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+        assert response.status_code == 403
+        assert "not authorized" in response.json()["detail"]
+        ticket_query.update.assert_not_called()
+
+    @patch("main.supabase")
+    def test_update_ticket_allows_only_whitelisted_fields(self, mock_supabase):
+        """PATCH should ignore ownership/routing fields and update only allowed fields."""
+        profile = {
+            "id": "test-user-id-123",
+            "company_id": "test-company-id",
+            "company": "Test Company",
+            "role": "user",
+        }
+        ticket = {
+            "id": "ticket-123",
+            "user_id": "test-user-id-123",
+            "company_id": "test-company-id",
+        }
+        updated = {**ticket, "status": "closed"}
+
+        profile_query = MagicMock()
+        profile_query.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(data=profile)
+
+        ticket_query = MagicMock()
+        ticket_query.select.return_value.eq.return_value.single.return_value.execute.return_value = MagicMock(data=ticket)
+        ticket_query.update.return_value.eq.return_value.execute.return_value = MagicMock(data=[updated])
+
+        mock_supabase.table.side_effect = [ticket_query, profile_query, ticket_query]
+
+        response = client.patch(
+            "/tickets/ticket-123",
+            json={
+                "status": "closed",
+                "owner_id": "attacker-user-id",
+                "assigned_team": "Security",
+                "ticket_id": "rewritten",
+            },
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+        assert response.status_code == 200
+        ticket_query.update.assert_called_once_with({"status": "closed"})
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
