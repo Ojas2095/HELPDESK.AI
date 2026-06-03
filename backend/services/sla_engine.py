@@ -134,7 +134,7 @@ class SLAEngine:
     def evaluate_ticket(self, ticket: dict) -> dict:
         """
         Evaluate a single ticket's SLA status.
-        
+
         Returns dict with:
           - sla_status: SLAStatus value
           - remaining_seconds: seconds until breach (negative if breached)
@@ -144,6 +144,12 @@ class SLAEngine:
           - policy: the applied SLA policy
         """
         priority_key = (ticket.get("priority") or "medium").lower().strip()
+        if priority_key not in SLA_POLICIES:
+            logger.warning(
+                "[SLAEngine] Unknown priority %r for ticket %s; falling back to 'medium'.",
+                ticket.get("priority"),
+                ticket.get("id"),
+            )
         policy = SLA_POLICIES.get(priority_key, SLA_POLICIES["medium"])
 
         # Resolve the start time: use sla_started_at if set, else created_at
