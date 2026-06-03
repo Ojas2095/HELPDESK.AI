@@ -15,6 +15,18 @@ export default defineConfig({
     },
   },
   build: {
-    sourcemap: true
-  }
+    sourcemap: true,
+  },
+  // Security headers served by the Vite dev server so developers experience
+  // the same browser hardening controls as production users.
+  server: {
+    headers: {
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "SAMEORIGIN",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy":
+        "geolocation=(), microphone=(), camera=(), payment=(), usb=()",
+      "X-XSS-Protection": "0",
+    },
+  },
 })

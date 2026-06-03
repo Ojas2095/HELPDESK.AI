@@ -43,5 +43,15 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Pending Requests** | Onboarding queue. | Approve/Reject new company registrations. |
 | **Master Bug Reports** | Platform diagnostics. | System-wide error tracking and resolution. |
 
+## 🛡️ Security Infrastructure
+
+| Component | Location | Responsibility |
+| :--- | :--- | :--- |
+| **Security Headers Middleware** | `backend/middleware/security_headers.py` | Injects CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy into every HTTP response. |
+| **Vite Dev-Server Headers** | `Frontend/vite.config.js` | Mirrors production security headers in the local development environment. |
+| **Vercel Production Headers** | `Frontend/vercel.json` | Enforces full security header suite (including HSTS and CSP) on the deployed frontend via Vercel edge layer. |
+| **SRI Attributes** | `Frontend/index.html` | `crossorigin="anonymous"` on external stylesheet links enables browser SRI verification. |
+| **Security Header Tests** | `backend/tests/test_security_headers.py` | 25+ unit and integration tests validating every header directive and env-driven configuration. |
+
 ---
 *Documented with millisecond precision for Helpdesk.ai Platform.*
