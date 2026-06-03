@@ -5,6 +5,7 @@ Translation helpers for locale detection, MyMemory API fallback, and ticket tran
 from __future__ import annotations
 
 import logging
+import re
 from typing import Optional
 from functools import lru_cache
 

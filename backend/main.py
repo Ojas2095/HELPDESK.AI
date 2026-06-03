@@ -24,8 +24,8 @@ import contextlib
 from logging.handlers import RotatingFileHandler
 
 # Suppress harmless PyTorch CPU pin_memory warning
-from encryption import encrypt_pii, decrypt_pii, is_encrypted
-from pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
+from backend.encryption import encrypt_pii, decrypt_pii, is_encrypted
+from backend.pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
@@ -1138,7 +1138,7 @@ async def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -
 app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
 # ── Security Headers Middleware (Helmet.js equivalent) ────────────────────────
-from security_middleware import SecurityHeadersMiddleware, get_allowed_origins
+from backend.security_middleware import SecurityHeadersMiddleware, get_allowed_origins
 app.add_middleware(SecurityHeadersMiddleware)
 
 # ── CORS — strictly from ALLOWED_ORIGINS env var, never wildcard ──────────────
@@ -1196,11 +1196,11 @@ from backend.routes.estimator import router as estimator_router
 app.include_router(estimator_router)
 
 # Tagging router (Issue #404)
-from tag_router import router as tag_router
+from backend.tag_router import router as tag_router
 app.include_router(tag_router)
 
 # Sentiment router (Issue #775)
-from sentiment_router import router as sentiment_router
+from backend.sentiment_router import router as sentiment_router
 app.include_router(sentiment_router)
 
 
