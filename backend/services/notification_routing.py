@@ -49,6 +49,9 @@ class NotificationRoutingMiddleware:
 # the new schema. The database table and column names are `system_settings`,
 # `email_notifications`, and `admin_alerts`.
 
+    # Cache TTL in seconds (5 minutes)
+    SETTINGS_CACHE_TTL_SECONDS = 300
+
     def __init__(self):
         """Initialize the notification routing middleware."""
         self.supabase = create_client(
@@ -99,9 +102,22 @@ class NotificationRoutingMiddleware:
         Returns:
             Dict with company notification preferences
         """
-        if company_id not in self._settings_cache:
-            self._settings_cache[company_id] = self._fetch_system_settings(company_id)
-        return self._settings_cache[company_id]
+        # Check if cached data exists and is still valid
+        if company_id in self._settings_cache:
+            cached_entry = self._settings_cache[company_id]
+            cached_at = cached_entry.get("cached_at")
+            if cached_at:
+                age_seconds = (datetime.now(timezone.utc) - cached_at).total_seconds()
+                if age_seconds < self.SETTINGS_CACHE_TTL_SECONDS:
+                    return cached_entry["data"]
+        
+        # Fetch fresh data and cache it with timestamp
+        settings = self._fetch_system_settings(company_id)
+        self._settings_cache[company_id] = {
+            "data": settings,
+            "cached_at": datetime.now(timezone.utc)
+        }
+        return settings
 
     def should_send_email_notification(self, company_id: str, notification_type: NotificationType) -> bool:
         """
