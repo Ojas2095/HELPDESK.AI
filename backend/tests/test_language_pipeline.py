@@ -273,5 +273,69 @@ class TestTranslateFromEnglish(unittest.TestCase):
             self.assertEqual(result, "Ticket resolved")
 
 
+# ---------------------------------------------------------------------------
+# detect_and_translate_ticket_text
+# ---------------------------------------------------------------------------
+
+class TestDetectAndTranslateTicketText(unittest.TestCase):
+
+    def test_english_text_skips_translation(self):
+        from backend.language_pipeline import detect_and_translate_ticket_text
+
+        with patch("backend.language_pipeline.detect_language", return_value="en"):
+            with patch("backend.language_pipeline._run_translation") as run_translation:
+                result = detect_and_translate_ticket_text("Printer is jammed")
+
+        self.assertEqual(result["text_for_analysis"], "Printer is jammed")
+        self.assertFalse(result["was_translated"])
+        self.assertFalse(result["translation_attempted"])
+        self.assertFalse(result["translation_failed"])
+        run_translation.assert_not_called()
+
+    def test_non_english_translation_success_sets_attempted_flag(self):
+        from backend.language_pipeline import detect_and_translate_ticket_text
+
+        with patch("backend.language_pipeline.detect_language", return_value="es"):
+            with patch("backend.language_pipeline._run_translation", return_value="Printer is broken"):
+                result = detect_and_translate_ticket_text("La impresora está rota")
+
+        self.assertEqual(result["text_for_analysis"], "Printer is broken")
+        self.assertTrue(result["was_translated"])
+        self.assertTrue(result["translation_attempted"])
+        self.assertFalse(result["translation_failed"])
+
+    def test_translation_returning_original_logs_failure(self):
+        from backend.language_pipeline import detect_and_translate_ticket_text
+
+        original = "La impresora está rota"
+        with patch("backend.language_pipeline.detect_language", return_value="es"):
+            with patch("backend.language_pipeline._run_translation", return_value=original):
+                with self.assertLogs("backend.language_pipeline", level="ERROR") as logs:
+                    result = detect_and_translate_ticket_text(original)
+
+        self.assertEqual(result["text_for_analysis"], original)
+        self.assertFalse(result["was_translated"])
+        self.assertTrue(result["translation_attempted"])
+        self.assertTrue(result["translation_failed"])
+        self.assertTrue(any("Translation attempted but failed" in msg for msg in logs.output))
+
+    def test_translation_exception_logs_failure_and_sets_flag(self):
+        from backend.language_pipeline import detect_and_translate_ticket_text
+
+        original = "La impresora está rota"
+        with patch("backend.language_pipeline.detect_language", return_value="es"):
+            with patch(
+                "backend.language_pipeline._run_translation",
+                side_effect=RuntimeError("model unavailable"),
+            ):
+                with self.assertLogs("backend.language_pipeline", level="ERROR") as logs:
+                    result = detect_and_translate_ticket_text(original)
+
+        self.assertEqual(result["text_for_analysis"], original)
+        self.assertTrue(result["translation_attempted"])
+        self.assertTrue(result["translation_failed"])
+        self.assertTrue(any("model unavailable" in msg for msg in logs.output))
+
+
 if __name__ == "__main__":
     unittest.main()
