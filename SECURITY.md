@@ -21,3 +21,7 @@ We take all security vulnerabilities seriously. Once a vulnerability is submitte
 3. Release a patch or advisory once the issue has been resolved.
 
 Thank you for helping us keep HELPDESK.AI safe and secure for all users!
+
+
+## Semantic Versioning rules (Issue #1553)
+Document all backward-incompatible config adjustments as Major changes in release releases.
