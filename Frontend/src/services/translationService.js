@@ -34,7 +34,10 @@ export async function translateText(text, fromLang = 'en', toLang = 'en') {
     try {
         const langPair = `${fromLang}|${toLang}`;
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (!response.ok) throw new Error(`Translation API error: ${response.status}`);
 
         const data = await response.json();
