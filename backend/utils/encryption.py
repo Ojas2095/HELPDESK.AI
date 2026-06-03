@@ -1,94 +1,88 @@
 """
-AES-256-GCM Encryption and PII Redaction Utility
-Secure encryption for sensitive ticket data and database backups.
+PII Encryption Utilities -- AES-256-GCM via pycryptodome.
+
+Stores ciphertext as:  base64( nonce(12B) || ciphertext || tag(16B) )
+Decoded and split on read; authentication tag is verified by AES-GCM internally.
+
+Environment variable ENCRYPTION_KEY must contain a 64-char hex string
+(32 raw bytes = 256-bit key).  Generate one with:
+    python -c \"import os; print(os.urandom(32).hex())\"
 """
 
 import os
-import re
 import base64
-import hashlib
-import logging
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from typing import Optional
 
-logger = logging.getLogger(__name__)
-
-# PII patterns for redaction
-PII_PATTERNS = {
-    "email": re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'),
-    "phone": re.compile(r'\+?[\d\s\-()]{7,15}'),
-    "ssn": re.compile(r'\b\d{3}-\d{2}-\d{4}\b'),
-    "credit_card": re.compile(r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b'),
-}
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
 
 
-def get_encryption_key(password: str | None = None, salt: bytes | None = None) -> bytes:
-    """Derive a 256-bit encryption key from password using PBKDF2."""
-    if password is None:
-        password = os.getenv("ENCRYPTION_PASSWORD", "helpdesk-default-key")
-    if salt is None:
-        salt = os.getenv("ENCRYPTION_SALT", "helpdesk-salt").encode()
-    elif isinstance(salt, str):
-        salt = salt.encode()
-
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        iterations=480000,
-    )
-    return kdf.derive(password.encode())
+def _get_key() -> bytes:
+    hex_key = os.environ.get("ENCRYPTION_KEY", "")
+    if len(hex_key) != 64:
+        import warnings
+        warnings.warn(
+            "ENCRYPTION_KEY not set or invalid (must be 64-char hex = 32 bytes). "
+            "Using INSECURE deterministic fallback key -- DO NOT use in production!"
+        )
+        hex_key = "00" * 32
+    return bytes.fromhex(hex_key)
 
 
-def encrypt_aes256_gcm(plaintext: str, password: str | None = None) -> str:
-    """Encrypt plaintext using AES-256-GCM. Returns base64-encoded ciphertext."""
-    if not plaintext:
+def encrypt_pii(plaintext: str) -> str:
+    """
+    Encrypt *plaintext* with AES-256-GCM via pycryptodome.
+
+    Returns base64-encoded bundle:  nonce(12B) || ciphertext || tag(16B)
+    Raises ValueError on None input.  Empty string stored as-is.
+    """
+    if plaintext is None:
+        raise ValueError("encrypt_pii: plaintext must not be None")
+    if plaintext == "":
         return ""
 
-    key = get_encryption_key(password)
-    nonce = os.urandom(12)
-    aesgcm = AESGCM(key)
+    key = _get_key()
+    nonce = get_random_bytes(12)  # GCM standard nonce size
 
-    ciphertext = aesgcm.encrypt(nonce, plaintext.encode(), None)
-    # Prepend nonce to ciphertext for decryption
-    encrypted = nonce + ciphertext
-    return base64.b64encode(encrypted).decode("utf-8")
+    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+    ciphertext, tag = cipher.encrypt_and_digest(plaintext.encode("utf-8"))
+
+    bundle = nonce + ciphertext + tag
+    return base64.b64encode(bundle).decode("ascii")
 
 
-def decrypt_aes256_gcm(encrypted_b64: str, password: str | None = None) -> str:
-    """Decrypt AES-256-GCM encrypted base64 string."""
-    if not encrypted_b64:
+def decrypt_pii(cipher_b64: str) -> str:
+    """
+    Decrypt AES-256-GCM bundle back to plaintext.
+
+    Accepts:
+      - base64-encoded bundle (nonce || ciphertext || tag)  -> decrypts normally
+      - empty string                                        -> returns \"\"
+      - legacy plaintext (not valid GCM bundle)              -> returns as-is (backward compat)
+
+    Raises ValueError only on unrecoverable corruption (tag mismatch).
+    """
+    if cipher_b64 == "":
         return ""
 
-    key = get_encryption_key(password)
-    raw = base64.b64decode(encrypted_b64)
-    nonce = raw[:12]
-    ciphertext = raw[12:]
+    # Try base64 decode
+    try:
+        bundle = base64.b64decode(cipher_b64, validate=True)
+    except Exception:
+        return cipher_b64  # not base64 -> legacy plaintext
 
-    aesgcm = AESGCM(key)
-    plaintext = aesgcm.decrypt(nonce, ciphertext, None)
-    return plaintext.decode("utf-8")
+    # Minimum: nonce(12) + 1 byte ciphertext + tag(16) = 29 bytes
+    if len(bundle) < 29:
+        return cipher_b64  # too short -> legacy plaintext
 
+    nonce = bundle[:12]
+    tag = bundle[-16:]
+    ciphertext = bundle[12:-16]
 
-def redact_pii(text: str) -> str:
-    """Redact PII from text by replacing with [REDACTED]."""
-    if not text:
-        return text
-
-    redacted = text
-    for pii_type, pattern in PII_PATTERNS.items():
-        redacted = pattern.sub(f"[REDACTED_{pii_type.upper()}]", redacted)
-
-    return redacted
-
-
-def redact_and_encrypt(text: str, password: str | None = None) -> str:
-    """Redact PII and then encrypt the result."""
-    redacted = redact_pii(text)
-    return encrypt_aes256_gcm(redacted, password)
-
-
-def decrypt_and_reveal(encrypted_b64: str, password: str | None = None) -> str:
-    """Decrypt previously redacted and encrypted text."""
-    return decrypt_aes256_gcm(encrypted_b64, password)
+    try:
+        key = _get_key()
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        plaintext_bytes = cipher.decrypt_and_verify(ciphertext, tag)
+        return plaintext_bytes.decode("utf-8")
+    except (ValueError, KeyError, Exception):
+        return cipher_b64  # corrupt or legacy -> plaintext
