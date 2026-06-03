@@ -6,6 +6,7 @@ import {
     FileText, Briefcase, RotateCcw, Send, MessageCircle,
     BrainCircuit, ImageIcon
 } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 import useTicketStore from '../store/ticketStore';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 
@@ -16,48 +17,67 @@ function TicketDetailView() {
     const [ticket, setTicket] = useState(null);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [isLoadingTicket, setIsLoadingTicket] = useState(false);
     const messagesEndRef = useRef(null);
 
-    // Force refresh when window gains focus to ensure latest data from Admin updates
-    useEffect(() => {
-        const handleFocus = () => {
-            useTicketStore.persist.rehydrate();
-        };
-        window.addEventListener('focus', handleFocus);
-        return () => window.removeEventListener('focus', handleFocus);
-    }, []);
+    const fetchTicketById = async (id) => {
+        setIsLoadingTicket(true);
+        try {
+            const { data, error } = await supabase
+                .from('tickets')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error || !data) {
+                console.warn('Ticket fetch failed or ticket not found:', error);
+                navigate('/my-tickets');
+                return;
+            }
+
+            setTicket(data);
+        } catch (err) {
+            console.error('Failed to fetch ticket by ID:', err);
+            navigate('/my-tickets');
+        } finally {
+            setIsLoadingTicket(false);
+        }
+    };
 
     const viewedRef = useRef(null);
 
     useEffect(() => {
-        const foundTicket = tickets.find(t => t.ticket_id.toString() === ticket_id);
+        const foundTicket = tickets.find(t => String(t.ticket_id) === String(ticket_id));
 
-        if (!foundTicket) {
-            // Only navigate if we've already loaded tickets and still don't find it
-            if (tickets.length > 0) {
-                navigate('/my-tickets');
+        if (foundTicket) {
+            setTicket(foundTicket);
+
+            if (viewedRef.current !== ticket_id) {
+                updateTicket(foundTicket.ticket_id, {
+                    last_user_viewed_at: new Date().toISOString()
+                });
+                viewedRef.current = ticket_id;
             }
             return;
         }
 
- 
-        setTicket(foundTicket);
-
-        // Mark ticket as viewed — only once per ticket_id visit to avoid infinite loops
-        if (viewedRef.current !== ticket_id) {
-            updateTicket(foundTicket.ticket_id, {
-                last_user_viewed_at: new Date().toISOString()
-            });
-            viewedRef.current = ticket_id;
+        if (ticket_id && !isLoadingTicket) {
+            fetchTicketById(ticket_id);
         }
-    }, [ticket_id, tickets, navigate, updateTicket]);
+    }, [ticket_id, tickets, isLoadingTicket, updateTicket]);
 
     // Auto-scroll to bottom when messages change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [ticket?.messages]);
 
-    if (!ticket) return null;
+    if (!ticket) {
+        return (
+            <main className="flex-1 w-full max-w-[1100px] mx-auto px-4 md:px-6 py-6 md:py-10 flex items-center justify-center">
+                <div className="text-center text-gray-600">Loading ticket details...</div>
+            </main>
+        );
+    }
 
     const isResolved = ticket.status === 'Resolved by Human Support';
     const isReopened = ticket.reopened_at && !isResolved;

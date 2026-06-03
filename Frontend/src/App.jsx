@@ -155,16 +155,6 @@ function AppLayout() {
   // Initialize Global Realtime Notifications Listener
   useRealtimeNotifications();
 
-  useEffect(() => {
-    if (!user) return;
-    const handleFocus = () => {
-      useTicketStore.persist.rehydrate();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [user]);
-
   // ProtectedRoute handles the redirect to /login if user is not present
   // but we still need to handle role-based navigation here
   return (

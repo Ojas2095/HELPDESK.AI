@@ -36,9 +36,6 @@ const useTicketStore = create(
                 const updatedTickets = state.tickets.map(t => t.ticket_id === ticketId ? { ...t, ...updates } : t);
                 const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
 
-
-
-
                 return {
                     tickets: updatedTickets,
                     activeTicket: shouldUpdateActive ? { ...state.activeTicket, ...updates } : state.activeTicket
@@ -46,11 +43,11 @@ const useTicketStore = create(
             }),
 
             removeTicket: (ticketId) => set((state) => ({
-    tickets: state.tickets.filter(t => t.ticket_id !== ticketId),
-    activeTicket: state.activeTicket?.ticket_id === ticketId
-        ? null
-        : state.activeTicket
-})),
+                tickets: state.tickets.filter(t => t.ticket_id !== ticketId),
+                activeTicket: state.activeTicket?.ticket_id === ticketId
+                    ? null
+                    : state.activeTicket
+            })),
             appendMessage: (ticketId, message) => set((state) => {
                 const updatedTickets = state.tickets.map(t =>
                     t.ticket_id === ticketId
@@ -88,15 +85,13 @@ const useTicketStore = create(
         }),
         {
             name: 'ticket-storage', // unique name for localStorage key
+            partialize: (state) => ({
+                aiTicket: state.aiTicket,
+                activeTicket: state.activeTicket,
+                notifications: state.notifications
+            })
         }
     )
 );
-
-// Listen for storage changes from other tabs to keep the queue in sync
-// Listen for storage changes from other tabs to keep the queue in sync
-window.addEventListener('storage', () => {
-    // Force rehydration on any storage change to catch updates reliably
-    useTicketStore.persist.rehydrate();
-});
 
 export default useTicketStore;

@@ -19,6 +19,102 @@ import {
     TooltipTrigger,
 } from "../../components/ui/tooltip";
 
+const TICKET_STATUS_OPTIONS = [
+    { value: 'All', label: 'All Statuses' },
+    { value: 'Resolved', label: 'Resolved' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'In Progress', label: 'In Progress' },
+    { value: 'Escalated', label: 'Escalated' }
+];
+
+const TICKET_PRIORITY_OPTIONS = [
+    { value: 'All', label: 'All Priorities' },
+    { value: 'Critical', label: 'Critical' },
+    { value: 'High', label: 'High' },
+    { value: 'Medium', label: 'Medium' },
+    { value: 'Low', label: 'Low' }
+];
+
+const getPriorityColor = (priority) => {
+    const p = (priority || '').toLowerCase();
+    if (p === 'high' || p === 'critical') return 'text-red-600 font-bold';
+    if (p === 'medium') return 'text-amber-600 font-bold';
+    if (p === 'low') return 'text-blue-600 font-bold';
+    return 'text-gray-600';
+};
+
+const TicketRow = React.memo(({ ticket, onNavigate }) => (
+    <tr
+        key={ticket.id}
+        onClick={() => onNavigate(`/ticket/${ticket.id}`)}
+        className="group hover:bg-emerald-50/30 transition-colors cursor-pointer"
+    >
+        <td className="px-6 py-4">
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="font-mono font-bold text-gray-900 text-sm">#{formatTicketId(ticket.id)}</span>
+                </TooltipTrigger>
+                <TooltipContent
+                    side="top"
+                    className="bg-gray-900 text-white border-none p-4 w-[300px] shadow-xl rounded-xl"
+                    sideOffset={10}
+                >
+                    <div className="space-y-3">
+                        <div>
+                            <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Issue Overview</p>
+                            <p className="text-sm font-medium leading-relaxed overflow-hidden text-ellipsis whitespace-nowrap">{ticket.summary || ticket.description || 'No description provided'}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Category</p>
+                                <p className="text-sm font-medium">{ticket.category || 'General'}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Priority</p>
+                                <p className="text-sm font-medium capitalize">{ticket.priority || 'medium'}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Assigned Unit</p>
+                            <p className="text-sm font-medium flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-400" />{ticket.assigned_team || 'General Support'}</p>
+                        </div>
+                    </div>
+                </TooltipContent>
+            </Tooltip>
+        </td>
+        <td className="px-6 py-4 w-1/3 max-w-[300px]">
+            <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
+                {ticket.summary || ticket.subject || ticket.description || 'No subject'}
+            </p>
+        </td>
+        <td className="px-6 py-4">
+            <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
+                {ticket.category || 'General'}
+            </span>
+        </td>
+        <td className="px-6 py-4">
+            <TicketStatusBadge status={ticket.status} />
+        </td>
+        <td className="px-6 py-4">
+            <span className={`text-sm capitalize ${getPriorityColor(ticket.priority)}`}>
+                {ticket.priority || 'medium'}
+            </span>
+        </td>
+        <td className="px-6 py-4">
+            <div className="flex flex-col">
+                <span className="text-sm font-semibold text-gray-700">
+                    {formatTimelineDate(ticket.created_at)}
+                </span>
+                <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-0.5">
+                    {getTimeZoneAbbr()} Node
+                </span>
+            </div>
+        </td>
+    </tr>
+));
+
+TicketRow.displayName = 'TicketRow';
+
 function MyTickets() {
     const navigate = useNavigate();
     const { user } = useAuthStore();
@@ -29,6 +125,7 @@ function MyTickets() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
+    const [visibleCount, setVisibleCount] = useState(50);
 
     // Fetch tickets from Supabase
     const fetchTickets = useCallback(async () => {
@@ -41,12 +138,11 @@ function MyTickets() {
         setError(null);
         const { data, error: sbError } = await supabase
             .from('tickets')
-            .select('*') // Select all columns
-            .eq('user_id', user.id) // Filter by the current user's ID
+            .select('id, ticket_id, summary, subject, description, category, status, priority, assigned_team, created_at')
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false });
 
         if (sbError) {
-            console.error("Error fetching tickets:", sbError);
             setError(sbError.message);
             setTickets([]);
         } else {
@@ -56,12 +152,10 @@ function MyTickets() {
     }, [user]);
 
     useEffect(() => {
-         
         fetchTickets();
 
         if (!user?.id) return;
 
-        // Real-time subscription for THIS user's tickets
         const channel = supabase
             .channel(`user_tickets_${user.id}`)
             .on(
@@ -73,7 +167,6 @@ function MyTickets() {
                     filter: `user_id=eq.${user.id}`
                 },
                 (payload) => {
-                    console.log("User tickets real-time event:", payload.eventType, payload.new);
                     if (payload.eventType === 'INSERT') {
                         setTickets(prev => [payload.new, ...prev]);
                     } else if (payload.eventType === 'UPDATE') {
@@ -88,37 +181,34 @@ function MyTickets() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user, fetchTickets]); // Re-subscribe when user changes
+    }, [user, fetchTickets]);
 
     // Filtering logic
     const filteredTickets = useMemo(() => {
-        return tickets
-            .filter(ticket => {
-                const searchLower = searchQuery.toLowerCase();
-                const matchesSearch =
-                    (ticket.subject || '').toLowerCase().includes(searchLower) ||
-                    (ticket.summary || '').toLowerCase().includes(searchLower) ||
-                    (ticket.description || '').toLowerCase().includes(searchLower) ||
-                    String(ticket.id).includes(searchLower);
+        const searchLower = searchQuery.toLowerCase();
+        return tickets.filter(ticket => {
+            const matchesSearch =
+                (ticket.subject || '').toLowerCase().includes(searchLower) ||
+                (ticket.summary || '').toLowerCase().includes(searchLower) ||
+                (ticket.description || '').toLowerCase().includes(searchLower) ||
+                String(ticket.id).includes(searchLower);
 
-                const ticketStatus = ticket.status || 'open';
-                const matchesStatus = statusFilter === 'All' ? true : ticketStatus.toLowerCase() === statusFilter.toLowerCase();
+            const ticketStatus = ticket.status || 'open';
+            const matchesStatus = statusFilter === 'All' ? true : ticketStatus.toLowerCase() === statusFilter.toLowerCase();
 
-                const ticketPriority = ticket.priority || 'medium';
-                const matchesPriority = priorityFilter === 'All' ? true : ticketPriority.toLowerCase() === priorityFilter.toLowerCase();
+            const ticketPriority = ticket.priority || 'medium';
+            const matchesPriority = priorityFilter === 'All' ? true : ticketPriority.toLowerCase() === priorityFilter.toLowerCase();
 
-                return matchesSearch && matchesStatus && matchesPriority;
-            });
+            return matchesSearch && matchesStatus && matchesPriority;
+        });
     }, [tickets, searchQuery, statusFilter, priorityFilter]);
 
+    const visibleTickets = useMemo(
+        () => filteredTickets.slice(0, visibleCount),
+        [filteredTickets, visibleCount]
+    );
 
-    const getPriorityColor = (priority) => {
-        const p = (priority || '').toLowerCase();
-        if (p === 'high' || p === 'critical') return 'text-red-600 font-bold';
-        if (p === 'medium') return 'text-amber-600 font-bold';
-        if (p === 'low') return 'text-blue-600 font-bold';
-        return 'text-gray-600';
-    };
+    const canLoadMore = filteredTickets.length > visibleCount;
 
     return (
         <main className="flex-1 max-w-[1200px] w-full mx-auto px-6 py-10 flex flex-col gap-8">
@@ -154,24 +244,12 @@ function MyTickets() {
                     <Select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        options={[
-                            { value: 'All', label: 'All Statuses' },
-                            { value: 'Resolved', label: 'Resolved' },
-                            { value: 'Pending', label: 'Pending' },
-                            { value: 'In Progress', label: 'In Progress' },
-                            { value: 'Escalated', label: 'Escalated' }
-                        ]}
+                        options={TICKET_STATUS_OPTIONS}
                     />
                     <Select
                         value={priorityFilter}
                         onChange={(e) => setPriorityFilter(e.target.value)}
-                        options={[
-                            { value: 'All', label: 'All Priorities' },
-                            { value: 'Critical', label: 'Critical' },
-                            { value: 'High', label: 'High' },
-                            { value: 'Medium', label: 'Medium' },
-                            { value: 'Low', label: 'Low' }
-                        ]}
+                        options={TICKET_PRIORITY_OPTIONS}
                     />
                 </div>
             </div>
@@ -273,80 +351,24 @@ function MyTickets() {
                                 </tr>
                             </thead>
                             <TooltipProvider delayDuration={300}>
-                                <tbody className="divide-y divide-gray-100">
-                                    {filteredTickets.map(ticket => (
-                                        <tr
-                                            key={ticket.id}
-                                            onClick={() => navigate(`/ticket/${ticket.id}`)}
-                                            className="group hover:bg-emerald-50/30 transition-colors cursor-pointer"
-                                        >
-                                            <td className="px-6 py-4">
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <span className="font-mono font-bold text-gray-900 text-sm">#{formatTicketId(ticket.id)}</span>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent
-                                                        side="top"
-                                                        className="bg-gray-900 text-white border-none p-4 w-[300px] shadow-xl rounded-xl"
-                                                        sideOffset={10}
-                                                    >
-                                                        <div className="space-y-3">
-                                                            <div>
-                                                                 <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Issue Overview</p>
-                                                                 <p className="text-sm font-medium leading-relaxed overflow-hidden text-ellipsis whitespace-nowrap">{ticket.summary || ticket.description || "No description provided"}</p>
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-3">
-                                                                <div>
-                                                                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Category</p>
-                                                                    <p className="text-sm font-medium">{ticket.category || 'General'}</p>
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Priority</p>
-                                                                    <p className="text-sm font-medium capitalize">{ticket.priority || 'medium'}</p>
-                                                                </div>
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Assigned Unit</p>
-                                                                <p className="text-sm font-medium flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-400" />{ticket.assigned_team || 'General Support'}</p>
-                                                            </div>
-                                                        </div>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </td>
-                                            <td className="px-6 py-4 w-1/3 max-w-[300px]">
-                                                 <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
-                                                     {ticket.summary || ticket.subject || ticket.description || "No subject"}
-                                                 </p>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
-                                                    {ticket.category || 'General'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <TicketStatusBadge status={ticket.status} />
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`text-sm capitalize ${getPriorityColor(ticket.priority)}`}>
-                                                    {ticket.priority || 'medium'}
-                                                </span>
-                                            </td>
-                                             <td className="px-6 py-4">
-                                                 <div className="flex flex-col">
-                                                     <span className="text-sm font-semibold text-gray-700">
-                                                         {formatTimelineDate(ticket.created_at)}
-                                                     </span>
-                                                     <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-0.5">
-                                                         {getTimeZoneAbbr()} Node
-                                                     </span>
-                                                 </div>
-                                             </td>
-                                        </tr>
+                                    <tbody className="divide-y divide-gray-100">
+                                    {visibleTickets.map(ticket => (
+                                        <TicketRow key={ticket.id} ticket={ticket} onNavigate={navigate} />
                                     ))}
                                 </tbody>
                             </TooltipProvider>
                         </table>
                     </div>
+                    {canLoadMore && (
+                        <div className="flex items-center justify-center py-4 bg-white border-t border-gray-100">
+                            <button
+                                onClick={() => setVisibleCount((prev) => prev + 50)}
+                                className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors"
+                            >
+                                Load more tickets ({filteredTickets.length - visibleCount} remaining)
+                            </button>
+                        </div>
+                    )}
                 </Card>
             )}
         </main>
