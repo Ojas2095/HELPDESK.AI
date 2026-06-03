@@ -17,7 +17,7 @@ export const masterAdminService = {
     };
   },
 
-  subscribeToVitals: (onUpdate) => {
+  subscribeToVitals: (onUpdate: any) => {
     return supabase.channel('dashboard_vitals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, onUpdate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'companies' }, onUpdate)

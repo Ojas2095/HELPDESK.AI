@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabaseClient';
 
 export const ticketService = {
-  fetchCompanyAgents: async (company) => {
+  fetchCompanyAgents: async (company: any) => {
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, role')
@@ -11,7 +11,7 @@ export const ticketService = {
     return data || [];
   },
 
-  fetchAdminTickets: async (filters) => {
+  fetchAdminTickets: async (filters: any) => {
     let query = supabase
       .from('tickets')
       .select(`
@@ -38,7 +38,7 @@ export const ticketService = {
     return data || [];
   },
 
-  updateTicket: async (id, updates) => {
+  updateTicket: async (id: any, updates: any) => {
     const { data, error } = await supabase
       .from('tickets')
       .update(updates)
@@ -47,7 +47,7 @@ export const ticketService = {
     return data;
   },
 
-  submitCSATRating: async (ticketId, rating, comment) => {
+  submitCSATRating: async (ticketId: any, rating: any, comment: any) => {
     const { error } = await supabase
       .from('tickets')
       .update({
@@ -58,7 +58,7 @@ export const ticketService = {
     if (error) throw error;
   },
 
-  subscribeToCompanyTickets: (company, callbacks) => {
+  subscribeToCompanyTickets: (company: any, callbacks: any) => {
     return supabase
       .channel('admin_tickets_realtime')
       .on(

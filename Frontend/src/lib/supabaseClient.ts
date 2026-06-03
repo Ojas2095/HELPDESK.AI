@@ -1,7 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 const INVALID_MARKERS = new Set([
 	'your_supabase_url',
@@ -10,7 +10,7 @@ const INVALID_MARKERS = new Set([
 	'your_key',
 ])
 
-const isLikelyValidUrl = (value) => {
+const isLikelyValidUrl = (value: string) => {
 	if (!value || INVALID_MARKERS.has(value)) return false
 	try {
 		const parsed = new URL(value)
@@ -20,7 +20,7 @@ const isLikelyValidUrl = (value) => {
 	}
 }
 
-const isLikelyValidAnonKey = (value) => {
+const isLikelyValidAnonKey = (value: string) => {
 	return Boolean(value && !INVALID_MARKERS.has(value) && value.length > 20)
 }
 
@@ -29,7 +29,7 @@ const disabledMessage =
 
 const makeDisabledError = () => ({ message: disabledMessage })
 
-const makeQueryBuilder = () => {
+const makeQueryBuilder = (): any => {
 	const terminalResult = Promise.resolve({ data: null, error: makeDisabledError(), count: 0 })
 	const passthrough = () => builder
 
@@ -62,7 +62,7 @@ const makeQueryBuilder = () => {
 	return builder
 }
 
-const createDisabledSupabaseClient = () => ({
+const createDisabledSupabaseClient = (): any => ({
 	auth: {
 		getUser: async () => ({ data: { user: null }, error: null }),
 		getSession: async () => ({ data: { session: null }, error: null }),
@@ -112,6 +112,27 @@ if (!hasValidConfig) {
 	)
 }
 
-export const supabase = hasValidConfig
-	? createClient(supabaseUrl, supabaseKey)
+// Custom In-Memory Storage to prevent JWT tokens from touching localStorage (XSS Mitigation)
+const inMemoryStorage = {
+	items: new Map<string, string>(),
+	getItem(key: string) {
+		return this.items.get(key) || null;
+	},
+	setItem(key: string, value: string) {
+		this.items.set(key, value);
+	},
+	removeItem(key: string) {
+		this.items.delete(key);
+	}
+};
+
+export const supabase: SupabaseClient = hasValidConfig
+	? createClient(supabaseUrl, supabaseKey, {
+			auth: {
+				storage: inMemoryStorage,
+				persistSession: true, // Will persist to our secure in-memory Map instead of localStorage
+				autoRefreshToken: true,
+				detectSessionInUrl: true
+			}
+	  })
 	: createDisabledSupabaseClient()
