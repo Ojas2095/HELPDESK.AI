@@ -71,3 +71,34 @@ This Code of Conduct is adapted from the [Contributor Covenant][homepage],
 version 1.4, available at https://www.contributor-covenant.org/version/1/4/code-of-conduct.html
 
 [homepage]: https://www.contributor-covenant.org
+
+
+---
+
+## GSSoC 2026 Specific Standards
+
+This project participates in GirlScript Summer of Code 2026. In addition to the standards above, all GSSoC participants are expected to follow these guidelines:
+
+### GSSoC-Specific Prohibited Conduct
+* Submitting PRs that copy existing solutions without original contribution
+* Opening multiple issues to reserve them without intent to work
+* Using multiple accounts to claim the same issue
+* Claiming issues that have been assigned to another contributor
+* Submitting plagiarized or AI-generated content as original work
+* Harassment, discrimination, or inappropriate conduct toward any fellow GSSoC participant
+* Disclosing private information of other contributors without consent
+* Any activity that undermines the integrity of the GSSoC program
+
+### Reporting GSSoC Violations
+If you witness or experience conduct that violates GSSoC program rules in addition to this Code of Conduct:
+
+1. **Project Admin**: Contact Ritesh (ritesh-1918) via GitHub
+2. **GSSoC Organizers**: Report through the official GSSoC portal at https://gssoc.dev/
+3. **Anonymous Tip Line**: For serious concerns, use the project's anonymous reporting form
+
+All reports will be treated with confidentiality. Retaliation against anyone who reports a violation is itself a violation of this Code of Conduct.
+
+### Acknowledgment
+By contributing to this project under GSSoC 2026, you agree to abide by both this Code of Conduct and the GSSoC program rules.
+
+For the full GSSoC 2026 Code of Conduct and program guidelines, visit: https://gssoc.dev/
