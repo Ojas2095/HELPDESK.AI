@@ -20,6 +20,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
         { label: 'Tickets', path: '/admin/tickets', icon: Inbox },
         { label: 'Users', path: '/admin/users', icon: Users },
         { label: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
+        { label: 'Audit Logs', path: '/admin/audit', icon: Activity },
         { label: 'Profile', path: '/admin/profile', icon: UserCircle },
     ];
 

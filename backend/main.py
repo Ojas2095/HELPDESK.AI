@@ -76,6 +76,9 @@ from backend.services.sla_service import (
     run_sla_escalation_loop,
 )
 from backend.services.spam_detector_service import analyze_spam_phishing
+from backend.middleware.audit_logger import AuditLoggerMiddleware
+from backend.services.audit_query_service import AuditQueryService
+
 
 
 # ---------------------------------------------------------------------------
@@ -364,6 +367,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(AuditLoggerMiddleware)
+
 
 
 # ---------------------------------------------------------------------------
@@ -1407,11 +1413,21 @@ async def get_current_user(request: Request) -> dict:
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid session")
-    if hasattr(user, "model_dump"):
-        return user.model_dump()
-    if hasattr(user, "dict"):
-        return user.dict()
-    return dict(user)
+    
+    user_payload = user.model_dump() if hasattr(user, "model_dump") else (user.dict() if hasattr(user, "dict") else dict(user))
+    
+    # Resolve company_id and role from profiles if missing or to ensure validity
+    try:
+        profile_res = supabase.table("profiles").select("company_id, role").eq("id", user_payload.get("id")).execute()
+        if profile_res.data:
+            user_payload["company_id"] = profile_res.data[0].get("company_id")
+            user_payload["role"] = profile_res.data[0].get("role")
+    except Exception:
+        pass
+        
+    request.state.user = user_payload
+    return user_payload
+
 
 class LoginBody(BaseModel):
     email: str
@@ -1482,4 +1498,149 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
+
+
+# ---------------------------------------------------------------------------
+# Enterprise Audit Logging endpoints
+# ---------------------------------------------------------------------------
+from typing import Optional
+
+@app.get("/api/audit/logs")
+async def get_audit_logs(
+    user_id: Optional[str] = None,
+    action: Optional[str] = None,
+    status: Optional[str] = None,
+    ip_address: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    current_user: dict = Depends(get_current_user)
+):
+    """Retrieve filtered audit logs for the authenticated administrator's company."""
+    role = current_user.get("role")
+    if role not in ("admin", "super_admin", "master_admin"):
+        raise HTTPException(status_code=403, detail="Forbidden: Admin credentials required")
+        
+    company_id = current_user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User is not associated with any company")
+
+    logs = AuditQueryService.filter_logs(
+        supabase_client=supabase,
+        company_id=company_id,
+        user_id=user_id,
+        action=action,
+        status=status,
+        ip_address=ip_address,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+        offset=offset
+    )
+    return logs
+
+
+@app.get("/api/audit/export")
+async def export_audit_logs(
+    format: str = "csv",
+    user_id: Optional[str] = None,
+    action: Optional[str] = None,
+    status: Optional[str] = None,
+    ip_address: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Export audit logs as CSV or JSON."""
+    role = current_user.get("role")
+    if role not in ("admin", "super_admin", "master_admin"):
+        raise HTTPException(status_code=403, detail="Forbidden: Admin credentials required")
+        
+    company_id = current_user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User is not associated with any company")
+
+    logs = AuditQueryService.filter_logs(
+        supabase_client=supabase,
+        company_id=company_id,
+        user_id=user_id,
+        action=action,
+        status=status,
+        ip_address=ip_address,
+        date_from=date_from,
+        date_to=date_to,
+        limit=5000  # Higher limit for exports
+    )
+
+    if format.lower() == "csv":
+        csv_data = AuditQueryService.export_logs_csv(logs)
+        return Response(
+            content=csv_data,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=audit_export.csv"}
+        )
+    else:
+        json_data = AuditQueryService.export_logs_json(logs)
+        return Response(
+            content=json_data,
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=audit_export.json"}
+        )
+
+
+@app.get("/api/audit/report")
+async def get_compliance_report(
+    type: str = "SOC2",
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate SOC 2, HIPAA, or GDPR compliance reporting."""
+    role = current_user.get("role")
+    if role not in ("admin", "super_admin", "master_admin"):
+        raise HTTPException(status_code=403, detail="Forbidden: Admin credentials required")
+        
+    company_id = current_user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User is not associated with any company")
+
+    report = AuditQueryService.generate_compliance_report(
+        supabase_client=supabase,
+        report_type=type,
+        company_id=company_id
+    )
+    return report
+
+
+@app.get("/api/audit/alerts")
+async def get_security_alerts(
+    current_user: dict = Depends(get_current_user)
+):
+    """Retrieve anomalous/suspicious security alerts detected in the past 24 hours."""
+    role = current_user.get("role")
+    if role not in ("admin", "super_admin", "master_admin"):
+        raise HTTPException(status_code=403, detail="Forbidden: Admin credentials required")
+        
+    company_id = current_user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User is not associated with any company")
+
+    alerts = AuditQueryService.detect_security_alerts(
+        supabase_client=supabase,
+        company_id=company_id
+    )
+    return alerts
+
+
+@app.post("/api/audit/verify")
+async def post_verify_integrity(
+    current_user: dict = Depends(get_current_user)
+):
+    """Perform cryptographic chain-of-custody verification on the audit trail."""
+    role = current_user.get("role")
+    if role not in ("admin", "super_admin", "master_admin"):
+        raise HTTPException(status_code=403, detail="Forbidden: Admin credentials required")
+        
+    result = AuditQueryService.verify_integrity(supabase)
+    return result
+
 

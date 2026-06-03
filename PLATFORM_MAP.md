@@ -31,6 +31,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Admin Users** | Workforce management. | Invite-only onboarding, user role auditing. |
 | **Admin Analytics** | Performance dashboard. | Sentiment heatmaps, tech-stack recurring issue analysis. |
 | **Admin Settings** | Organizational configuration. | Custom branding, SLA threshold definitions. |
+| **Audit Center** | Compliance & Forensics. | Immutable audit trails, cryptographic validation, SOC2/HIPAA compliance analytics, threat alerts, CSV/JSON exports. |
 | **Admin Profile** | Managerial settings. | Administrative credentials and settings. |
 
 ## 👑 Layer 4: Master Admin Portal

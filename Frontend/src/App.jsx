@@ -62,9 +62,11 @@ import AdminTickets from "./admin/pages/AdminTickets";
 import AdminTicketDetail from "./admin/pages/AdminTicketDetail";
 import AdminUsers from "./admin/pages/AdminUsers";
 import AdminAnalytics from "./admin/pages/AdminAnalytics";
+import AuditLogViewer from "./admin/pages/AuditLogViewer";
 import AdminProfile from "./admin/pages/AdminProfile";
 import AdminSettings from "./admin/pages/AdminSettings";
 import MasterBugReports from "./master-admin/pages/MasterBugReports";
+
 
 // Feature Pages
 import AutoCategorizationFeature from "./pages/features/AutoCategorizationFeature";
@@ -104,6 +106,7 @@ function TitleUpdater() {
     else if (path.startsWith('/admin/tickets')) title = 'Admin Tickets';
     else if (path.startsWith('/admin/users')) title = 'Manage Users | Admin';
     else if (path.startsWith('/admin/analytics')) title = 'Analytics | Admin';
+    else if (path.startsWith('/admin/audit')) title = 'Audit Logs | Admin';
     else if (path.startsWith('/admin/profile')) title = 'Admin Profile';
     else if (path.startsWith('/admin/settings')) title = 'Settings | Admin';
     // Master Admin Routes
@@ -206,6 +209,7 @@ function AppLayout() {
             <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
+            <Route path="/admin/audit" element={<AuditLogViewer />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
