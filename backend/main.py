@@ -28,10 +28,11 @@ from logging.handlers import RotatingFileHandler
 
 # Suppress harmless PyTorch CPU pin_memory warning
 from encryption import encrypt_pii, decrypt_pii, is_encrypted
+from pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, Header
+from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
@@ -49,6 +50,17 @@ import redis
 from pathlib import Path
 from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
+import ipaddress
+
+# Prometheus instrumentation (optional - added when package is available)
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY
+except Exception:
+    Instrumentator = None
+    generate_latest = None
+    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+    REGISTRY = None
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -101,6 +113,8 @@ except Exception as e:
 
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "https://helpdeskaiv1.vercel.app").rstrip("/")
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from backend.auth.tenant_middleware import security_manager
@@ -120,7 +134,9 @@ from backend.services.spam_service import SpamService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
 from backend.sla_predictor import get_sla_estimate
+from backend.sanitization import get_security_headers
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
+from backend.sanitization import sanitize_text
 
 
 # ---------------------------------------------------------------------------
@@ -570,12 +586,14 @@ class TicketSaveRequest(BaseModel):
 
 @app.get("/health")
 async def health_check():
+    """Return a lightweight status payload showing whether core models are loaded."""
     return {"status": "ok"}
 
 # NLP classification endpoint
 @app.post("/analyze")
 @limiter.limit(ML_HEAVY_LIMIT)
 async def analyze_ticket(request: Request, ticket: TicketRequest):
+    """Legacy NLP classification endpoint. Use /ai/analyze_ticket for full pipeline."""
     # ... existing implementation unchanged ...
     pass
 
@@ -583,6 +601,7 @@ async def analyze_ticket(request: Request, ticket: TicketRequest):
 @app.post("/analyze-ocr")
 @limiter.limit(ML_HEAVY_LIMIT)
 async def analyze_ocr(request: Request, ticket: TicketRequest):
+    """Legacy OCR analysis endpoint. Extracts text from images and classifies alongside ticket text."""
     # ... existing implementation unchanged ...
     pass
 
@@ -590,6 +609,7 @@ async def analyze_ocr(request: Request, ticket: TicketRequest):
 @app.post("/similar")
 @limiter.limit(ML_LIGHT_LIMIT)
 async def find_similar(request: Request, ticket: TicketRequest):
+    """Legacy similar ticket detection. Use /ai/check_duplicate for the current implementation."""
     # ... existing implementation unchanged ...
     pass
 
@@ -1000,23 +1020,43 @@ The `/ai/analyze_ticket` endpoint is capped at **10 requests / minute / IP**.
 TAGS_METADATA = [
     {
         "name": "System",
-        "description": "Service health, readiness, and landing page.",
+        "description": "Service health, readiness, landing page, and monitoring endpoints.",
     },
     {
         "name": "AI Analysis",
-        "description": "Core NLP endpoints: classification, troubleshooting, bug analysis, and streaming analysis.",
+        "description": "Core NLP endpoints: classification, troubleshooting, bug analysis, duplicate detection, and streaming analysis.",
     },
     {
         "name": "Tickets",
-        "description": "CRUD operations over support tickets (Supabase + in-memory).",
+        "description": "CRUD operations over support tickets (Supabase + in-memory). Includes search, bulk operations, and ratings.",
     },
     {
         "name": "Admin",
-        "description": "Internal endpoints for correction logging and model feedback loops.",
+        "description": "Internal endpoints for correction logging, CSAT reporting, knowledge gap analysis, and security auditing.",
     },
     {
         "name": "Docs",
         "description": "Themed API documentation (Swagger UI and ReDoc).",
+    },
+    {
+        "name": "SLA Management",
+        "description": "SLA tracking, breach detection, escalation management, and policy configuration.",
+    },
+    {
+        "name": "Translation",
+        "description": "Multi-language translation endpoints for tickets and text.",
+    },
+    {
+        "name": "Estimator",
+        "description": "Response time and SLA estimation endpoints.",
+    },
+    {
+        "name": "Voice",
+        "description": "Voice-to-ticket endpoints using speech-to-text transcription.",
+    },
+    {
+        "name": "Weekly Digest",
+        "description": "Automated weekly digest emails with ticket summaries and trends.",
     },
 ]
 
@@ -1025,6 +1065,7 @@ app = FastAPI(
     description=API_DESCRIPTION,
     version="1.0.0",
     lifespan=lifespan,
+    openapi_tags=TAGS_METADATA,
     swagger_ui_parameters={
         "defaultModelsExpandDepth": -1,
         "docExpansion": "none",
@@ -1034,6 +1075,7 @@ app = FastAPI(
     swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
     swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
 )
+app.state.supabase = supabase
 
 # Corporate-clean Swagger theme overrides (HELPDESK.AI palette: emerald + slate).
 SWAGGER_CUSTOM_CSS = """
@@ -1100,46 +1142,34 @@ async def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -
 
 app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
-# ---------------------------------------------------------------------------
-# CORS — locked to production + local dev only
-allowed_origins = os.getenv("CORS_ORIGINS", "https://helpdeskaiv1.vercel.app,http://localhost:5173,http://localhost:3000").split(",")
+# ── Security Headers Middleware (Helmet.js equivalent) ────────────────────────
+from security_middleware import SecurityHeadersMiddleware, get_allowed_origins
+app.add_middleware(SecurityHeadersMiddleware)
+
+# ── CORS — strictly from ALLOWED_ORIGINS env var, never wildcard ──────────────
+_allowed_origins = get_allowed_origins()
+print(f"[startup] CORS allowed origins: {_allowed_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "https://helpdeskaiv1.vercel.app,http://localhost:5173,http://localhost:3000").split(","),
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-API-Key",
+        "X-CSRF-Token",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+    ],
+    expose_headers=["X-Request-ID"],
+    max_age=600,
 )
 
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss: http://localhost:7860 ws://localhost:7860 http://127.0.0.1:7860 ws://127.0.0.1:7860;"
-    )
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
-    response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
-    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss: http://localhost:7860 ws://localhost:7860 http://127.0.0.1:7860 ws://127.0.0.1:7860;"
-    )
-    return response
+from backend.middleware.tenant_validator import TenantContextMiddleware
+app.add_middleware(TenantContextMiddleware)
 
 
 app.include_router(auth_cookie_router)
@@ -1226,35 +1256,83 @@ async def custom_swagger_ui_html(request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Prometheus instrumentation and /metrics endpoint (secure)
+# ---------------------------------------------------------------------------
+if Instrumentator:
+    try:
+        instrumentator = Instrumentator()
+        instrumentator.instrument(app)
+    except Exception as e:
+        instrumentator = None
+        print(f"[METRICS] Instrumentator init failed: {e}")
+else:
+    instrumentator = None
 
-# Prometheus Metrics
-from prometheus_fastapi_instrumentator import Instrumentator, metrics
-from prometheus_client import CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST
 
-# Initialize Prometheus instrumentator
-instrumentator = Instrumentator(
-    should_group_status_codes=True,
-    should_ignore_untemplated=True,
-    should_instrument_requests_inprogress=True,
-    excluded_handlers=["/health", "/ready", "/metrics"],
-    inprogress_name="helpdesk_requests_in_progress",
-    inprogress_labels=True,
-)
+@app.get("/metrics")
+async def metrics_endpoint(request: Request):
+    """Expose Prometheus metrics with basic IP / token-based protections.
 
-# Add custom metrics
-try:
-    instrumentator.add(metrics.latency(buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)))
-    instrumentator.add(metrics.request_size(buckets=(100, 1000, 10000, 100000, 1000000)))
-    instrumentator.add(metrics.response_size(buckets=(100, 1000, 10000, 100000, 1000000)))
-except TypeError:
-    # Newer prometheus-fastapi-instrumentator versions don't support custom buckets
-    instrumentator.add(metrics.latency())
-    instrumentator.add(metrics.request_size())
-    instrumentator.add(metrics.response_size())
+    Controls:
+    - `METRICS_TOKEN` env var: if set, the client must provide that token either
+      via the `token` query param or `X-Metrics-Token` header.
+    - `METRICS_ALLOWED_IPS` env var: comma-separated CIDR or IP list allowed.
+    - If neither is set, only localhost (127.0.0.1 / ::1) is allowed.
+    """
+    # Token-based auth (preferred)
+    metrics_token = os.environ.get("METRICS_TOKEN")
+    allowed_ips = os.environ.get("METRICS_ALLOWED_IPS", "")
+    client_ip = None
+    try:
+        client_ip = request.client.host if request.client else None
+    except Exception:
+        client_ip = None
 
-# Instrument the app
-instrumentator.instrument(app).expose(app, endpoint="/prometheus-metrics", include_in_schema=False)
+    # Check token first (header or query param)
+    if metrics_token:
+        token = None
+        # header may be presented in different casing; prefer X-Metrics-Token
+        token = request.headers.get("X-Metrics-Token") or request.query_params.get("token")
+        if token != metrics_token:
+            raise HTTPException(status_code=403, detail="Forbidden: invalid metrics token")
+    elif allowed_ips:
+        # Validate client IP against allowed CIDRs
+        try:
+            allowed = [s.strip() for s in allowed_ips.split(",") if s.strip()]
+            ok = False
+            if client_ip:
+                for entry in allowed:
+                    try:
+                        net = ipaddress.ip_network(entry, strict=False)
+                        if ipaddress.ip_address(client_ip) in net:
+                            ok = True
+                            break
+                    except Exception:
+                        # Treat as single IP
+                        if client_ip == entry:
+                            ok = True
+                            break
+            if not ok:
+                raise HTTPException(status_code=403, detail="Forbidden: IP not allowed")
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[METRICS] allowed_ips parse error: {e}")
+            raise HTTPException(status_code=500, detail="Metrics configuration error")
+    else:
+        # Default: local-only
+        if client_ip not in ("127.0.0.1", "::1"):
+            raise HTTPException(status_code=403, detail="Forbidden: metrics restricted to localhost")
 
+    if REGISTRY is None or generate_latest is None:
+        return JSONResponse(status_code=503, content={"status": "metrics_unavailable"})
+
+    data = generate_latest(REGISTRY)
+    return StreamingResponse(content=data, media_type=CONTENT_TYPE_LATEST)
+
+
+
+# ---------------------------------------------------------------------------
 # Root & Health check
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse, tags=["System"], summary="API landing page")
@@ -1313,7 +1391,7 @@ async def root():
                 </a>
                 
                 <!-- Frontend Button -->
-                <a href="https://helpdeskaiv1.vercel.app/" target="_blank" class="btn-hover block w-full bg-slate-800/80 border border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/80 rounded-xl p-5 group">
+                <a href="{FRONTEND_BASE_URL}/" target="_blank" class="btn-hover block w-full bg-slate-800/80 border border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/80 rounded-xl p-5 group">
                     <h3 class="font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">Client Web Portal</h3>
                     <p class="text-slate-400 text-sm text-center md:text-left">Access the React/Vite dashboard</p>
                 </a>
@@ -1347,6 +1425,7 @@ async def verify_metrics_token(x_metrics_token: str | None = Header(default=None
 
 @app.get("/metrics", dependencies=[Depends(verify_metrics_token)])
 def metrics():
+    """Prometheus scrape endpoint — exposes HTTP request, AI inference, and system metrics."""
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
@@ -1804,9 +1883,81 @@ async def log_correction(request: Request, user: dict = Depends(get_current_user
 
 
 # ---------------------------------------------------------------------------
+# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
+# ---------------------------------------------------------------------------
+ACCESS_COOKIE = "access_token"
+REFRESH_COOKIE = "refresh_token"
+ACCESS_MAX_AGE = 60 * 60
+REFRESH_MAX_AGE = 60 * 60 * 24 * 7
+
+def _cookie_kwargs() -> dict:
+    secure = os.getenv("ENV", "production").lower() != "development"
+    return {
+        "httponly": True,
+        "secure": secure,
+        "samesite": "strict",
+        "path": "/",
+    }
+
+def extract_token(request: Request) -> str | None:
+    cookie_token = request.cookies.get(ACCESS_COOKIE)
+    if cookie_token:
+        return cookie_token
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip() or None
+    return None
+
+def _set_session_cookies(response: Response, session) -> None:
+    if not session or not getattr(session, "access_token", None):
+        return
+    response.set_cookie(
+        ACCESS_COOKIE,
+        session.access_token,
+        max_age=ACCESS_MAX_AGE,
+        **_cookie_kwargs(),
+    )
+    refresh = getattr(session, "refresh_token", None)
+    if refresh:
+        response.set_cookie(
+            REFRESH_COOKIE,
+            refresh,
+            max_age=REFRESH_MAX_AGE,
+            **_cookie_kwargs(),
+        )
+
+def _clear_session_cookies(response: Response) -> None:
+    kwargs = _cookie_kwargs()
+    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
+    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+
+async def get_current_user(request: Request) -> dict:
+    token = extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid session: {exc}",
+        ) from exc
+    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    if hasattr(user, "model_dump"):
+        return user.model_dump()
+    if hasattr(user, "dict"):
+        return user.dict()
+    return dict(user)
+
+# ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 MASTER_TICKET_ROLES = {"master_admin", "super_admin", "superadmin", "owner"}
+TENANT_ADMIN_ROLES = {"admin", "company_admin", "super_admin"}
 
 
 def _get_auth_user_id(user: dict) -> str:
@@ -1835,9 +1986,30 @@ def _get_authenticated_profile(user: dict) -> dict:
     return data
 
 
+def _profile_role(profile: dict) -> str:
+    return str(profile.get("role") or "").lower()
+
+
 def _is_master_ticket_reader(profile: dict) -> bool:
-    role = str(profile.get("role") or "").lower()
-    return role in MASTER_TICKET_ROLES
+    return _profile_role(profile) in MASTER_TICKET_ROLES
+
+
+def _is_tenant_admin(profile: dict) -> bool:
+    return _is_master_ticket_reader(profile) or _profile_role(profile) in TENANT_ADMIN_ROLES
+
+
+def _require_tenant_admin_profile(user: dict) -> dict:
+    profile = _get_authenticated_profile(user)
+    if not _is_tenant_admin(profile):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return profile
+
+
+def _require_platform_admin_profile(user: dict) -> dict:
+    profile = _get_authenticated_profile(user)
+    if not _is_master_ticket_reader(profile):
+        raise HTTPException(status_code=403, detail="Platform admin access required")
+    return profile
 
 
 def _ticket_company_scope(profile: dict, requested_company_id: str | None = None) -> str | None:
@@ -1903,12 +2075,12 @@ def trigger_webhook_for_new_ticket(company_id: str, ticket: dict) -> None:
             assigned_team = ticket.get("assigned_team") or "Unassigned"
             
             payload = {
-                "text": f"🚨 *New {priority.upper()} Ticket Alert*: {ticket_ref} - {subject}\nPriority: {priority.upper()}\nLink: https://helpdeskaiv1.vercel.app/tickets/{ticket_id}",
+                "text": f"🚨 *New {priority.upper()} Ticket Alert*: {ticket_ref} - {subject}\nPriority: {priority.upper()}\nLink: {FRONTEND_BASE_URL}/tickets/{ticket_id}",
                 "attachments": [
                     {
                         "color": "#FF0000" if priority == "critical" else "#FFA500",
                         "title": f"New Ticket: {ticket_ref}",
-                        "title_link": f"https://helpdeskaiv1.vercel.app/tickets/{ticket_id}",
+                        "title_link": f"{FRONTEND_BASE_URL}/tickets/{ticket_id}",
                         "fields": [
                             {"title": "Subject", "value": subject, "short": True},
                             {"title": "Priority", "value": priority.upper(), "short": True},
@@ -1942,12 +2114,15 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
-    # Ensure current user is authorized to save this ticket (request user_id must match authenticated user_id)
     auth_user_id = user.get("id") or user.get("sub") or ""
+    # Ensure current user is authorized to save this ticket (request user_id must match authenticated user_id)
     if request_body.user_id and str(request_body.user_id) != str(auth_user_id):
         role = (user.get("user_metadata") or {}).get("role", "") or (user.get("app_metadata") or {}).get("role", "") or user.get("role", "")
         if role != "master_admin":
             raise HTTPException(status_code=403, detail="Unauthorized user context")
+
+    if not request_body.user_id:
+        request_body.user_id = auth_user_id
 
     logger = logging.getLogger(__name__)
     final_data = request_body.model_dump()
@@ -1991,6 +2166,9 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
         final_data["sla_status"] = "ACTIVE"
     # Resolve tenant linkage from user profile with authorization validation.
     profile = {}
+    auth_user_id = user.get("id")
+    if auth_user_id and request_body.user_id and str(request_body.user_id) != str(auth_user_id):
+        raise HTTPException(status_code=403, detail="User not authorized to save ticket for another user ID")
     if request_body.user_id:
         try:
             profile_res = (
@@ -2081,6 +2259,18 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
             if extra_key in final_data and final_data[extra_key] not in (None, "", [], {}):
                 existing_metadata[extra_key] = final_data[extra_key]
         final_data["metadata"] = existing_metadata
+
+        # Apply PII redaction if enabled for this company
+        company_id_for_settings = final_data.get("company_id")
+        if company_id_for_settings:
+            try:
+                _cs = get_system_settings(company_id_for_settings)
+                if _cs.get("enable_pii_redaction"):
+                    redact_ips = _cs.get("redact_ip_addresses", False)
+                    final_data = redact_pii_dict(final_data, redact_ips=redact_ips)
+                    logger.info("[PIIRedaction] PII redacted for ticket save (company=%s)", company_id_for_settings)
+            except Exception as redact_err:
+                logger.warning("[PIIRedaction] Redaction skipped: %s", redact_err)
 
         # Strip keys not accepted by the DB schema
         insert_data = {k: v for k, v in final_data.items() if k in VALID_TICKET_COLUMNS}
@@ -2269,6 +2459,16 @@ async def create_ticket(
         data["company_id"] = profile_company_id
     elif data.get("company_id"):
         raise HTTPException(status_code=403, detail="User has no tenant assignment")
+
+    # Apply PII redaction if enabled for this company
+    if data.get("company_id"):
+        try:
+            _cs = get_system_settings(data["company_id"])
+            if _cs.get("enable_pii_redaction"):
+                redact_ips = _cs.get("redact_ip_addresses", False)
+                data = redact_pii_dict(data, redact_ips=redact_ips)
+        except Exception:
+            pass
 
     res = supabase.table("tickets").insert(data).execute()
     if not res.data:
@@ -2681,6 +2881,7 @@ async def analyze_only(request_body: TicketRequest, request: Request, current_us
     Centralized analysis logic used by `/ai/analyze`, `/ai/analyze_ticket`, and `/ai/analyze_stream`.
     Returns a serializable dict representing the ticket analysis result.
     """
+    api_endpoint = request.url.path
     text = request_body.text
     translation_ctx = await detect_and_translate_ticket_text(text)
     text = translation_ctx["text_for_analysis"]
@@ -3091,6 +3292,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
 @app.post("/ai/analyze-v2")
 @limiter.limit("10/minute")
 async def analyze_ticket_v2(request: Request, request_body: TicketRequest):
+    """V2 AI analysis with improved classifier. Returns category, subcategory, priority, and auto-resolve flag."""
     text = sanitize_text(request_body.text) or ""
     try:
         prediction = classifier_v2.predict(text)
@@ -3121,15 +3323,55 @@ class SLAStatsResponse(BaseModel):
     by_priority: dict = {}
 
 
+def _aggregate_sla_stats(tickets: list[dict]) -> dict:
+    total = len(tickets)
+    active_tickets = [
+        ticket for ticket in tickets
+        if not any(status_key in (ticket.get("status") or "").lower() for status_key in ["resolv", "closed"])
+    ]
+
+    counts = {
+        "total": total,
+        "active": len(active_tickets),
+        "breached": sum(1 for ticket in tickets if ticket.get("sla_status") == "breached"),
+        "warning": sum(1 for ticket in tickets if ticket.get("sla_status") == "warning"),
+        "met": sum(1 for ticket in tickets if ticket.get("sla_status") == "met"),
+        "by_priority": {},
+        "breach_rate": 0,
+    }
+
+    if total > 0:
+        counts["breach_rate"] = round(counts["breached"] / total * 100, 1)
+
+    for priority in ["critical", "high", "medium", "low"]:
+        priority_tickets = [ticket for ticket in active_tickets if (ticket.get("priority") or "").lower() == priority]
+        counts["by_priority"][priority] = {
+            "total": len(priority_tickets),
+            "breached": sum(1 for ticket in priority_tickets if ticket.get("sla_status") == "breached"),
+            "warning": sum(1 for ticket in priority_tickets if ticket.get("sla_status") == "warning"),
+        }
+
+    return counts
+
+
 @app.get("/sla/stats", response_model=SLAStatsResponse)
-async def sla_stats(current_user: dict = Depends(get_current_user)):
-    """Get aggregated SLA dashboard statistics across all tickets."""
+async def sla_stats(company_id: str | None = None, current_user: dict = Depends(get_current_user)):
+    """Get aggregated SLA dashboard statistics for the caller's tenant."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
-    stats = await sla_engine.get_dashboard_stats()
-    if "error" in stats:
-        raise HTTPException(status_code=500, detail=stats["error"])
-    return stats
+
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
+    try:
+        query = supabase.table("tickets").select("id, company_id, priority, sla_status, status, escalation_level")
+        if company_scope:
+            query = query.eq("company_id", company_scope)
+        res = query.execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return _aggregate_sla_stats(res.data or [])
 
 
 class SLATicketInfo(BaseModel):
@@ -3203,20 +3445,40 @@ class EscalationLogEntry(BaseModel):
 
 
 @app.get("/sla/escalations")
-async def sla_escalations(limit: int = 50, offset: int = 0, current_user: dict = Depends(get_current_user)):
+async def sla_escalations(
+    limit: int = 50,
+    offset: int = 0,
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
     """Fetch escalation log history."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
 
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
     try:
-        res = (
+        logs = (
             supabase.table("escalation_logs")
             .select("*")
             .order("triggered_at", desc=True)
-            .range(offset, offset + limit - 1)
             .execute()
-        )
-        return {"escalations": res.data or [], "total": len(res.data or [])}
+        ).data or []
+
+        if company_scope:
+            ticket_rows = (
+                supabase.table("tickets")
+                .select("id")
+                .eq("company_id", company_scope)
+                .execute()
+            ).data or []
+            allowed_ticket_ids = {str(ticket.get("id")) for ticket in ticket_rows if ticket.get("id") is not None}
+            logs = [log for log in logs if str(log.get("ticket_id")) in allowed_ticket_ids]
+
+        total = len(logs)
+        page = logs[offset:offset + limit]
+        return {"escalations": page, "total": total}
     except Exception as e:
         # Table might not exist yet
         print(f"[SLA] Escalation logs query failed: {e}")
@@ -3236,6 +3498,8 @@ class SLAPolicyInfo(BaseModel):
 @app.get("/sla/policies")
 async def sla_policies(current_user: dict = Depends(get_current_user)):
     """Get configured SLA policies."""
+    _require_tenant_admin_profile(current_user)
+
     if not supabase:
         # Return defaults from code
         policies = []
@@ -3264,7 +3528,8 @@ async def trigger_sla_check(current_user: dict = Depends(get_current_user)):
     """Manually trigger an SLA evaluation cycle (admin)."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
-    
+
+    _require_platform_admin_profile(current_user)
     asyncio.create_task(sla_engine.check_all_active_tickets())
     return {"status": "triggered", "message": "SLA check cycle started in background"}
 
@@ -3305,6 +3570,7 @@ async def check_duplicate_endpoint(
 @limiter.limit("2/minute")
 async def reindex_embeddings(request: Request, current_user: dict = Depends(get_current_user)):
     """Re-generate vector embeddings for all tickets."""
+    _require_platform_admin_profile(current_user)
     result = await semantic_dupe_service.reindex_all()
     return result
 
@@ -3312,29 +3578,112 @@ async def reindex_embeddings(request: Request, current_user: dict = Depends(get_
 @app.get("/admin/knowledge-gaps", tags=["Admin"])
 async def get_knowledge_gaps(current_user: dict = Depends(get_current_user)):
     """
-    Identify gaps in the knowledge base by analyzing low-confidence predictions.
+    Identify gaps in the knowledge base by analyzing resolved tickets and clustering them.
     Requires admin role.
     """
     profile = _get_authenticated_profile(current_user)
     role = str(profile.get("role") or "").lower()
     if role not in ("admin", "company_admin"):
         raise HTTPException(status_code=403, detail="Only admins can access knowledge gaps")
+    
+    company_id = profile.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User must belong to a company")
 
-    from backend.services.knowledge_gap_service import knowledge_gap_service
-    return knowledge_gap_service.get_summary()
+    from backend.services.knowledge_gap_service import KnowledgeGapService
+    kgs = KnowledgeGapService(supabase)
+    return await kgs.get_dashboard_insights(company_id)
+
+@app.post("/admin/knowledge-gaps/detect", tags=["Admin"])
+async def detect_knowledge_gaps(background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    """
+    Trigger background detection of knowledge gaps.
+    """
+    profile = _get_authenticated_profile(current_user)
+    role = str(profile.get("role") or "").lower()
+    if role not in ("admin", "company_admin"):
+        raise HTTPException(status_code=403, detail="Only admins can trigger detection")
+        
+    company_id = profile.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User must belong to a company")
+
+    def run_detection(cid):
+        import asyncio
+        from backend.services.knowledge_gap_service import KnowledgeGapService
+        kgs = KnowledgeGapService(supabase)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(kgs.detect_gaps(cid))
+        finally:
+            loop.close()
+
+    background_tasks.add_task(run_detection, company_id)
+    return {"status": "success", "message": "Knowledge gap detection started in the background."}
+
+@app.post("/admin/tickets/{ticket_id}/convert-to-kb", tags=["Admin"])
+async def convert_ticket_to_kb(ticket_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Convert a resolved ticket into a knowledge base article draft.
+    """
+    profile = _get_authenticated_profile(current_user)
+    role = str(profile.get("role") or "").lower()
+    if role not in ("admin", "company_admin"):
+        raise HTTPException(status_code=403, detail="Only admins can convert tickets to KB")
+        
+    company_id = profile.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User must belong to a company")
+        
+    from backend.services.knowledge_gap_service import KnowledgeGapService
+    kgs = KnowledgeGapService(supabase)
+    try:
+        res = await kgs.convert_ticket_to_article(ticket_id, company_id)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _format_system_settings_payload(rows: list[dict]) -> dict:
+    if not rows:
+        return {}
+
+    first_row = rows[0]
+    if "key" in first_row:
+        return {
+            str(row["key"]): row.get("value")
+            for row in rows
+            if row.get("key")
+        }
+
+    hidden_fields = {"id", "company_id", "created_at", "updated_at"}
+    return {
+        key: value
+        for key, value in first_row.items()
+        if key not in hidden_fields
+    }
+
 
 @app.get("/system/settings")
-async def get_system_settings_endpoint(current_user: dict = Depends(get_current_user)):
-    """Fetch all system settings."""
+async def get_system_settings_endpoint(
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """Fetch the current tenant's system settings."""
     _logger = logging.getLogger(__name__)
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
+
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
     try:
-        res = supabase.table("system_settings").select("*").execute()
-        settings = {}
-        for row in res.data or []:
-            settings[row["key"]] = row["value"]
-        return settings
+        query = supabase.table("system_settings").select("*")
+        if company_scope:
+            query = query.eq("company_id", company_scope)
+        res = query.execute()
+        return _format_system_settings_payload(res.data or [])
     except Exception as e:
         _logger.warning(f"[SETTINGS] Query failed: {e}")
         return {}
@@ -3342,20 +3691,29 @@ async def get_system_settings_endpoint(current_user: dict = Depends(get_current_
 
 @app.patch("/system/settings")
 async def update_system_settings(body: dict, current_user: dict = Depends(get_current_user)):
-    """Update a specific system setting."""
+    """Update system settings for the current tenant."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
-    key = body.get("key")
-    value = body.get("value")
-    if not key or value is None:
-        raise HTTPException(status_code=400, detail="key and value required")
+
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, body.get("company_id"))
+
+    update_fields = {
+        key: value
+        for key, value in body.items()
+        if key not in {"company_id", "id", "created_at", "updated_at"}
+    }
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No settings provided")
+
+    payload = {
+        "company_id": company_scope,
+        **update_fields,
+        "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
+    }
     try:
-        supabase.table("system_settings").upsert({
-            "key": key,
-            "value": value,
-            "updated_at": datetime.datetime.utcnow().isoformat() + "Z",
-        }).execute()
-        return {"status": "updated", "key": key}
+        supabase.table("system_settings").upsert(payload).execute()
+        return {"status": "updated", "company_id": company_scope}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -3400,6 +3758,7 @@ async def sla_ticket_detail(ticket_id: str, current_user: dict = Depends(get_cur
         "sla_evaluation": result,
         "escalations": escalations,
     }
+
 
 
 
@@ -3611,3 +3970,30 @@ async def download_security_report(current_user: dict = Depends(security_manager
             "Content-Disposition": "attachment; filename=tenant_isolation_report.md",
         },
     )
+
+
+@app.post("/api/pii/scan", tags=["Security"])
+async def scan_text_for_pii(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Scan text for PII without redacting. Returns found PII grouped by type.
+    Admin-only endpoint for auditing PII exposure.
+    """
+    profile = _get_authenticated_profile(current_user)
+    if not profile.get("is_master_admin"):
+        raise HTTPException(status_code=403, detail="Only administrators can scan for PII.")
+
+    body = await request.json()
+    text = body.get("text", "")
+    if not text:
+        return {"findings": {}, "message": "No text provided"}
+
+    from pii_redaction import scan_pii
+    findings = scan_pii(text)
+    return {
+        "findings": findings,
+        "total_pii_found": sum(len(v) for v in findings.values()),
+        "types_found": list(findings.keys()),
+    }

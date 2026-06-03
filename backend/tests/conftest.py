@@ -1,14 +1,69 @@
 import os
 import sys
 import types
+import importlib.util
 import pytest
 from unittest.mock import MagicMock, patch
+
+# Define shared mock objects to prevent ModuleNotFoundError on optional ML/caching libraries in test runs
+def _get_or_create_mock(name):
+    if name not in sys.modules:
+        sys.modules[name] = MagicMock()
+    return sys.modules[name]
+
+# Mock redis
+mock_redis = types.ModuleType("redis")
+mock_redis.from_url = MagicMock()
+sys.modules["redis"] = mock_redis
+
+# Mock torch
+mock_torch = _get_or_create_mock("torch")
+mock_torch.device.return_value = "cpu"
+mock_torch.cuda.is_available.return_value = False
+
+# Ensure torch.max behaves correctly by default to prevent unpack errors in classifier/duplicate tests
+def default_torch_max(tensor, dim=None, *args, **kwargs):
+    val = MagicMock()
+    val.item.return_value = 0
+    idx = MagicMock()
+    idx.item.return_value = 0
+    return (val, idx)
+mock_torch.max.side_effect = default_torch_max
+
+_get_or_create_mock("torch.nn")
+
+mock_f = _get_or_create_mock("torch.nn.functional")
+def default_softmax(input, dim=None):
+    return input
+mock_f.softmax = default_softmax
+
+_get_or_create_mock("transformers")
+
+# sentence-transformers
+mock_st = _get_or_create_mock("sentence_transformers")
+mock_st.SentenceTransformer = MagicMock()
+mock_st.util = MagicMock()
 
 # Force test environment variables before anything is imported
 os.environ["ALLOW_DEGRADED_STARTUP"] = "1"
 os.environ["SUPABASE_URL"] = "https://mock.supabase.co"
 os.environ["SUPABASE_SERVICE_KEY"] = "mockservicekey"
 os.environ["SLA_ESCALATION_ENABLED"] = "false"
+
+# Mock prometheus_fastapi_instrumentator to prevent duplicate timeseries registry errors
+class MockInstrumentator:
+    def __init__(self, *args, **kwargs):
+        pass
+    def add(self, *args, **kwargs):
+        return self
+    def instrument(self, *args, **kwargs):
+        return self
+    def expose(self, *args, **kwargs):
+        return self
+
+sys.modules["prometheus_fastapi_instrumentator"] = types.ModuleType("prometheus_fastapi_instrumentator")
+sys.modules["prometheus_fastapi_instrumentator"].Instrumentator = MockInstrumentator
+sys.modules["prometheus_fastapi_instrumentator"].metrics = MagicMock()
 
 # Ensure root directory is in python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -47,6 +102,33 @@ class FakeTable:
         self.inserted_rows = rows
         return self
 
+    def upsert(self, payload):
+        rows = payload if isinstance(payload, list) else [payload]
+        table_rows = self.db.setdefault(self.name, [])
+        merged_rows = []
+        for new_row in rows:
+            match_index = None
+            if new_row.get("company_id") is not None:
+                for index, existing_row in enumerate(table_rows):
+                    if existing_row.get("company_id") == new_row.get("company_id"):
+                        match_index = index
+                        break
+            if match_index is None and new_row.get("id") is not None:
+                for index, existing_row in enumerate(table_rows):
+                    if existing_row.get("id") == new_row.get("id"):
+                        match_index = index
+                        break
+
+            if match_index is None:
+                table_rows.append(dict(new_row))
+                merged_rows.append(table_rows[-1])
+            else:
+                table_rows[match_index].update(new_row)
+                merged_rows.append(table_rows[match_index])
+
+        self.inserted_rows = merged_rows
+        return self
+
     def eq(self, field, value):
         self.filters[field] = value
         return self
@@ -62,6 +144,11 @@ class FakeTable:
 
     def offset(self, value):
         self.offset_count = value
+        return self
+
+    def range(self, start, end):
+        self.offset_count = start
+        self.limit_count = max(end - start + 1, 0)
         return self
 
     def single(self):
@@ -156,6 +243,50 @@ def _make_stub_module(name, attrs):
 
 def _install_optional_ml_stubs():
     # Provide import-safe stand-ins for optional ML modules used by backend.main.
+    class _LimiterStub:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def limit(self, *args, **kwargs):
+            def decorator(func):
+                return func
+
+            return decorator
+
+    class _InstrumentatorStub:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def instrument(self, *args, **kwargs):
+            return self
+
+        def expose(self, *args, **kwargs):
+            return self
+
+        def add(self, *args, **kwargs):
+            return self
+
+    class _CollectorRegistryStub:
+        pass
+
+    class _RateLimitExceededStub(Exception):
+        pass
+
+    class _MetricsStub:
+        def __getattr__(self, _name):
+            return lambda *args, **kwargs: None
+
+    class _AsyncIOSchedulerStub:
+        def add_job(self, *args, **kwargs):
+            return None
+
+        def start(self):
+            return None
+
+    class _CronTriggerStub:
+        def __init__(self, *args, **kwargs):
+            pass
+
     class _BaseStub:
         def __init__(self):
             self._loaded = True
@@ -240,10 +371,92 @@ def _install_optional_ml_stubs():
             "backend.services.rag_service",
             {"RagService": _RagStub},
         ),
+        "slowapi": _make_stub_module(
+            "slowapi",
+            {"Limiter": _LimiterStub, "_rate_limit_exceeded_handler": lambda *args, **kwargs: None},
+        ),
+        "slowapi.util": _make_stub_module(
+            "slowapi.util",
+            {"get_remote_address": lambda *args, **kwargs: "127.0.0.1"},
+        ),
+        "slowapi.errors": _make_stub_module(
+            "slowapi.errors",
+            {"RateLimitExceeded": _RateLimitExceededStub},
+        ),
+        "prometheus_client": _make_stub_module(
+            "prometheus_client",
+            {
+                "generate_latest": lambda *args, **kwargs: b"",
+                "CONTENT_TYPE_LATEST": "text/plain; version=0.0.4",
+                "CollectorRegistry": _CollectorRegistryStub,
+                "REGISTRY": object(),
+            },
+        ),
+        "prometheus_fastapi_instrumentator": _make_stub_module(
+            "prometheus_fastapi_instrumentator",
+            {
+                "Instrumentator": _InstrumentatorStub,
+                "metrics": _MetricsStub(),
+            },
+        ),
+        "apscheduler": _make_stub_module(
+            "apscheduler",
+            {},
+        ),
+        "apscheduler.schedulers": _make_stub_module(
+            "apscheduler.schedulers",
+            {},
+        ),
+        "apscheduler.schedulers.asyncio": _make_stub_module(
+            "apscheduler.schedulers.asyncio",
+            {"AsyncIOScheduler": _AsyncIOSchedulerStub},
+        ),
+        "apscheduler.triggers": _make_stub_module(
+            "apscheduler.triggers",
+            {},
+        ),
+        "apscheduler.triggers.cron": _make_stub_module(
+            "apscheduler.triggers.cron",
+            {"CronTrigger": _CronTriggerStub},
+        ),
+        "fcntl": _make_stub_module(
+            "fcntl",
+            {
+                "LOCK_EX": 0,
+                "LOCK_UN": 0,
+                "flock": lambda *args, **kwargs: None,
+            },
+        ),
+        "encryption": _make_stub_module(
+            "encryption",
+            {
+                "encrypt_pii": lambda value, *args, **kwargs: value,
+                "decrypt_pii": lambda value, *args, **kwargs: value,
+                "is_encrypted": lambda *_args, **_kwargs: False,
+            },
+        ),
     }
 
     for module_name, stub_module in stubs.items():
-        if module_name not in sys.modules:
+        if module_name in sys.modules:
+            continue
+
+        if module_name.startswith("backend."):
+            should_stub = True
+        elif module_name == "encryption":
+            try:
+                crypto_missing = importlib.util.find_spec("Crypto") is None
+            except ModuleNotFoundError:
+                crypto_missing = True
+            should_stub = crypto_missing
+        else:
+            try:
+                spec_missing = importlib.util.find_spec(module_name) is None
+            except (ModuleNotFoundError, ValueError):
+                spec_missing = True
+            should_stub = spec_missing
+
+        if should_stub:
             sys.modules[module_name] = stub_module
 
 
@@ -271,12 +484,14 @@ def fake_db():
             {
                 "id": "user_A",
                 "company_id": "company_A",
-                "company": "Company A"
+                "company": "Company A",
+                "role": "user",
             },
             {
                 "id": "user_B",
                 "company_id": "company_B",
-                "company": "Company B"
+                "company": "Company B",
+                "role": "user",
             }
         ],
         "tickets": [],
@@ -303,9 +518,13 @@ def mock_ai_services(request):
         "test_language_pipeline.py",
         "test_sla_predictor.py",
         "test_webhook_service.py",
+        "test_knowledge_gap_service.py",
         "test_metrics_service.py",
         "test_audit_service.py",
         "test_correction_log_async.py",
+        "test_notification_routing.py",
+        "test_notification_routing_push.py",
+        "test_notification_routing_admin_alert.py",
     }:
         yield
         return

@@ -11,6 +11,9 @@ from backend.sla_predictor import get_sla_estimate
 
 logger = logging.getLogger(__name__)
 
+# Valid priority values (must match sla_predictor._BASELINE_MINUTES keys)
+_VALID_PRIORITIES = frozenset({"critical", "high", "medium", "low"})
+
 class SLABreachPredictionService:
     def __init__(self, supabase_client):
         self.supabase = supabase_client
@@ -29,10 +32,15 @@ class SLABreachPredictionService:
             if not ticket:
                 return {"error": "Ticket not found"}
 
-            # 2. Get estimate from SLA Predictor
+            # 2. Validate priority
+            priority = ticket.get("priority")
+            if priority and str(priority).strip().lower() not in _VALID_PRIORITIES:
+                return {"error": f"Invalid priority '{priority}'. Must be one of: {', '.join(sorted(_VALID_PRIORITIES))}"}
+
+            # 3. Get estimate from SLA Predictor
             estimate = get_sla_estimate(ticket, self.supabase)
             
-            # 3. Calculate Risk Level
+            # 4. Calculate Risk Level
             # Risk is 'High' if estimated resolution is > 90% of remaining SLA time.
             # Risk is 'Medium' if between 60% and 90%.
             

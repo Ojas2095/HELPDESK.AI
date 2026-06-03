@@ -106,3 +106,6 @@ def add_tenant_validator_middleware(app: FastAPI) -> None:
         add_tenant_validator_middleware(app)   # Tenant validation
     """
     app.add_middleware(TenantValidatorMiddleware)
+
+# Alias for compatibility
+TenantContextMiddleware = TenantValidatorMiddleware

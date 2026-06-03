@@ -144,7 +144,7 @@ class TestTranslateToEnglish(unittest.TestCase):
 
     def setUp(self):
         import backend.language_pipeline as lp
-        lp._MODEL_CACHE.clear()
+        lp._load_model.cache_clear()
 
     def test_english_input_unchanged(self):
         from backend.language_pipeline import translate_to_english
@@ -237,7 +237,7 @@ class TestTranslateFromEnglish(unittest.TestCase):
 
     def setUp(self):
         import backend.language_pipeline as lp
-        lp._MODEL_CACHE.clear()
+        lp._load_model.cache_clear()
 
     def test_english_target_unchanged(self):
         from backend.language_pipeline import translate_from_english

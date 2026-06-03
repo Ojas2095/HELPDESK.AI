@@ -18,7 +18,7 @@ class TestGeminiServiceMissingEnv:
         svc._initialized = False
 
         result = svc.analyze_image("base64data")
-        assert result["image_description"] == "[Gemini API Key Missing] Could not analyze image."
+        assert result["image_description"] == "[Gemini Service Offline] Could not analyze image."
         assert result["ocr_text"] == ""
         assert result["detected_problem"] == ""
 

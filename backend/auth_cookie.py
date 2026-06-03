@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 ACCESS_COOKIE = "access_token"
 REFRESH_COOKIE = "refresh_token"
@@ -101,6 +102,14 @@ class LoginBody(BaseModel):
     email: str = Field(min_length=3)
     password: str = Field(min_length=1)
 
+    @field_validator("email")
+    @classmethod
+    def validate_email_format(cls, v: str) -> str:
+        pattern = r"^[a-zA-Z0-9_.+%\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-.]+$"
+        if not re.match(pattern, v):
+            raise ValueError("Invalid email format")
+        return v
+
 
 class SignupBody(BaseModel):
     email: str = Field(min_length=3)
@@ -108,6 +117,14 @@ class SignupBody(BaseModel):
     full_name: str | None = None
     role: str | None = "user"
     company: str | None = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_format(cls, v: str) -> str:
+        pattern = r"^[a-zA-Z0-9_.+%\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-.]+$"
+        if not re.match(pattern, v):
+            raise ValueError("Invalid email format")
+        return v
 
 
 @router.post("/login")

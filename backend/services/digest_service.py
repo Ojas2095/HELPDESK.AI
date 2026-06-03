@@ -379,6 +379,7 @@ def send_digest_email(admin_email: str, stats: dict, ai_summary: str) -> bool:
 
     # Load template and substitute values
     template_str = _load_email_template()
+    frontend_base_url = os.environ.get("FRONTEND_BASE_URL", "https://helpdeskaiv1.vercel.app").rstrip("/")
 
     # Use string.Template for safe substitution ($-based)
     tmpl = Template(template_str)
@@ -397,6 +398,7 @@ def send_digest_email(admin_email: str, stats: dict, ai_summary: str) -> bool:
         resolved_tickets=stats.get("resolved_tickets", 0),
         category_list_html=category_list_html,
         team_performance_html=team_performance_html,
+        frontend_base_url=frontend_base_url,
     )
 
     # Dispatch via Resend API POST

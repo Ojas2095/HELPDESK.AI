@@ -119,3 +119,5 @@ if (!hasValidConfig) {
 export const supabase = hasValidConfig
   ? createClient(supabaseUrl, supabaseKey)
   : createDisabledSupabaseClient();
+
+export { isLikelyValidUrl, isLikelyValidAnonKey, makeQueryBuilder, createDisabledSupabaseClient, INVALID_MARKERS, disabledMessage }
