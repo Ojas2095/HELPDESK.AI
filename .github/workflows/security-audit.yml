@@ -27,7 +27,11 @@ jobs:
         pip install fastapi uvicorn pydantic python-dotenv slowapi \
                     supabase==2.22.4 storage3==2.22.4 \
                     requests httpx \
-                    pytest pytest-cov
+                    pytest pytest-cov pytest-asyncio \
+                    redis langdetect tokenizers openpyxl google-genai pillow \
+                    prometheus-fastapi-instrumentator prometheus-client pycryptodome \
+                    cryptography websockets openai-whisper python-multipart \
+                    sentencepiece sacremoses accelerate
         pip install -r backend/requirements.txt --ignore-requires-python || true
 
     - name: Run Tenant Isolation Security Tests
