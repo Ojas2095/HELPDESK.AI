@@ -1,4 +1,13 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+
+// Basic XSS sanitization: removes script tags and inline event handlers
+const sanitizeMessage = (text) => {
+    if (!text) return text;
+    return text
+        .replace(/<script.*?>.*?<\/script>/gi, '')
+        .replace(/ on\w+="[^"]*"/g, '')
+        .replace(/ on\w+='[^']*'/g, '');
+};
 import { Send, User, ShieldCheck, Bot, MessageSquare, Circle, Loader2 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
@@ -177,7 +186,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
             sender_id: user.id,
             sender_name: profile?.full_name || user.email,
             sender_role: profile?.role || 'user',
-            message: content,
+            message: sanitizeMessage(content),
             is_internal: currentIsInternal,
             created_at: new Date().toISOString()
         };
