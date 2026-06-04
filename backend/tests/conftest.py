@@ -447,11 +447,14 @@ def _install_optional_ml_stubs():
                 crypto_missing = True
             should_stub = module_name not in sys.modules and crypto_missing
         else:
-            try:
-                spec_missing = importlib.util.find_spec(module_name) is None
-            except ModuleNotFoundError:
-                spec_missing = True
-            should_stub = module_name not in sys.modules and spec_missing
+            if module_name in sys.modules:
+                should_stub = False
+            else:
+                try:
+                    spec_missing = importlib.util.find_spec(module_name) is None
+                except (ModuleNotFoundError, ValueError):
+                    spec_missing = True
+                should_stub = spec_missing
 
         if should_stub:
             sys.modules[module_name] = stub_module

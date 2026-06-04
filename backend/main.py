@@ -382,7 +382,8 @@ def classify_sla_status(sla_breach_at: str | None) -> str:
 # ── Rate limiter setup ────────────────────────────────────────────────────────
 # Uses client IP as the key. In production behind a proxy, set:
 #   get_remote_address to read X-Forwarded-For instead.
-limiter = Limiter(key_func=get_remote_address)
+from backend.services.rate_limit_config import limiter
+
 
 # Limits (tune via env vars in production)
 ML_HEAVY_LIMIT  = "10/minute"   # NLP, OCR, Gemini — GPU/CPU intensive
@@ -1115,8 +1116,9 @@ body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', sy
 """
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
-limiter = Limiter(key_func=get_remote_address)
+from backend.services.rate_limit_config import limiter
 app.state.limiter = limiter
+
 
 
 async def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
@@ -1163,8 +1165,8 @@ app.add_middleware(
     max_age=600,
 )
 
-from backend.middleware.tenant_validator import TenantContextMiddleware
-app.add_middleware(TenantContextMiddleware)
+from backend.middleware.tenant_validator import TenantValidatorMiddleware
+app.add_middleware(TenantValidatorMiddleware)
 
 
 app.include_router(auth_cookie_router)
@@ -1515,6 +1517,12 @@ async def send_digest_now(current_user: dict = Depends(get_current_user)):
 
 
 
+class TroubleshootResponse(BaseModel):
+    step_text: str
+    options: list[str]
+    is_final: bool
+
+
 class TroubleshootRequest(BaseModel):
     text: str
     category: str
@@ -1523,7 +1531,7 @@ class TroubleshootRequest(BaseModel):
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
 @limiter.limit("10/minute")
-async def troubleshoot(request: TroubleshootRequest):
+async def troubleshoot(request: Request, request_body: TroubleshootRequest):
     """Get the next dynamic troubleshooting step from Gemini given the user's
     ticket text, predicted category, and the conversation history so far.
     Returns the next ``step_text``, suggested ``options``, and an ``is_final``
@@ -1554,7 +1562,7 @@ class BugReportAnalysisResponse(BaseModel):
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 @limiter.limit("10/minute")
-async def analyze_bug(request: BugReportAnalysisRequest):
+async def analyze_bug(request: Request, request_body: BugReportAnalysisRequest):
     """Analyze a structured bug report (title, description, repro steps, and any
     captured console errors) using Gemini and return a short ``probable_cause``
     explanation that frontends can show to the reporter."""
@@ -1768,7 +1776,7 @@ def _atomic_write_json(path: Path, data) -> None:
 
 @app.post("/ai/log_correction")
 @limiter.limit("30/minute")
-async def log_correction(raw_request: Request, user: dict = Depends(get_current_user)):
+async def log_correction(request: Request, user: dict = Depends(get_current_user)):
     """Log an admin correction when the AI prediction differs from the human decision."""
     role = (user.get("user_metadata") or {}).get("role", "") or (user.get("app_metadata") or {}).get("role", "")
     if role not in ("admin", "company_admin"):
@@ -1783,7 +1791,7 @@ async def log_correction(raw_request: Request, user: dict = Depends(get_current_
             pass
 
     try:
-        body = await raw_request.json()
+        body = await request.json()
     except Exception as e:
         logging.error(f"[CORRECTION ERROR] Could not parse request body: {e}")
         return {"status": "error", "message": "Invalid JSON body"}
@@ -3262,9 +3270,9 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
 
 @app.post("/ai/analyze-v2")
 @limiter.limit("10/minute")
-async def analyze_ticket_v2(request: TicketRequest):
+async def analyze_ticket_v2(request: Request, body: TicketRequest):
     """V2 AI analysis with improved classifier. Returns category, subcategory, priority, and auto-resolve flag."""
-    text = sanitize_text(request.text) or ""
+    text = sanitize_text(body.text) or ""
     try:
         prediction = classifier_v2.predict(text)
         return {
@@ -3539,7 +3547,7 @@ async def check_duplicate_endpoint(
 
 @app.post("/ai/reindex_embeddings")
 @limiter.limit("2/minute")
-async def reindex_embeddings(current_user: dict = Depends(get_current_user)):
+async def reindex_embeddings(request: Request, current_user: dict = Depends(get_current_user)):
     """Re-generate vector embeddings for all tickets."""
     _require_platform_admin_profile(current_user)
     result = await semantic_dupe_service.reindex_all()
