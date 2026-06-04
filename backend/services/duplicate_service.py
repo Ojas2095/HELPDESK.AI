@@ -273,6 +273,19 @@ class DuplicateService:
             self._embedding_matrix_dirty = True
         self.save_to_disk(ticket_id, text)
 
+    def get_ticket_count(self) -> int:
+        """Return the number of indexed tickets using a thread-safe snapshot."""
+        with self._lock:
+            return len(self._tickets)
+
+    def clear(self) -> None:
+        """Clear in-memory duplicate detection state in a thread-safe way."""
+        with self._lock:
+            self._tickets.clear()
+            self._ticket_ids.clear()
+            self._embedding_matrix = None
+            self._embedding_matrix_dirty = True
+
     def generate_embedding(self, text: str) -> Optional[List[float]]:
         """Generate a 384-d embedding for the provided ticket text."""
         from backend.services.redis_cache import redis_cache
@@ -340,7 +353,10 @@ class DuplicateService:
             except Exception:
                 pass
 
-        # Take a snapshot of tickets under lock to avoid mutation during iteration
+        # Take a consistent snapshot under the same lock used by add_ticket().
+        # The matrix and ticket ID list must be derived from that same snapshot;
+        # using the mutable service-level matrix here can race with concurrent
+        # add_ticket() calls and return an ID from a different version of _tickets.
         with self._lock:
             tickets_snapshot = list(self._tickets)
 
@@ -361,15 +377,18 @@ class DuplicateService:
 
         # --- Vectorized cosine similarity (NumPy path) ---
         if _HAS_NUMPY:
-            self._ensure_matrix()
-            if self._embedding_matrix is not None and len(self._ticket_ids) > 0:
+            assert np is not None
+            ticket_ids_snapshot = [tid for tid, _, _ in tickets_snapshot]
+            embeddings_snapshot = [emb for _, emb, _ in tickets_snapshot]
+            matrix_snapshot = np.vstack(embeddings_snapshot).astype(np.float32)
+            if matrix_snapshot is not None and len(ticket_ids_snapshot) > 0:
                 # query (d,) @ matrix.T (d, n) → similarities (n,)
                 similarities = _cosine_similarity_numpy(
-                    query_embedding, self._embedding_matrix
+                    query_embedding, matrix_snapshot
                 )
                 best_index = int(np.argmax(similarities))
                 best_score = float(similarities[best_index])
-                best_id = self._ticket_ids[best_index]
+                best_id = ticket_ids_snapshot[best_index]
             else:
                 # Fallback: loop
                 best_score = -1.0
