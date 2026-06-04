@@ -30,6 +30,13 @@ def _get_sb():
 def _require_auth(authorization: Optional[str]) -> None:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
+    token = authorization[7:]
+    sb = _get_sb()
+    if sb:
+        try:
+            sb.auth.get_user(token)
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 class AnalyzeRequest(BaseModel):

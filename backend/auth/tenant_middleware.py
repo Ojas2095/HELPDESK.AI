@@ -65,7 +65,6 @@ class TenantSecurityManager:
     async def get_current_user_profile(self, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme)) -> dict:
         """
         Extracts token, validates auth with Supabase, and returns the resolved profile.
-        Supports mock tokens for testing/offline audits.
         """
         if not credentials:
             raise HTTPException(
@@ -75,18 +74,17 @@ class TenantSecurityManager:
         
         token = credentials.credentials
 
-        # --- MOCK TOKENS FOR TESTING / OFFLINE MODE ---
-        if token.startswith("mock-token-"):
+        mock_enabled = os.getenv("MOCK_AUTH_ENABLED", "false").lower() == "true"
+        if mock_enabled and token.startswith("mock-token-"):
             parts = token.split("-")
-            # Format: mock-token-[company_id]-[role]-[user_id]
-            # e.g., mock-token-companyA-admin-user123
             company_id = parts[2] if len(parts) > 2 else "company-mock-default"
             role = parts[3] if len(parts) > 3 else "user"
             user_id = parts[4] if len(parts) > 4 else f"user-{company_id}-{role}"
-            
+
             if company_id == "master":
                 return {"id": "master-admin-id", "company_id": None, "role": "master_admin"}
-            
+
+            logger.warning(f"Mock auth used — user={user_id} company={company_id} role={role}")
             return {"id": user_id, "company_id": company_id, "role": role}
 
         if not self.supabase:
@@ -166,18 +164,6 @@ class TenantSecurityManager:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: User has no tenant assignments."
             )
-
-        # MOCK FALLBACK for testing
-        if resource_id.startswith("mock-"):
-            parts = resource_id.split("-")
-            # Resource ID format: mock-[type]-[company_id]-[id]
-            resource_company = parts[2] if len(parts) > 2 else "company-mock-default"
-            if resource_company != user_company_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: Resource belongs to another organization."
-                )
-            return {"id": resource_id, "company_id": resource_company}
 
         if not self.supabase:
             raise HTTPException(

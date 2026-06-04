@@ -2,18 +2,39 @@
 scorecard_router.py — Agent performance scorecard endpoints
 Issue #774
 """
+import os
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Header, Query
+from supabase import create_client
 
 from agent_scorecard import get_company_scorecard, refresh_agent_scorecard
 
 router = APIRouter(prefix="/api/scorecard", tags=["scorecard"])
 
+_sb = None
+
+
+def _get_sb():
+    global _sb
+    if _sb is None:
+        url = os.getenv("SUPABASE_URL", "")
+        key = os.getenv("SUPABASE_SERVICE_KEY", "")
+        if url and key:
+            _sb = create_client(url, key)
+    return _sb
+
 
 def _require_auth(authorization: Optional[str]) -> None:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized")
+    token = authorization[7:]
+    sb = _get_sb()
+    if sb:
+        try:
+            sb.auth.get_user(token)
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 @router.get("/company/{company_id}")

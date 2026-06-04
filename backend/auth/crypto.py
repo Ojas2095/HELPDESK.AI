@@ -77,7 +77,7 @@ def derive_cryptographic_key(raw_key: str | None) -> bytes | None:
 
 # Initialize Key and AESGCM instance
 if CRYPTOGRAPHY_AVAILABLE:
-    SECRET_KEY_ENV_VAR="DB_ENC..._KEY"
+    SECRET_KEY_ENV_VAR="DB_ENCRYPTION_SECRET_KEY"
     raw_secret_key = os.environ.get(SECRET_KEY_ENV_VAR)
     
     if raw_secret_key:
