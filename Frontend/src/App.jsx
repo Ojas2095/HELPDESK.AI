@@ -5,6 +5,7 @@
 
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { ThemeProvider } from 'next-themes';
 import { PageSkeleton, MinimalSkeleton } from './components/ui/page-skeleton';
 import { NotFound } from './components/ui/not-found-2';
 import Toaster from './components/shared/Toaster';
@@ -13,6 +14,7 @@ import useAuthStore from './store/authStore';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
 import ShortcutsHelp from './components/shared/ShortcutsHelp';
 import BackToTop from './components/shared/BackToTop';
+import BackToTopButton from './components/shared/BackToTopButton';
 import ScrollToTopButton from './components/ScrollToTopButton';
 
 // ---------------------------------------------------------------------------
@@ -172,7 +174,6 @@ class ErrorBoundary extends React.Component {
 function AppContent() {
   const { profile } = useAuthStore();
   const [showShortcuts, setShowShortcuts] = useState(false);
-  useRealtimeNotifications();
 
   const { shortcuts } = useKeyboardShortcuts(
     profile?.role === 'admin'
@@ -310,24 +311,6 @@ export default function App() {
       </ThemeProvider>
     );
   }
-
-  return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <Toaster />
-        <BugReportWidget />
-        <BackToTopButton />
-        <Routes>
-          <Route path='/' element={<DocsPortal />} />
-          <Route path='/docs' element={<Navigate to='/' replace />} />
-          <Route path='/api-reference' element={<ApiReference />} />
-          <Route path='/changelog' element={<Changelog />} />
-          <Route path='/status' element={<StatusPage />} />
-          <Route path='*' element={<DocsPortal />} />
-        </Routes>
-      </BrowserRouter>
-    );
 
   return (
     <BrowserRouter>
