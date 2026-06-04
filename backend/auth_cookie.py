@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import logging
 import os
 import re
 from typing import Any
@@ -11,10 +13,15 @@ from pydantic import BaseModel, Field, field_validator
 from backend.services.rate_limit_config import limiter
 
 
+logger = logging.getLogger(__name__)
+
 ACCESS_COOKIE = "access_token"
 REFRESH_COOKIE = "refresh_token"
 ACCESS_MAX_AGE = 60 * 60
 REFRESH_MAX_AGE = 60 * 60 * 24 * 7
+
+# Redis key prefix for revoked tokens (TTL-keyed denylist)
+_REVOKED_PREFIX = "helpdesk:revoked:"
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -40,6 +47,55 @@ def _anon_supabase():
             detail="Auth backend not configured (SUPABASE_URL / SUPABASE_ANON_KEY missing)",
         )
     return create_client(url, key)
+
+
+def _service_supabase():
+    """Return a service-role Supabase client for admin operations."""
+    from supabase import create_client
+
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        return None
+    return create_client(url, key)
+
+
+def _get_redis():
+    """Return the shared Redis client if available, else None."""
+    try:
+        import redis as _redis
+
+        url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        client = _redis.from_url(url, decode_responses=True, socket_connect_timeout=1)
+        client.ping()
+        return client
+    except Exception:
+        return None
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _revoke_token(token: str, ttl: int = ACCESS_MAX_AGE) -> None:
+    """Add token to Redis denylist so it is rejected even before natural expiry."""
+    try:
+        redis = _get_redis()
+        if redis:
+            redis.setex(f"{_REVOKED_PREFIX}{_token_hash(token)}", ttl, "1")
+    except Exception as exc:
+        logger.warning("[Auth] Redis denylist write failed: %s", exc)
+
+
+def _is_token_revoked(token: str) -> bool:
+    """Return True if the token appears in the Redis denylist."""
+    try:
+        redis = _get_redis()
+        if redis:
+            return bool(redis.exists(f"{_REVOKED_PREFIX}{_token_hash(token)}"))
+    except Exception as exc:
+        logger.warning("[Auth] Redis denylist read failed: %s", exc)
+    return False
 
 
 def extract_token(request: Request) -> str | None:
@@ -82,10 +138,18 @@ async def get_current_user(request: Request) -> dict:
     token = extract_token(request)
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    # Reject tokens that were explicitly revoked via logout
+    if _is_token_revoked(token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has been revoked. Please log in again.",
+        )
+
     try:
         client = _anon_supabase()
         result = client.auth.get_user(token)
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid session",
@@ -184,14 +248,34 @@ async def auth_signup(request: Request, body: SignupBody, response: Response):
 @router.post("/logout")
 @limiter.limit("10/minute")
 async def auth_logout(request: Request, response: Response):
-    # Invalidate the session server-side before clearing cookies
+    """Log out the current user.
+
+    Performs three layers of session invalidation:
+    1. Adds the access token to a Redis denylist so it is rejected immediately on
+       any subsequent request, even before its natural JWT expiry.
+    2. Calls the Supabase admin API (service role) to sign the user out server-side,
+       which invalidates the refresh token and prevents silent token renewal.
+    3. Clears both the access_token and refresh_token HttpOnly cookies from the browser.
+    """
     token = extract_token(request)
     if token:
+        # Layer 1: denylist the raw access token in Redis for its remaining lifetime
+        _revoke_token(token, ttl=ACCESS_MAX_AGE)
+
+        # Layer 2: sign out via Supabase admin API to invalidate the refresh token
         try:
-            client = _anon_supabase()
-            client.auth.sign_out(token)
-        except Exception:
-            pass  # Still clear cookies even if server-side invalidation fails
+            admin = _service_supabase()
+            if admin:
+                user_result = admin.auth.get_user(token)
+                user = getattr(user_result, "user", None)
+                user_id = getattr(user, "id", None) if user else None
+                if user_id:
+                    admin.auth.admin.sign_out(user_id)
+        except Exception as exc:
+            # Non-fatal: cookies are cleared regardless; Redis denylist still protects
+            logger.warning("[Auth] Admin sign-out failed: %s", exc)
+
+    # Layer 3: clear cookies from the browser
     _clear_session_cookies(response)
     return {"ok": True}
 
