@@ -175,7 +175,7 @@ class AutoCloseService:
         Execute the auto-close job.
 
         Process:
-        1. Fetch all resolved tickets
+        1. Fetch all resolved tickets (paginated to avoid memory exhaustion)
         2. Group by company_id
         3. For each company, check auto-close settings from DATABASE
         4. Close tickets older than auto_close_days
@@ -196,14 +196,26 @@ class AutoCloseService:
         try:
             logger.info("Starting auto-close job...")
 
-            # Fetch all resolved tickets
-            response = self.supabase.table("tickets").select(
-                "id, company_id, status, updated_at"
-            ).eq("status", "resolved").execute()
+            # Fetch resolved tickets in pages to avoid memory exhaustion at scale
+            PAGE_SIZE = 1000
+            resolved_tickets: List[Dict] = []
+            offset = 0
 
-            resolved_tickets = response.data if response.data else []
+            while True:
+                response = self.supabase.table("tickets").select(
+                    "id, company_id, status, updated_at"
+                ).eq("status", "resolved").range(offset, offset + PAGE_SIZE - 1).execute()
+
+                page = response.data if response.data else []
+                resolved_tickets.extend(page)
+                logger.info(f"Fetched page of {len(page)} resolved tickets (offset={offset})")
+
+                if len(page) < PAGE_SIZE:
+                    break
+                offset += PAGE_SIZE
+
             stats["processed_count"] = len(resolved_tickets)
-            logger.info(f"Found {len(resolved_tickets)} resolved tickets")
+            logger.info(f"Found {len(resolved_tickets)} resolved tickets total")
 
             if not resolved_tickets:
                 logger.info("No resolved tickets to process")
