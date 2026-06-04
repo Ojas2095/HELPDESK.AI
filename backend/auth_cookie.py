@@ -8,6 +8,8 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, field_validator
+from backend.services.rate_limit_config import limiter
+
 
 ACCESS_COOKIE = "access_token"
 REFRESH_COOKIE = "refresh_token"
@@ -128,7 +130,8 @@ class SignupBody(BaseModel):
 
 
 @router.post("/login")
-async def auth_login(body: LoginBody, response: Response):
+@limiter.limit("5/minute")
+async def auth_login(request: Request, body: LoginBody, response: Response):
     try:
         client = _anon_supabase()
         result = client.auth.sign_in_with_password(
@@ -148,7 +151,8 @@ async def auth_login(body: LoginBody, response: Response):
 
 
 @router.post("/signup")
-async def auth_signup(body: SignupBody, response: Response):
+@limiter.limit("5/minute")
+async def auth_signup(request: Request, body: SignupBody, response: Response):
     metadata: dict[str, str] = {}
     if body.full_name:
         metadata["full_name"] = body.full_name
@@ -178,6 +182,7 @@ async def auth_signup(body: SignupBody, response: Response):
 
 
 @router.post("/logout")
+@limiter.limit("10/minute")
 async def auth_logout(request: Request, response: Response):
     # Invalidate the session server-side before clearing cookies
     token = extract_token(request)
@@ -192,7 +197,8 @@ async def auth_logout(request: Request, response: Response):
 
 
 @router.get("/me")
-async def auth_me(user: dict = Depends(get_current_user)):
+@limiter.limit("60/minute")
+async def auth_me(request: Request, user: dict = Depends(get_current_user)):
     return {"user": user}
 
 

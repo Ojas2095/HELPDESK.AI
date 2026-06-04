@@ -5,8 +5,10 @@ Translation helpers for locale detection, MyMemory API fallback, and ticket tran
 from __future__ import annotations
 
 import logging
+import re
 from typing import Optional
 from functools import lru_cache
+
 
 try:
     import requests as _requests_lib
@@ -247,7 +249,7 @@ def translate_ticket(ticket_data: dict, target_lang: str = "en") -> dict:
         desc_result = translate_text(ticket_data["description"], target_lang=target_lang)
         result["translations"]["description"] = desc_result
         if not result["original_language"]:
-            result["original_language"] = description_result["source_lang"]
+            result["original_language"] = desc_result["source_lang"]
 
     if "messages" in ticket_data:
         translated_messages = []
