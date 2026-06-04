@@ -123,6 +123,8 @@ def detect_language(text: str) -> Optional[str]:
     except Exception as e:
         logger.warning(f"Language detection failed: {e}")
         return None
+    lang, _ = detect_locale(text)
+    return lang
 
 
 def get_supported_languages() -> dict[str, str]:

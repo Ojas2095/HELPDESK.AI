@@ -2,7 +2,8 @@
 Tests for backend/services/translation_service.py
 Covers: successful translation, language detection, fallback on API error,
 empty text, same-language passthrough, batch translation, timeout handling,
-rate limit (429), malformed responses, locale detection, unicode encoding.
+rate limit (429), malformed responses, locale detection, unicode encoding,
+and target language validation.
 """
 
 import sys
@@ -18,6 +19,7 @@ from backend.services.translation_service import (
     detect_locale,
     batch_translate,
     detect_and_translate_to_english,
+    SUPPORTED_LANGUAGES,
 )
 
 
@@ -62,7 +64,7 @@ class TestDetectLocale(unittest.TestCase):
         self.assertGreater(conf, 0.5)
 
     def test_telugu_script(self):
-        lang, conf = detect_locale("నా పరికరం పని చేయడం లేదు")
+        lang, conf = detect_locale("నా ప్రింటర్ పనిచేయడం లేదు")
         self.assertEqual(lang, "te")
         self.assertGreater(conf, 0.5)
 
@@ -91,6 +93,10 @@ class TestDetectLocale(unittest.TestCase):
 
 
 class TestTranslateText(unittest.TestCase):
+    def setUp(self):
+        from backend.services.translation_service import _translation_cache
+        _translation_cache.clear()
+
     def test_empty_text_returns_passthrough(self):
         result = translate_text("")
         self.assertEqual(result["source"], "passthrough")
