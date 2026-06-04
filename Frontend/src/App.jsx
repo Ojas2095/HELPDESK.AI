@@ -126,6 +126,7 @@ function TitleUpdater() {
     else if (path === '/create-ticket') title = 'Create Ticket';
     else if (path === '/my-tickets') title = 'My Tickets';
     else if (path === '/profile') title = 'User Profile';
+    else if (path === '/privacy-settings') title = 'Privacy Settings';
     else if (path === '/notifications') title = 'Notifications';
     else if (path === '/docs') title = 'Documentation';
     else if (path === '/api-reference') title = 'API Reference';
