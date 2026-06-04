@@ -91,7 +91,6 @@ const AllAdmins = React.lazy(() => import("./master-admin/pages/AllAdmins"));
 
 function TitleUpdater() {
   const location = useLocation();
-
   useEffect(() => {
     const path = location.pathname;
     let title = 'HELPDESK.AI';
@@ -106,10 +105,12 @@ function TitleUpdater() {
     else if (path.startsWith('/admin/settings')) title = 'Settings | Admin';
     // Master Admin Routes
     else if (path.startsWith('/master-admin/dashboard')) title = 'Master Dashboard';
-    else if (path.startsWith('/master-admin/admin-requests')) title = 'Pending Requests | Master Admin';
+    else if (path.startsWith('/master-admin/admin-requests'))
+      title = 'Pending Requests | Master Admin';
     else if (path.startsWith('/master-admin/companies')) title = 'Companies | Master Admin';
     else if (path.startsWith('/master-admin/all-admins')) title = 'All Admins | Master Admin';
-    else if (path.startsWith('/master-admin/bug-reports')) title = 'System Bug Radar | Master Admin';
+    else if (path.startsWith('/master-admin/bug-reports'))
+      title = 'System Bug Radar | Master Admin';
     // User Routes
     else if (path.startsWith('/ticket/')) title = 'Ticket Detail';
     else if (path.startsWith('/ai-understanding')) title = 'AI Understanding';
@@ -128,45 +129,51 @@ function TitleUpdater() {
     else if (path === '/cookie-policy') title = 'Cookie Policy';
     // Public / Lobby Routes
     else if (path === '/login') title = 'Login';
-    else if (path === '/signup') title = 'Create Account';
-    else if (path === '/admin-signup') title = 'Admin Signup';
-    else if (path === '/user-lobby') title = 'User Lobby';
-    else if (path === '/admin-lobby') title = 'Admin Lobby';
-    else if (path === '/') title = 'Welcome';
-
-    document.title = title === 'HELPDESK.AI' ? title : `${title} | HELPDESK.AI`;
+    else if (path === '/signup') title = 'Sign Up';
+    document.title = `${title} | HELPDESK.AI`;
   }, [location]);
-
   return null;
 }
 
-// Scrolls to top on every route change
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo(0, 0);
   }, [pathname]);
   return null;
 }
 
-function AppLayout() {
-  const { user, profile } = useAuthStore();
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, info) { console.error(error, info); }
+  render() {
+    if (this.state.hasError) return (
+      <div className="flex min-h-[40vh] items-center justify-center px-6 py-16">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-4 text-sm font-semibold text-red-600 shadow-sm">
+          Something went wrong. Please refresh the page.
+        </div>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
-  // Initialize Global Realtime Notifications Listener
+function AppContent() {
+  const { profile } = useAuthStore();
+  const [showShortcuts, setShowShortcuts] = useState(false);
   useRealtimeNotifications();
 
-  useEffect(() => {
-    if (!user) return;
-    const handleFocus = () => {
-      useTicketStore.persist.rehydrate();
-    };
+  const { shortcuts } = useKeyboardShortcuts(
+    profile?.role === 'admin'
+      ? { 'g,a': '/admin/dashboard', 'g,t': '/admin/tickets' }
+      : {},
+    { onShortcutsHelp: () => setShowShortcuts(true) }
+  );
 
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [user]);
-
-  // ProtectedRoute handles the redirect to /login if user is not present
-  // but we still need to handle role-based navigation here
   return (
     <>
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>}>
@@ -196,17 +203,32 @@ function AppLayout() {
           <Route path="/notifications" element={<Notifications />} />
         </Route>
 
-        {/* --- Admin Portal (Protected) --- */}
+        {/* Protected Admin Routes */}
         <Route element={<AdminProtectedRoute />}>
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/tickets" element={<AdminTickets />} />
-            <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/analytics" element={<AdminAnalytics />} />
-            <Route path="/admin/profile" element={<AdminProfile />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin" element={<Suspense fallback={<PageSkeleton />}><AdminLayout /></Suspense>}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="tickets"   element={<AdminTickets />} />
+            <Route path="tickets/:id" element={<AdminTicketDetail />} />
+            <Route path="users"     element={<AdminUsers />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="settings"  element={<AdminSettings />} />
+            <Route path="profile"   element={<AdminProfile />} />
+            <Route path="scorecard" element={<AdminScorecard />} />
+            <Route path="sla"       element={<SLAPage />} />
+          </Route>
+        </Route>
+
+        {/* Master Admin Routes */}
+        <Route path="/master-admin-login" element={<MasterAdminLogin />} />
+        <Route element={<MasterAdminProtectedRoute />}>
+          <Route path="/master-admin" element={<Suspense fallback={<PageSkeleton />}><MasterAdminLayout /></Suspense>}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard"        element={<MasterAdminDashboard />} />
+            <Route path="admins"           element={<AllAdmins />} />
+            <Route path="companies"        element={<AllCompanies />} />
+            <Route path="pending-requests" element={<PendingAdminRequests />} />
+            <Route path="bug-reports"      element={<MasterBugReports />} />
           </Route>
         </Route>
 
@@ -217,20 +239,39 @@ function AppLayout() {
   );
 }
 
-
-function App() {
+export default function App() {
   const { initialize } = useAuthStore();
-
-  useEffect(() => {
-    initialize();
+  useEffect(() => { 
+    initialize().catch(err => console.error('Auth init failed:', err)); 
   }, [initialize]);
 
+  // Handle docs subdomain if applicable
   const isDocsSubdomain = window.location.hostname.startsWith('docs.');
 
   if (isDocsSubdomain) {
     return (
+      <ThemeProvider>
+        <BrowserRouter>
+          <TitleUpdater />
+          <ScrollToTop />
+          <Toaster />
+          <BugReportWidget />
+          <Routes>
+            <Route path="/" element={<DocsPortal />} />
+            <Route path="/docs" element={<Navigate to="/" replace />} />
+            <Route path="/api-reference" element={<ApiReference />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/status" element={<StatusPage />} />
+            <Route path="*" element={<DocsPortal />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
+    );
+  }
+
+  return (
+    <ThemeProvider>
       <BrowserRouter>
-        <TitleUpdater />
         <ScrollToTop />
         <Toaster />
         <BugReportWidget />
@@ -246,11 +287,9 @@ function App() {
         </Suspense>
       </BrowserRouter>
     );
-  }
 
   return (
     <BrowserRouter>
-      <TitleUpdater />
       <ScrollToTop />
       <Toaster />
       <BugReportWidget />
@@ -307,6 +346,3 @@ function App() {
     </BrowserRouter>
   );
 }
-
-export default App;
-

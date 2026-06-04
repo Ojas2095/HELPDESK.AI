@@ -31,3 +31,13 @@ This space is configured to run as a Docker container on port 7860.
 - `GET /health` is a lightweight liveness check. It returns API status and model load flags.
 - `GET /ready` is a deployment readiness check. It returns `200` only when the API, classifier, NER service, duplicate index, and RAG service are ready; otherwise it returns `503` with a flat response body and per-check details. Set `REQUIRE_SUPABASE=true` to include Supabase configuration in the strict readiness gate.
 - Docker images run `backend/healthcheck.py` against `/ready` every 30 seconds after a 120-second startup grace period. Override `HEALTHCHECK_URL` or `HEALTHCHECK_TIMEOUT_SECONDS` if your deployment uses a different internal port or gateway.
+
+
+## Healthcheck Verification Guide
+
+To verify the server ready state locally:
+- Run the healthcheck query script:
+    `python healthcheck.py`
+- By default, it calls `HEALTHCHECK_URL` defined in the environment (defaulting to `http://127.0.0.1:7860/ready`).
+- You can customize connection timeout using `HEALTHCHECK_TIMEOUT_SECONDS` environment variable (defaults to 3 seconds).
+- The script returns exit code `0` on successful check (HTTP 2xx) and `1` on failure.
