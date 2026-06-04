@@ -177,7 +177,7 @@ class SLAEngine:
         # Determine SLA status
         if elapsed >= max_sec:
             sla_status = SLAStatus.BREACHED
-            remaining_seconds = -(elapsed - max_sec)
+            remaining_seconds = max_sec - elapsed # Result is negative or zero
         elif elapsed >= max_sec * policy["warning_pct"]:
             sla_status = SLAStatus.WARNING
             remaining_seconds = max_sec - elapsed
@@ -256,20 +256,20 @@ class SLAEngine:
                 "sla_status": result["sla_status"],
                 "remaining_seconds": result["remaining_seconds"],
                 "escalation_level": result["escalation_level"],
-                "sla_updated_at": datetime.datetime.utcnow().isoformat() + "Z",
+                "sla_updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
             }
 
             # If breached and not yet marked as breached, set breached timestamp
             if result["sla_status"] == SLAStatus.BREACHED.value and not ticket.get("sla_breach_at"):
-                update_fields["sla_breach_at"] = datetime.datetime.utcnow().isoformat() + "Z"
+                update_fields["sla_breach_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z"
 
             # If warning and not yet notified, mark warning time
             if result["sla_status"] == SLAStatus.WARNING.value and not ticket.get("sla_warning_at"):
-                update_fields["sla_warning_at"] = datetime.datetime.utcnow().isoformat() + "Z"
+                update_fields["sla_warning_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z"
 
             # If needs notification, prepare escalation record
             if result["needs_notification"]:
-                update_fields["last_escalated_at"] = datetime.datetime.utcnow().isoformat() + "Z"
+                update_fields["last_escalated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z"
                 escalated.append({
                     "ticket": ticket,
                     "sla_result": result,
@@ -373,7 +373,7 @@ class SLAEngine:
             "remaining_seconds": result["remaining_seconds"],
             "ticket_url": f"{FRONTEND_BASE_URL}/admin/ticket/{ticket['id']}",
             "assigned_team": ticket.get("assigned_team", "Unassigned"),
-            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
         }
 
         if channel_type == ChannelType.SLACK:
@@ -386,7 +386,7 @@ class SLAEngine:
                             f"*Priority:* {priority} | *Team:* {base['assigned_team']}\n"
                             f"*Remaining:* {self._fmt_remaining(result['remaining_seconds'])}",
                     "footer": "HELPDESK.AI SLA Engine",
-                    "ts": int(datetime.datetime.utcnow().timestamp()),
+                    "ts": int(datetime.datetime.now(datetime.timezone.utc).timestamp()),
                 }]
             }
 

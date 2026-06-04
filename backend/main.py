@@ -1577,7 +1577,10 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 # ---------------------------------------------------------------------------
 
 @app.get("/ai/agent_scorecard")
-async def agent_scorecard(company_id: str | None = None):
+async def agent_scorecard(
+    company_id: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Build a real-time performance scorecard for every support agent
     (grouped by assigned_team) within a company, then request personalised
@@ -1591,14 +1594,17 @@ async def agent_scorecard(company_id: str | None = None):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection not initialised")
 
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+
     try:
         query = supabase.table("tickets").select(
             "id, assigned_team, status, priority, created_at, updated_at, "
             "sla_breach_at, auto_resolve, category, subcategory"
         ).order("created_at", desc=False)
 
-        if company_id:
-            query = query.eq("company_id", company_id)
+        if company_scope:
+            query = query.eq("company_id", company_scope)
 
         res = query.execute()
         tickets = res.data or []
@@ -3840,14 +3846,21 @@ async def metrics(request: Request):
 # Admin settings endpoints (Issue #913)
 # ---------------------------------------------------------------------------
 @app.get("/admin/settings/auto-resolve")
-async def get_auto_resolve_setting(company_id: str):
+async def get_auto_resolve_setting(
+    company_id: str,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Return the current auto-resolve / auto-close enabled setting for a company.
     Reads live from DB so it reflects the latest toggle state.
     """
-    settings = get_system_settings(company_id)
+    profile = _require_tenant_admin_profile(current_user)
+    company_scope = _ticket_company_scope(profile, company_id)
+    if not company_scope:
+        raise HTTPException(status_code=400, detail="company_id is required")
+    settings = get_system_settings(company_scope)
     return {
-        "company_id": company_id,
+        "company_id": company_scope,
         "enable_auto_resolve": settings.get("enable_auto_resolve", False),
         "auto_close_enabled": settings.get("auto_close_enabled", False),
         "auto_close_days": settings.get("auto_close_days", 7),

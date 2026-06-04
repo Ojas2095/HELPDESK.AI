@@ -51,20 +51,34 @@ class GeminiService:
             }
 
         try:
-            # Decode base64 image (actually the new SDK handles base64 easily if we just pass bytes, 
-            # but we can also use PIL if we need to process it)
-            image_bytes = base64.b64decode(image_base64)
-
-            # Defense-in-depth: reject oversized images to prevent memory exhaustion
-            max_size_bytes = 10 * 1024 * 1024  # 10MB
-            if len(image_bytes) > max_size_bytes:
+            # Defensive check: validate base64 length before decoding (base64 expands by ~33%)
+            # 10MB binary is approx 13.3MB base64. Limit to 14MB.
+            if len(image_base64) > 14_000_000:
                 return {
-                    "image_description": "[Image Too Large] Image exceeds 10MB limit.",
+                    "image_description": "[Image Too Large] Base64 string exceeds length limit.",
                     "ocr_text": "",
                     "detected_problem": ""
                 }
 
-            img = Image.open(io.BytesIO(image_bytes))
+            # Decode base64 image
+            image_bytes = base64.b64decode(image_base64)
+
+            # Re-check decoded byte size
+            max_size_bytes = 10 * 1024 * 1024  # 10MB
+            if len(image_bytes) > max_size_bytes:
+                return {
+                    "image_description": "[Image Too Large] Decoded image exceeds 10MB limit.",
+                    "ocr_text": "",
+                    "detected_problem": ""
+                }
+
+            # Pre-validate with PIL for decompression bombs
+            # Set a safe limit for pixels (e.g., 50MP)
+            if Image:
+                Image.MAX_IMAGE_PIXELS = 50_000_000
+                img = Image.open(io.BytesIO(image_bytes))
+            else:
+                img = io.BytesIO(image_bytes) # fallback to raw bytes if PIL missing, though SDK prefers Image object for multi-modal
 
             prompt = (
                 "Analyze this screenshot from a user reporting a technical issue. "
