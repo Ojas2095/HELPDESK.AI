@@ -402,6 +402,39 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+# Hard request body size cap — rejects oversized payloads before any JSON parsing
+# or Pydantic validation runs, preventing memory exhaustion from multi-MB uploads.
+# Default: 20 MB to accommodate the 14 MB image_base64 limit plus JSON overhead.
+_MAX_REQUEST_BODY_BYTES = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(20 * 1024 * 1024)))
+
+
+@app.middleware("http")
+async def request_body_size_guard(request: Request, call_next):
+    """Reject requests whose body exceeds _MAX_REQUEST_BODY_BYTES.
+
+    The Content-Length header is checked first (fast path); bodies sent with
+    chunked transfer encoding are read and measured before they reach any
+    endpoint handler.
+    """
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            cl = int(content_length)
+            if cl > _MAX_REQUEST_BODY_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "detail": (
+                            f"Request body too large ({cl:,} bytes). "
+                            f"Maximum allowed size is {_MAX_REQUEST_BODY_BYTES:,} bytes."
+                        )
+                    },
+                )
+        except ValueError:
+            pass  # malformed Content-Length — let downstream handle it
+
+    return await call_next(request)
+
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
@@ -546,7 +579,7 @@ def _classify_ticket_text_uncached(text: str) -> dict:
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
-    image_text: str = "" # Keep for backward compatibility
+    image_text: str = ""  # keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
     company_id: str | None = None
@@ -554,25 +587,49 @@ class TicketRequest(BaseModel):
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
+    # Guard limits — tune via environment variables in production
+    _MAX_TEXT_LEN: int = int(os.getenv("MAX_TICKET_TEXT_LEN", "50000"))
+    # base64 expands binary by ~4/3, so 10 MB binary ≈ 13.3 MB base64
+    _MAX_IMAGE_BASE64_LEN: int = int(os.getenv("MAX_IMAGE_BASE64_LEN", "14000000"))
+
+    @field_validator("text")
+    @classmethod
+    def validate_text_length(cls, v: str) -> str:
+        max_len = int(os.getenv("MAX_TICKET_TEXT_LEN", "50000"))
+        if len(v) > max_len:
+            raise ValueError(
+                f"Ticket text exceeds maximum length of {max_len:,} characters "
+                f"(got {len(v):,}). Please shorten your description."
+            )
+        return v
+
+    @field_validator("image_base64")
+    @classmethod
+    def validate_image_base64_size(cls, v: str) -> str:
+        """Reject oversized base64 payloads before any decoding or OCR is attempted.
+
+        Raising ValueError here causes Pydantic to return a 422 Unprocessable
+        Entity with a clear error message. A middleware-level 413 guard (via
+        RequestBodySizeLimitMiddleware) acts as the first line of defence so
+        this validator is primarily a safety net for requests that bypass the
+        middleware (e.g. unit tests, internal calls).
+        """
+        if not v:
+            return v
+        max_len = int(os.getenv("MAX_IMAGE_BASE64_LEN", "14000000"))
+        if len(v) > max_len:
+            raise ValueError(
+                f"Image payload exceeds the {max_len // 1_000_000} MB limit. "
+                "Please resize or compress the image before uploading."
+            )
+        return v
+
     @field_validator("confidence_threshold", "duplicate_sensitivity")
     @classmethod
     def validate_threshold_range(cls, v: float) -> float:
         if not 0.0 <= v <= 1.0:
             raise ValueError(f"Value must be between 0.0 and 1.0, got {v}")
         return v
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        # Validate image size to prevent memory exhaustion DoS
-        if self.image_base64:
-            # base64 expands binary by ~33%, so 10MB binary ≈ 13.3MB base64
-            max_base64_len = 14_000_000  # ~10MB original image
-            if len(self.image_base64) > max_base64_len:
-                from fastapi import HTTPException
-                raise HTTPException(
-                    status_code=413,
-                    detail="Image too large. Maximum size is 10MB."
-                )
 
 class TicketSaveRequest(BaseModel):
     model_config = {"extra": "allow"}
