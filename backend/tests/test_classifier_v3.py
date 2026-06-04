@@ -3,9 +3,9 @@ import sys
 import os
 from unittest.mock import patch, MagicMock
 
-sys.modules['torch'] = MagicMock()
-sys.modules['torch.nn'] = MagicMock()
-sys.modules['transformers'] = MagicMock()
+if 'torch' not in sys.modules: sys.modules['torch'] = MagicMock()
+if 'torch.nn' not in sys.modules: sys.modules['torch.nn'] = MagicMock()
+if 'transformers' not in sys.modules: sys.modules['transformers'] = MagicMock()
 
 # Remove the stub installed by conftest.py to force importing the real module with our mocks
 if 'backend.services.classifier_v3' in sys.modules:

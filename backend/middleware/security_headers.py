@@ -59,13 +59,17 @@ _SECURITY_HEADERS: dict[str, str] = {
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "Content-Security-Policy": (
         "default-src 'self'; "
-        "script-src 'self'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+        "font-src 'self' data: https://fonts.gstatic.com; "
+        "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https:; "
         "connect-src 'self' https://*.supabase.co https://*.supabase.in "
-        "wss://*.supabase.co https://generativelanguage.googleapis.com; "
+        "wss://*.supabase.co https://generativelanguage.googleapis.com "
+        "http://localhost:* ws://localhost:*; "
         "frame-ancestors 'none'; "
-        "object-src 'none'"
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
     ),
 }
 
@@ -96,15 +100,26 @@ def add_security_middleware(app: FastAPI, *, extra_headers: dict[str, str] | Non
 
         app = FastAPI(...)
         add_security_middleware(app)
+
+    CORS origins are read from the ALLOWED_ORIGINS environment variable (comma-separated).
+    Supports wildcard patterns via ALLOWED_ORIGIN_REGEX (e.g., r"https://.*\\.vercel\\.app").
     """
+    import re
+
     allowed_origins = _parse_allowed_origins()
+    origin_regex = os.environ.get("ALLOWED_ORIGIN_REGEX", "")
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
-    )
+    cors_kwargs: dict = {
+        "allow_origins": allowed_origins,
+        "allow_credentials": True,
+        "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        "allow_headers": ["Authorization", "Content-Type", "X-Requested-With", "X-CSRF-Token"],
+        "expose_headers": ["X-Request-ID", "X-Process-Time"],
+        "max_age": 600,
+    }
 
+    if origin_regex:
+        cors_kwargs["allow_origin_regex"] = origin_regex
+
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
     app.add_middleware(SecurityHeadersMiddleware, extra_headers=extra_headers)

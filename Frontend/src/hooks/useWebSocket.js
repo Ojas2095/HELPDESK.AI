@@ -80,13 +80,16 @@ export default function useWebSocket(companyId) {
   // ---- Start heartbeat timers (called after connect) --------------------
 
   const startHeartbeat = useCallback(() => {
+    // Clear any existing timers first to prevent duplicates on reconnect
+    clearTimers();
+
     // Periodic pings
     pingTimerRef.current = setInterval(() => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: "ping" }));
       }
     }, PING_INTERVAL_MS);
-  }, []);
+  }, [clearTimers]);
 
   // ---- WebSocket lifecycle & Reconnection ---------------------------------
 

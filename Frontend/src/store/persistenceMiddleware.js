@@ -16,6 +16,48 @@ export const STORAGE_PREFIX = 'helpdesk-v2-';
 // ---------------------------------------------------------------------------
 // Quota recovery
 // ---------------------------------------------------------------------------
+/**
+ * Custom storage adapter with centralized error handling and quota recovery.
+ */
+const safeLocalStorage = {
+    getItem: (name) => {
+        try {
+            const str = localStorage.getItem(name);
+            if (!str) return null;
+            return JSON.parse(str);
+        } catch (e) {
+            console.error(`[Sync] Read failed for ${name}:`, e);
+            return null;
+        }
+    },
+    setItem: (name, value) => {
+        let serialized = '';
+        try {
+            serialized = JSON.stringify(value);
+            localStorage.setItem(name, serialized);
+        } catch (error) {
+            if (error.name === 'QuotaExceededError' || error.code === 22 || error.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                console.warn(`[Sync] Storage quota exceeded for ${name}. Attempting cleanup...`);
+                recoverStorageQuota();
+                // Retry once
+                try {
+                    localStorage.setItem(name, serialized);
+                } catch (retryError) {
+                    console.error(`[Sync] Failed to save ${name} even after cleanup:`, retryError);
+                }
+            } else {
+                console.error(`[Sync] Failed to save ${name}:`, error);
+            }
+        }
+    },
+    removeItem: (name) => {
+        try {
+            localStorage.removeItem(name);
+        } catch (e) {
+            console.error(`[Sync] Remove failed for ${name}:`, e);
+        }
+    }
+};
 
 /**
  * Attempt to free localStorage space by evicting 25% of helpdesk-namespaced
@@ -138,6 +180,13 @@ export function createPersistedStore(storeName, creator, options = {}) {
 // ---------------------------------------------------------------------------
 // Cross-tab utilities
 // ---------------------------------------------------------------------------
+export const broadcastStoreSync = () => {
+    try {
+        localStorage.setItem(`${STORAGE_PREFIX}sync-trigger`, Date.now().toString());
+    } catch (e) {
+        console.error("[Sync] Broadcast failed:", e);
+    }
+};
 
 /**
  * Broadcast a sync event so other tabs can rehydrate their stores.
@@ -165,3 +214,14 @@ export function clearGlobalState() {
   }
   window.location.reload();
 }
+export const clearGlobalState = () => {
+    try {
+        Object.keys(localStorage)
+            .filter(key => key.startsWith(STORAGE_PREFIX) || key.startsWith('helpdesk-'))
+            .forEach(key => localStorage.removeItem(key));
+    } catch (e) {
+        console.error("[Sync] Clear state failed:", e);
+    }
+    window.location.reload();
+};
+

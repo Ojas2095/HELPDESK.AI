@@ -200,6 +200,16 @@ class TestTranslateText(unittest.TestCase):
         params = call_kwargs[1].get("params") or call_kwargs[0][1]
         self.assertIn("fr|en", params.get("langpair", ""))
 
+    @patch("backend.services.translation_service._requests_lib")
+    def test_unsupported_to_lang_returns_error_without_request(self, mock_requests):
+        result = translate_text("Bonjour", from_lang="fr", to_lang="xx")
+        self.assertEqual(result["translated"], "Bonjour")
+        self.assertEqual(result["source_lang"], "fr")
+        self.assertEqual(result["target_lang"], "xx")
+        self.assertFalse(result["cached"])
+        self.assertEqual(result["error"], "unsupported_language")
+        mock_requests.get.assert_not_called()
+
 
 class TestBatchTranslate(unittest.TestCase):
     @patch("backend.services.translation_service._requests_lib")
@@ -264,6 +274,7 @@ class TestDetectAndTranslateToEnglish(unittest.TestCase):
         mock_requests.get.return_value = _mock_response(json_data=_GOOD_RESPONSE)
         detect_and_translate_to_english("मेरी नेटवर्क धीमी है")
         mock_requests.get.assert_called_once()
+"""
 Unit tests for backend.services.translation_service (Issue #734).
 
 Covers:
@@ -278,8 +289,6 @@ Covers:
 All tests are self-contained: langdetect and transformers are mocked via
 sys.modules injection so the suite runs without optional ML packages installed.
 """
-
-from __future__ import annotations
 
 import sys
 import types

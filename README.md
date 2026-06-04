@@ -160,6 +160,52 @@ graph TD
 
 ---
 
+<h2 id="project-structure">📁 Project Structure</h2>
+
+This document outlines the key directories in the HELPDESK.AI repository to help contributors navigate the codebase efficiently.
+
+```
+HELPDESK.AI/
+├── Frontend/          # React frontend application (Vite-based)
+├── backend/           # Backend API services
+├── MobileApp/         # Mobile application (Android)
+├── Model/             # ML models and AI inference code
+├── supabase/          # Supabase database configuration and migrations
+├── scripts/           # Utility and automation scripts
+├── docs/              # Documentation files
+├── app/               # Main application entry point
+├── src/               # Source code modules
+├── tests/             # Test suites and fixtures
+├── k8s/               # Kubernetes deployment manifests
+├── deploy/            # Deployment configurations and scripts
+├── middleware/        # Express/FastAPI middleware components
+├── utils/             # Helper functions and utilities
+├── static/            # Static assets (CSS, images)
+├── templates/         # HTML templates
+└── ...
+```
+
+| Directory | Purpose |
+| :--- | :--- |
+| **Frontend/** | React-based web UI built with Vite |
+| **backend/** | FastAPI/Node.js backend API services |
+| **MobileApp/** | React Native mobile application |
+| **Model/** | Machine learning models (DistilBERT, NER, OCR) |
+| **supabase/** | Database schema, migrations, and edge functions |
+| **scripts/** | Build, deployment, and utility scripts |
+| **docs/** | Project documentation and guides |
+| **app/** | Core application logic |
+| **src/** | Shared source modules and libraries |
+| **tests/** | Unit, integration, and E2E tests |
+| **k8s/** | Kubernetes manifests for production deployment |
+| **deploy/** | CI/CD pipelines and deployment configs |
+| **middleware/** | Authentication, logging, and request middleware |
+| **utils/** | Common utilities and helper functions |
+| **static/** | Static assets served by the application |
+| **templates/** | HTML/email templates |
+
+---
+
 <h2 id="the-ai-neural-pipeline">🧠 The AI Neural Pipeline</h2>
 
 Under the hood, Helpdesk.ai leverages a custom suite of high speed models.
@@ -242,3 +288,12 @@ Thanks goes to these wonderful people for contributing to this project ❤️
 <div align="center">
 Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team.
 </div>
+
+
+## Local Docker Deployment Verification Checklist
+
+Before deploying your container to staging or production, verify:
+- [ ] Port binding configuration maps correctly (default `7860`).
+- [ ] Volumetric storage binds persist datasets like `final_dataset.xlsx`.
+- [ ] Database credentials (`SUPABASE_URL`, `SUPABASE_KEY`) are passed correctly.
+- [ ] Container health check is active and returns status green.

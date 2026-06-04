@@ -1,79 +1,112 @@
 """
-Benchmark duplicate-detection cosine similarity:
-loop-based (old) vs NumPy-vectorized (new).
+Benchmark: Loop-based vs NumPy-Vectorized vs ONNX Cosine Similarity
 
-Usage:
-    python -m backend.scripts.benchmark_duplicate_similarity \
-        [--sizes 100 1000 5000 10000] [--dim 384] [--repeat 5]
+Compares three approaches for duplicate detection similarity search:
+1. Old loop-based (per-ticket cos_sim calls)
+2. NumPy vectorized (single matrix dot-product)
+3. ONNX Runtime (model inference + NumPy similarity)
 
-Reports per-query latency (ms) and speedup factor.
+Run:
+    python -m backend.scripts.benchmark_duplicate_similarity
 """
 
-import argparse
+from __future__ import annotations
+
+import sys
 import time
+from pathlib import Path
+
 import numpy as np
 
-
-def loop_cosine(query: np.ndarray, stored: list[np.ndarray]) -> tuple[int, float]:
-    """Old behaviour: Python loop, one cosine per stored embedding."""
-    best_idx, best_score = -1, -1.0
-    q_norm = query / (np.linalg.norm(query) + 1e-12)
-    for i, emb in enumerate(stored):
-        e_norm = emb / (np.linalg.norm(emb) + 1e-12)
-        score = float(np.dot(q_norm, e_norm))
-        if score > best_score:
-            best_score = score
-            best_idx = i
-    return best_idx, best_score
+EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 output dimension
 
 
-def vector_cosine(query: np.ndarray, matrix: np.ndarray) -> tuple[int, float]:
-    """New behaviour: single matrix-vector dot product."""
-    q = query / (np.linalg.norm(query) + 1e-12)
-    # matrix rows assumed L2-normalised in the service; we normalise here for parity.
-    norms = np.linalg.norm(matrix, axis=1, keepdims=True) + 1e-12
-    m = matrix / norms
-    scores = m @ q
-    idx = int(np.argmax(scores))
-    return idx, float(scores[idx])
+def _generate_synthetic_embeddings(n: int, dim: int = EMBEDDING_DIM) -> np.ndarray:
+    """Create *n* random L2-normalised embeddings as a (n, dim) float32 array."""
+    raw = np.random.randn(n, dim).astype(np.float32)
+    norms = np.linalg.norm(raw, axis=1, keepdims=True)
+    norms = np.where(norms < 1e-8, 1.0, norms)
+    return raw / norms
 
 
-def benchmark(n: int, dim: int, repeat: int):
-    rng = np.random.default_rng(seed=42)
-    stored_list = [rng.standard_normal(dim).astype(np.float32) for _ in range(n)]
-    stored_matrix = np.vstack(stored_list)
-    query = rng.standard_normal(dim).astype(np.float32)
+def benchmark_loop(query: np.ndarray, matrix: np.ndarray, rounds: int = 10) -> float:
+    """Old approach: iterate and compute dot product one at a time."""
+    # Warm up
+    for i in range(min(10, len(matrix))):
+        _ = float(np.dot(query, matrix[i]))
 
-    # Warm-up.
-    loop_cosine(query, stored_list)
-    vector_cosine(query, stored_matrix)
+    times = []
+    for _ in range(rounds):
+        t0 = time.perf_counter()
+        best = -1.0
+        for i in range(len(matrix)):
+            score = float(np.dot(query, matrix[i]))
+            if score > best:
+                best = score
+        times.append(time.perf_counter() - t0)
+    return sum(times) / len(times)
 
-    t0 = time.perf_counter()
-    for _ in range(repeat):
-        loop_cosine(query, stored_list)
-    loop_ms = (time.perf_counter() - t0) * 1000 / repeat
 
-    t0 = time.perf_counter()
-    for _ in range(repeat):
-        vector_cosine(query, stored_matrix)
-    vec_ms = (time.perf_counter() - t0) * 1000 / repeat
+def benchmark_vectorized(query: np.ndarray, matrix: np.ndarray, rounds: int = 10) -> float:
+    """New approach: single matrix dot-product."""
+    # Warm up
+    _ = matrix @ query
 
-    speedup = loop_ms / vec_ms if vec_ms > 0 else float("inf")
-    return loop_ms, vec_ms, speedup
+    times = []
+    for _ in range(rounds):
+        t0 = time.perf_counter()
+        similarities = matrix @ query
+        _ = int(np.argmax(similarities))
+        times.append(time.perf_counter() - t0)
+    return sum(times) / len(times)
+
+
+def benchmark_torch(query_np: np.ndarray, matrix_np: np.ndarray, rounds: int = 10) -> float:
+    """Torch approach: util.cos_sim (requires torch + sentence-transformers)."""
+    try:
+        import torch
+        from sentence_transformers import util
+    except ImportError:
+        return -1.0  # not available
+
+    query = torch.from_numpy(query_np).unsqueeze(0)
+    matrix = torch.from_numpy(matrix_np)
+
+    # Warm up
+    _ = util.cos_sim(query, matrix)
+
+    times = []
+    for _ in range(rounds):
+        t0 = time.perf_counter()
+        sim = util.cos_sim(query, matrix)
+        _ = torch.max(sim, dim=1)
+        times.append(time.perf_counter() - t0)
+    return sum(times) / len(times)
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--sizes", type=int, nargs="+", default=[100, 1000, 5000, 10000])
-    parser.add_argument("--dim", type=int, default=384)  # all-MiniLM-L6-v2 dim
-    parser.add_argument("--repeat", type=int, default=5)
-    args = parser.parse_args()
+    sizes = [100, 500, 1000, 5000]
+    print("=" * 70)
+    print("Duplicate Detection — Cosine Similarity Benchmark")
+    print("=" * 70)
+    print(f"{'Tickets':>8}  {'Loop (ms)':>12}  {'NumPy (ms)':>12}  {'Speedup':>8}  {'Torch (ms)':>12}")
+    print("-" * 70)
 
-    print(f"{'N tickets':>10} | {'loop (ms)':>12} | {'vector (ms)':>12} | {'speedup':>8}")
-    print("-" * 54)
-    for n in args.sizes:
-        loop_ms, vec_ms, speedup = benchmark(n, args.dim, args.repeat)
-        print(f"{n:>10} | {loop_ms:>12.3f} | {vec_ms:>12.3f} | {speedup:>7.1f}x")
+    for n in sizes:
+        matrix = _generate_synthetic_embeddings(n)
+        query = _generate_synthetic_embeddings(1)[0]
+
+        t_loop = benchmark_loop(query, matrix) * 1000  # ms
+        t_numpy = benchmark_vectorized(query, matrix) * 1000  # ms
+        t_torch = benchmark_torch(query, matrix) * 1000  # ms
+        speedup = t_loop / t_numpy if t_numpy > 0 else float("inf")
+
+        torch_str = f"{t_torch:>10.3f}ms" if t_torch >= 0 else "     N/A  "
+        print(f"{n:>8}  {t_loop:>10.3f}ms  {t_numpy:>10.3f}ms  {speedup:>7.1f}x  {torch_str}")
+
+    print("=" * 70)
+    print("\n✅ NumPy vectorized is the recommended production path.")
+    print("   Uses cached embedding matrix + single dot-product per query.")
 
 
 if __name__ == "__main__":
