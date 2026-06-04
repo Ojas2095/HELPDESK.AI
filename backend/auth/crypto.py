@@ -14,141 +14,59 @@ if not logger.handlers:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-CRYPTOGRAPHY_AVAILABLE = False
-_aesgcm = None
-ENCRYPTION_ENABLED = False
+# Initialize AESGCM with 32-byte key derived from secret key
+SECRET_KEY = os.environ.get("DB_ENCRYPTION_SECRET_KEY")
 
-try:
+_cipher = None
+if SECRET_KEY:
+    # Hash secret key to ensure it is exactly 32 bytes (256 bits)
+    key_bytes = hashlib.sha256(SECRET_KEY.encode()).digest()
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-    CRYPTOGRAPHY_AVAILABLE = True
-except ImportError:
-    logger.warning("The 'cryptography' library is not available. Running with database encryption disabled.")
-
-# ---------------------------------------------------------------------------
-# Runtime toggle: controlled by system_settings.enable_encryption
-# ---------------------------------------------------------------------------
-
-_encryption_setting_enabled = True  # default: allow encryption when key is present
-
-
-def set_encryption_setting_enabled(enabled: bool) -> None:
-    """Set whether encryption is allowed by the admin toggle.
-
-    Even with a valid DB_ENCRYPTION_SECRET_KEY, encryption will be
-    skipped when this is set to False. Called by the application after
-    reading system_settings.enable_encryption.
-    """
-    global _encryption_setting_enabled
-    _encryption_setting_enabled = bool(enabled)
-    logger.info(f"Encryption admin toggle set to {_encryption_setting_enabled}")
-
-
-def is_encryption_setting_enabled() -> bool:
-    """Return whether the admin toggle permits encryption."""
-    return _encryption_setting_enabled
-
-
-# Key Parsing logic: supporting urlsafe-b64, hex, and SHA-256 stretching
-def derive_cryptographic_key(raw_key: str | None) -> bytes | None:
-    if not raw_key:
-        return None
-    
-    # 1. Try URL-safe Base64 decode
-    try:
-        # Pad string appropriately if needed
-        padded = raw_key + "=" * ((4 - len(raw_key) % 4) % 4)
-        decoded = base64.urlsafe_b64decode(padded.encode('utf-8'))
-        if len(decoded) == 32:
-            return decoded
-    except Exception:
-        pass
-
-    # 2. Try hex decode
-    try:
-        decoded = bytes.fromhex(raw_key)
-        if len(decoded) == 32:
-            return decoded
-    except Exception:
-        pass
-
-    # 3. Fall back to SHA-256 stretch
-    return hashlib.sha256(raw_key.encode('utf-8')).digest()
-
-
-# Initialize Key and AESGCM instance
-if CRYPTOGRAPHY_AVAILABLE:
-    SECRET_KEY_ENV_VAR="DB_ENC..._KEY"
-    raw_secret_key = os.environ.get(SECRET_KEY_ENV_VAR)
-    
-    if raw_secret_key:
-        try:
-            key_bytes = derive_cryptographic_key(raw_secret_key)
-            if key_bytes:
-                _aesgcm = AESGCM(key_bytes)
-                ENCRYPTION_ENABLED = True
-                logger.info("Database encryption key loaded and active.")
-            else:
-                logger.warning("Could not derive key from DB_ENCRYPTION_SECRET_KEY. Database encryption disabled.")
-        except Exception as e:
-            logger.warning(f"Failed to initialize AESGCM: {e}. Database encryption disabled.")
-    else:
-        logger.warning("DB_ENCRYPTION_SECRET_KEY is not set in environment. Running with database encryption disabled.")
+    _cipher = AESGCM(key_bytes)
+else:
+    logger.warning("DB_ENCRYPTION_SECRET_KEY is not set in environment. Running with database encryption disabled.")
 
 # Tag prefix for identifying encrypted data
 PREFIX = "enc:v1:"
 
-
-def _encryption_active() -> bool:
-    """Return True only when both the key is available AND the admin toggle allows it."""
-    return ENCRYPTION_ENABLED and _aesgcm is not None and is_encryption_setting_enabled()
-
-
-def encrypt_value(value: str) -> str:
-    """Encrypt a string value using AES-256-GCM. Returns 'enc:v1:<base64>'."""
-    if not _encryption_active():
-        return value
-    if not isinstance(value, str):
-        return value
-    # Double-encryption protection: if already encrypted, return as-is
-    if value.startswith(PREFIX):
-        return value
+def legacy_decrypt(cipher_text: str) -> str:
+    """Decrypt base64 encoded ciphertext using AES-256 GCM and return plain text (legacy fallback)."""
+    if not _cipher or not cipher_text:
+        return cipher_text
+        
+    text_to_decrypt = cipher_text
+    if cipher_text.startswith(PREFIX):
+        text_to_decrypt = cipher_text[len(PREFIX):]
         
     try:
-        # Generate 12-byte secure random nonce
-        nonce = os.urandom(12)
-        plaintext_bytes = value.encode('utf-8')
-        # Encrypt (combines ciphertext and tag automatically in cryptography's AESGCM)
-        ciphertext = _aesgcm.encrypt(nonce, plaintext_bytes, None)
-        # Store nonce + ciphertext together
-        payload = nonce + ciphertext
-        encoded = base64.b64encode(payload).decode('utf-8')
-        return f"{PREFIX}{encoded}"
-    except Exception as e:
-        logger.error(f"Encryption failed: {e}")
-        return value
-
-def decrypt_value(value: str) -> str:
-    """Decrypt a string value that starts with 'enc:v1:'."""
-    if not ENCRYPTION_ENABLED or _aesgcm is None:
-        return value
-    if not isinstance(value, str):
-        return value
-    # Graceful pass-through for legacy/plaintext rows
-    if not value.startswith(PREFIX):
-        return value
-        
-    try:
-        encoded_str = value[len(PREFIX):]
-        payload = base64.b64decode(encoded_str)
-        if len(payload) < 12:
-            return value
-        nonce = payload[:12]
-        ciphertext = payload[12:]
-        decrypted_bytes = _aesgcm.decrypt(nonce, ciphertext, None)
+        try:
+            combined = base64.b64decode(text_to_decrypt.encode('utf-8'))
+        except Exception:
+            return cipher_text  # Return as-is if not valid base64
+            
+        if len(combined) < 12:
+            return cipher_text  # Not enough bytes for nonce
+            
+        nonce = combined[:12]
+        ciphertext = combined[12:]
+        decrypted_bytes = _cipher.decrypt(nonce, ciphertext, None)
         return decrypted_bytes.decode('utf-8')
-    except Exception as e:
-        logger.error(f"Decryption failed: {e}")
-        return value
+    except Exception:
+        # If decryption fails, it might be unencrypted plaintext (graceful degrade for old records)
+        return cipher_text
+
+def encrypt(plain_text: str, tenant_id: str | None = None, field_name: str | None = None) -> str:
+    """Encrypt plain text using the Encryption Manager."""
+    from backend.security.encryption_manager import encrypt_field
+    return encrypt_field(plain_text, tenant_id=tenant_id, field_name=field_name)
+
+def decrypt(cipher_text: str, tenant_id: str | None = None, field_name: str | None = None) -> str:
+    """Decrypt base64 encoded ciphertext using the Encryption Manager."""
+    if cipher_text and cipher_text.startswith(PREFIX):
+        return legacy_decrypt(cipher_text)
+        
+    from backend.security.encryption_manager import decrypt_field
+    return decrypt_field(cipher_text, tenant_id=tenant_id, field_name=field_name)
 
 # ORM Payload Processing Helpers
 TARGET_FIELDS = {"contact_email", "description", "raw_text"}
@@ -156,23 +74,21 @@ TARGET_FIELDS = {"contact_email", "description", "raw_text"}
 def encrypt_row(row: dict) -> dict:
     if not isinstance(row, dict):
         return row
-    if not _encryption_active():
-        return row
     new_row = dict(row)
+    company_id = row.get("company_id")
     for field in TARGET_FIELDS:
         if field in new_row and new_row[field] is not None:
-            new_row[field] = encrypt_value(str(new_row[field]))
+            new_row[field] = encrypt(str(new_row[field]), tenant_id=company_id, field_name=field)
     return new_row
 
 def decrypt_row(row: dict) -> dict:
     if not isinstance(row, dict):
         return row
-    if not ENCRYPTION_ENABLED or _aesgcm is None:
-        return row
     new_row = dict(row)
+    company_id = row.get("company_id")
     for field in TARGET_FIELDS:
         if field in new_row and new_row[field] is not None:
-            new_row[field] = decrypt_value(str(new_row[field]))
+            new_row[field] = decrypt(str(new_row[field]), tenant_id=company_id, field_name=field)
     return new_row
 
 def encrypt_payload(payload: Any) -> Any:
@@ -250,3 +166,53 @@ def wrap_client(client: Any) -> Any:
     client.table = wrapped_table
     client._wrapped_by_crypto = True
     return client
+
+def apply_db_encryption_patch():
+    """Apply transparent monkeypatch to Postgrest/Supabase client execute method for 'tickets' table."""
+    try:
+        from postgrest._sync.request_builder import SyncQueryRequestBuilder
+        
+        _original_execute = SyncQueryRequestBuilder.execute
+
+        def custom_execute(self):
+            path_str = getattr(self.request.path, "path", "")
+            table_name = path_str.split('/')[-1]
+            
+            if table_name == "tickets":
+                payload = self.request.json
+                if isinstance(payload, dict):
+                    company_id = payload.get("company_id")
+                    for field in ["contact_email", "description", "raw_text"]:
+                        if field in payload and payload[field] is not None:
+                            payload[field] = encrypt(str(payload[field]), tenant_id=company_id, field_name=field)
+                elif isinstance(payload, list):
+                    for item in payload:
+                        if isinstance(item, dict):
+                            company_id = item.get("company_id")
+                            for field in ["contact_email", "description", "raw_text"]:
+                                if field in item and item[field] is not None:
+                                    item[field] = encrypt(str(item[field]), tenant_id=company_id, field_name=field)
+                                    
+            res = _original_execute(self)
+            
+            if table_name == "tickets" and res and hasattr(res, "data"):
+                data = res.data
+                if isinstance(data, dict):
+                    company_id = data.get("company_id")
+                    for field in ["contact_email", "description", "raw_text"]:
+                        if field in data and data[field] is not None:
+                            data[field] = decrypt(str(data[field]), tenant_id=company_id, field_name=field)
+                elif isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict):
+                            company_id = item.get("company_id")
+                            for field in ["contact_email", "description", "raw_text"]:
+                                if field in item and item[field] is not None:
+                                    item[field] = decrypt(str(item[field]), tenant_id=company_id, field_name=field)
+                                    
+            return res
+
+        SyncQueryRequestBuilder.execute = custom_execute
+        print("[Crypto] Supabase database encryption patch applied successfully.")
+    except Exception as e:
+        print(f"[Crypto WARNING] Failed to apply database encryption patch: {e}")

@@ -1326,6 +1326,50 @@ async def metrics_endpoint(request: Request):
     return StreamingResponse(content=data, media_type=CONTENT_TYPE_LATEST)
 
 
+# Request context binding middleware for encryption auditing and tenant context
+@app.middleware("http")
+async def audit_context_middleware(request: Request, call_next):
+    from backend.security.encryption_manager import request_context
+    import base64
+    import json
+    
+    user_id = request.headers.get("x-user-id")
+    company_id = request.headers.get("x-company-id") or request.headers.get("x-tenant-id")
+    
+    auth_header = request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            parts = token.split(".")
+            if len(parts) == 3:
+                payload_b64 = parts[1]
+                payload_b64 += "=" * ((4 - len(payload_b64) % 4) % 4)
+                payload = json.loads(base64.b64decode(payload_b64).decode("utf-8"))
+                if not user_id:
+                    user_id = payload.get("sub")
+                if not company_id:
+                    user_metadata = payload.get("user_metadata", {})
+                    company_id = user_metadata.get("company_id") or payload.get("company_id")
+        except Exception:
+            pass
+            
+    ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    request_source = f"IP: {ip}, UA: {user_agent}"
+    
+    context = {
+        "user_id": user_id,
+        "company_id": company_id,
+        "request_source": request_source
+    }
+    
+    token_var = request_context.set(context)
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        request_context.reset(token_var)
+
 
 # ---------------------------------------------------------------------------
 # Root & Health check
