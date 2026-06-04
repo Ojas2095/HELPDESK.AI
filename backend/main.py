@@ -536,7 +536,7 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(user: dict = Depends(get_current_user), company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -652,7 +652,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
