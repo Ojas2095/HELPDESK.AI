@@ -1,0 +1,52 @@
+{
+  "info": {
+    "_postman_id": "helpdesk-ai-backend",
+    "name": "HelpDesk AI Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Ticket",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"New Ticket\", \"description\": \"This is a new ticket\"}"
+        },
+        "url": {
+          "raw": "https://helpdeskaiv1.vercel.app/api/tickets",
+          "host": [
+            "helpdeskaiv1"
+          ],
+          "path": [
+            "api",
+            "tickets"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Tickets",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://helpdeskaiv1.vercel.app/api/tickets",
+          "host": [
+            "helpdeskaiv1"
+          ],
+          "path": [
+            "api",
+            "tickets"
+          ]
+        }
+      }
+    }
+  ]
+}
