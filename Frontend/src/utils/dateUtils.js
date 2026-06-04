@@ -1,18 +1,37 @@
 /**
  * Unified Date Utility for HELPDESK.AI
  * Fixes timezone shift issues by explicitly forcing local display.
+ * Safari-safe: normalizes ISO-8601 strings before parsing.
  */
+
+/**
+ * Normalize a date string so Safari (and all browsers) can parse it.
+ * Safari rejects "YYYY-MM-DD HH:MM:SS" but accepts "YYYY-MM-DDTHH:MM:SSZ".
+ */
+function normalizeDateString(dateStr) {
+    if (typeof dateStr !== 'string') return dateStr;
+    // Replace a space between date and time with 'T' (Safari fix)
+    let normalized = dateStr.replace(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})/, '$1T$2');
+    // If no timezone info, assume UTC
+    if (!normalized.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(normalized) && normalized.includes('T')) {
+        normalized += 'Z';
+    }
+    return normalized;
+}
 
 export const formatTimelineDate = (dateStr) => {
     if (!dateStr) return null;
     
-    // Ensure the date string is interpreted as UTC if it's an ISO string from DB
     let date;
-    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
-        // If it's a raw string without TZ, assume it was intended as UTC from our backend
-        date = new Date(dateStr + 'Z');
-    } else {
-        date = new Date(dateStr);
+    try {
+        if (typeof dateStr === 'string') {
+            const normalized = normalizeDateString(dateStr);
+            date = new Date(normalized);
+        } else {
+            date = new Date(dateStr);
+        }
+    } catch (_e) {
+        return 'Invalid Date';
     }
 
     if (isNaN(date.getTime())) return 'Invalid Date';
