@@ -2537,9 +2537,20 @@ async def websocket_endpoint(ws: WebSocket, company_id: str):
             except json.JSONDecodeError:
                 continue  # ignore malformed frames
 
-            # Handle pong response
-            if data.get("type") == "pong":
+            msg_type = data.get("type")
+
+            # Client responds to server pings — record liveness timestamp
+            if msg_type == "pong":
                 connection_manager.record_pong(ws)
+                continue
+
+            # Client-initiated keepalive ping — echo back so the client can
+            # confirm the connection is alive and cancel its pong-timeout timer
+            if msg_type == "ping":
+                try:
+                    await ws.send_json({"type": "pong"})
+                except Exception:
+                    pass
                 continue
 
     except WebSocketDisconnect:
