@@ -25,6 +25,7 @@ import {
 } from '../../utils/adminSettingsPersistence';
 
 import { Select } from "../../components/ui/select";
+import SSOConfig from '../../pages/AdminSettings/SSOConfig';
 
 /**
  * AdminSettings Page

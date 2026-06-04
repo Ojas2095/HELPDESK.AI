@@ -135,6 +135,12 @@ from backend.sanitization import get_security_headers
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 from backend.sanitization import sanitize_text
 
+# Enterprise SSO / SAML & OAuth Imports
+from backend.auth.saml_provider import generate_authn_request, parse_metadata_xml, verify_saml_response
+from backend.auth.oauth_provider import get_authorization_url, exchange_code_for_tokens, get_user_profile
+from backend.services.idp_sync_service import provision_user, handle_scim_webhook, log_sso_event
+
+
 
 # ---------------------------------------------------------------------------
 # WebSocket Connection Manager — real-time ticket dashboards
