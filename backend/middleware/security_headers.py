@@ -1,126 +1,181 @@
 """
-[DEPRECATED] HTTP Security Headers middleware for FastAPI (issue #637).
-Use backend.security_middleware instead.
-
-Adds standard Helmet-equivalent headers to every response:
-  - X-Content-Type-Options
-  - X-Frame-Options
-  - X-XSS-Protection
-  - Referrer-Policy
-  - Permissions-Policy
-  - Strict-Transport-Security (HSTS)
-  - Content-Security-Policy
-
-Also refactors CORS to read allowed origins from the ALLOWED_ORIGINS env var
-so production and staging environments are controlled without code changes.
-
-Usage in main.py:
-    from backend.middleware.security_headers import add_security_middleware
-    add_security_middleware(app)
+[DEPRECATED] Consolidated Security and CORS configuration for HELPDESK.AI Backend.
+Resolves Issue #637 by standardizing Helmet headers and CORS policy.
+Use backend/security_middleware instead.
 """
 
 import os
-from typing import Callable
-
-from fastapi import FastAPI, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 
 # ---------------------------------------------------------------------------
-# CORS — read allowed origins from environment
+# CSP configuration
 # ---------------------------------------------------------------------------
 
-def _parse_allowed_origins() -> list[str]:
+def _build_csp(report_only: bool = False) -> str:
     """
-    Read ALLOWED_ORIGINS from env (comma-separated) and return as a list.
-    Falls back to sensible defaults for local development when the var is not set.
+    Build the Content-Security-Policy directive string.
+
+    The policy restricts resource loading to trusted origins, blocks inline
+    script execution where possible, and prevents framing by third parties.
+    ``'unsafe-inline'`` is retained for ``style-src`` because the application
+    uses Tailwind CSS utility classes applied via inline <style> attributes
+    generated at runtime.  Removing it without a nonce/hash strategy would
+    break the UI.
     """
-    raw = os.environ.get("ALLOWED_ORIGINS", "")
-    if raw:
-        return [origin.strip() for origin in raw.split(",") if origin.strip()]
-    # Default: production deployment + local dev
-    return [
-        "https://helpdeskaiv1.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:3000",
+    directives = [
+        "default-src 'self'",
+        # Allow scripts only from the application origin and the Tailwind CDN
+        # used by the backend landing page.
+        "script-src 'self' cdn.tailwindcss.com",
+        # Images may be loaded over HTTPS from any domain (avatars, screenshots).
+        "img-src 'self' https: data:",
+        # Inline styles required by Tailwind; no external style-sheet CDNs.
+        "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
+        # Web-font assets.
+        "font-src 'self' fonts.gstatic.com",
+        # API calls are strictly same-origin.  Supabase Realtime WS endpoints
+        # are handled by the frontend; the backend only talks to itself.
+        "connect-src 'self'",
+        # No plugins (Flash, Silverlight, etc.).
+        "object-src 'none'",
+        # Prevent embedding this application in third-party frames.
+        "frame-ancestors 'self'",
+        # Restrict <base> tag manipulation.
+        "base-uri 'self'",
+        # Restrict form submission targets.
+        "form-action 'self'",
     ]
 
+    csp_string = "; ".join(directives)
+
+    if report_only:
+        csp_string += "; report-uri /csp-report"
+
+    return csp_string
+
 
 # ---------------------------------------------------------------------------
-# Security headers middleware
+# Permissions-Policy configuration
 # ---------------------------------------------------------------------------
 
-_SECURITY_HEADERS: dict[str, str] = {
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "X-XSS-Protection": "1; mode=block",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
-    "Content-Security-Policy": (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
-        "font-src 'self' data: https://fonts.gstatic.com; "
-        "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https:; "
-        "connect-src 'self' https://*.supabase.co https://*.supabase.in "
-        "wss://*.supabase.co https://generativelanguage.googleapis.com "
-        "http://localhost:* ws://localhost:*; "
-        "frame-ancestors 'none'; "
-        "object-src 'none'; "
-        "base-uri 'self'; "
-        "form-action 'self'"
-    ),
-}
+def _build_permissions_policy() -> str:
+    """
+    Return a Permissions-Policy header value that disables browser features
+    not required by this application, following the principle of least privilege.
+    """
+    denied = [
+        "geolocation=()",
+        "microphone=()",
+        "camera=()",
+        "payment=()",
+        "usb=()",
+        "magnetometer=()",
+        "accelerometer=()",
+        "gyroscope=()",
+        "fullscreen=(self)",
+    ]
+    return ", ".join(denied)
 
+
+# ---------------------------------------------------------------------------
+# Middleware
+# ---------------------------------------------------------------------------
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Injects security headers into every HTTP response."""
+    """
+    Starlette middleware that injects HTTP security hardening headers into
+    every outbound response.
 
-    def __init__(self, app, extra_headers: dict[str, str] | None = None):
+    Configuration is driven by environment variables so deployment-specific
+    values (HSTS max-age, CSP report-only mode) can be adjusted without
+    code changes.
+
+    Environment variables:
+      HSTS_MAX_AGE          — Integer seconds for HSTS max-age (default: 63072000 / 2 years)
+      HSTS_INCLUDE_SUBDOMAINS — "true"/"false" (default: "true")
+      HSTS_PRELOAD          — "true"/"false" (default: "false"; enable only after HSTS preload
+                              list submission)
+      CSP_REPORT_ONLY       — "true"/"false" (default: "false"); use during initial rollout
+                              to monitor violations without blocking.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
-        self.headers = {**_SECURITY_HEADERS, **(extra_headers or {})}
+        self._hsts_max_age = int(os.environ.get("HSTS_MAX_AGE", "63072000"))
+        self._hsts_include_subdomains = (
+            os.environ.get("HSTS_INCLUDE_SUBDOMAINS", "true").lower() == "true"
+        )
+        self._hsts_preload = os.environ.get("HSTS_PRELOAD", "false").lower() == "true"
+        self._csp_report_only = (
+            os.environ.get("CSP_REPORT_ONLY", "false").lower() == "true"
+        )
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        response = await call_next(request)
-        for header, value in self.headers.items():
-            response.headers[header] = value
+    # ------------------------------------------------------------------
+    # HSTS header
+    # ------------------------------------------------------------------
+
+    def _hsts_value(self) -> str:
+        value = f"max-age={self._hsts_max_age}"
+        if self._hsts_include_subdomains:
+            value += "; includeSubDomains"
+        if self._hsts_preload:
+            value += "; preload"
+        return value
+
+    # ------------------------------------------------------------------
+    # Middleware dispatch
+    # ------------------------------------------------------------------
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response: Response = await call_next(request)
+
+        # ----------------------------------------------------------
+        # Content Security Policy
+        # ----------------------------------------------------------
+        csp_value = _build_csp(report_only=self._csp_report_only)
+        if self._csp_report_only:
+            response.headers["Content-Security-Policy-Report-Only"] = csp_value
+        else:
+            response.headers["Content-Security-Policy"] = csp_value
+
+        # ----------------------------------------------------------
+        # Clickjacking protection
+        # CSP frame-ancestors supersedes X-Frame-Options for modern
+        # browsers; both are set for defense-in-depth with legacy UAs.
+        # ----------------------------------------------------------
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+
+        # ----------------------------------------------------------
+        # MIME sniffing protection
+        # ----------------------------------------------------------
+        response.headers["X-Content-Type-Options"] = "nosniff"
+
+        # ----------------------------------------------------------
+        # Referrer policy — send origin only on same-origin requests;
+        # omit the path on cross-origin to prevent URL leakage.
+        # ----------------------------------------------------------
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # ----------------------------------------------------------
+        # Browser feature restrictions
+        # ----------------------------------------------------------
+        response.headers["Permissions-Policy"] = _build_permissions_policy()
+
+        # ----------------------------------------------------------
+        # HSTS — enforce HTTPS; applied unconditionally so that the
+        # header is served even on HTTP during local dev (browsers
+        # ignore it over HTTP, so there is no correctness risk).
+        # ----------------------------------------------------------
+        response.headers["Strict-Transport-Security"] = self._hsts_value()
+
+        # ----------------------------------------------------------
+        # Legacy XSS filter (IE/old Edge) — disable the built-in
+        # filter to avoid XSS filter bypass attacks; modern browsers
+        # ignore this header entirely.
+        # ----------------------------------------------------------
+        response.headers["X-XSS-Protection"] = "0"
+
         return response
-
-
-# ---------------------------------------------------------------------------
-# Convenience setup function
-# ---------------------------------------------------------------------------
-
-def add_security_middleware(app: FastAPI, *, extra_headers: dict[str, str] | None = None) -> None:
-    """
-    Attach CORS (from ALLOWED_ORIGINS env var) and security headers middleware to *app*.
-
-    Call this AFTER creating the FastAPI app but BEFORE adding routes:
-
-        app = FastAPI(...)
-        add_security_middleware(app)
-
-    CORS origins are read from the ALLOWED_ORIGINS environment variable (comma-separated).
-    Supports wildcard patterns via ALLOWED_ORIGIN_REGEX (e.g., r"https://.*\\.vercel\\.app").
-    """
-    import re
-
-    allowed_origins = _parse_allowed_origins()
-    origin_regex = os.environ.get("ALLOWED_ORIGIN_REGEX", "")
-
-    cors_kwargs: dict = {
-        "allow_origins": allowed_origins,
-        "allow_credentials": True,
-        "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        "allow_headers": ["Authorization", "Content-Type", "X-Requested-With", "X-CSRF-Token"],
-        "expose_headers": ["X-Request-ID", "X-Process-Time"],
-        "max_age": 600,
-    }
-
-    if origin_regex:
-        cors_kwargs["allow_origin_regex"] = origin_regex
-
-    app.add_middleware(CORSMiddleware, **cors_kwargs)
-    app.add_middleware(SecurityHeadersMiddleware, extra_headers=extra_headers)
