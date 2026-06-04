@@ -25,7 +25,7 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
-                aria-label={selectedOption ? selectedOption.label : placeholder}
+                aria-label={ariaLabel || (selectedOption ? selectedOption.label : placeholder)}
                 aria-haspopup="listbox"
                 aria-expanded={isOpen}
                 className={buttonClassName || `w-full flex items-center justify-between pl-4 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-slate-50 cursor-pointer text-slate-700'}`}
@@ -50,7 +50,9 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
                                 <button
                                     key={option.value}
                                     type="button"
+                                    role="option"
                                     aria-label={option.label}
+                                    aria-selected={String(value) === String(option.value)}
                                     onClick={() => {
                                         // Fake native event structure for easy drop-in replacement
                                         if (onChange) onChange({ target: { value: option.value, name: props.name } });

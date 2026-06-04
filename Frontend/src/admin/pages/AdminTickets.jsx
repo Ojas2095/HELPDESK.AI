@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
@@ -44,35 +44,101 @@ import { downloadCSV, printTicket } from "../../utils/exportUtils";
    Confirmation Modal  – reusable for any destructive bulk op
    ──────────────────────────────────────────────────────────── */
 const BulkConfirmModal = ({ action, count, onConfirm, onCancel, isExecuting }) => {
+    const dialogRef = useRef(null);
+    const confirmButtonRef = useRef(null);
+    const titleId = 'bulk-confirm-title';
+    const descriptionId = 'bulk-confirm-description';
     const labelMap = {
         close: 'Close',
         priority: 'Change Priority of',
         assign: 'Assign Agent to',
     };
+    const actionLabel = labelMap[action] || action;
+
+    useEffect(() => {
+        const previouslyFocused = document.activeElement;
+
+        const getFocusableElements = () =>
+            Array.from(
+                dialogRef.current?.querySelectorAll(
+                    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                ) || []
+            );
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape' && !isExecuting) {
+                event.preventDefault();
+                onCancel();
+                return;
+            }
+
+            if (event.key !== 'Tab') return;
+
+            const focusableElements = getFocusableElements();
+            if (focusableElements.length === 0) {
+                event.preventDefault();
+                dialogRef.current?.focus();
+                return;
+            }
+
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (event.shiftKey && document.activeElement === firstElement) {
+                event.preventDefault();
+                lastElement.focus();
+            } else if (!event.shiftKey && document.activeElement === lastElement) {
+                event.preventDefault();
+                firstElement.focus();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        requestAnimationFrame(() => {
+            confirmButtonRef.current?.focus();
+        });
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            previouslyFocused?.focus?.();
+        };
+    }, [isExecuting, onCancel]);
+
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl shadow-slate-900/20 border border-slate-100 animate-in zoom-in-95 duration-300">
+            <div
+                ref={dialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                aria-describedby={descriptionId}
+                tabIndex={-1}
+                className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl shadow-slate-900/20 border border-slate-100 animate-in zoom-in-95 duration-300"
+            >
                 {/* Icon */}
                 <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto mb-5">
-                    <AlertCircle className="w-7 h-7 text-amber-500" />
+                    <AlertCircle className="w-7 h-7 text-amber-500" aria-hidden="true" />
                 </div>
-                <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight text-center">
+                <h3 id={titleId} className="text-lg font-black text-slate-900 uppercase italic tracking-tight text-center">
                     Confirm Bulk Action
                 </h3>
-                <p className="text-sm text-slate-500 mt-3 text-center leading-relaxed">
-                    You are about to <strong className="text-slate-800">{labelMap[action] || action}</strong>{' '}
+                <p id={descriptionId} className="text-sm text-slate-500 mt-3 text-center leading-relaxed">
+                    You are about to <strong className="text-slate-800">{actionLabel}</strong>{' '}
                     <strong className="text-indigo-600">{count}</strong> ticket{count > 1 ? 's' : ''}.
                     This action cannot be undone.
                 </p>
                 <div className="flex gap-3 mt-8">
                     <button
+                        ref={confirmButtonRef}
+                        type="button"
                         onClick={onConfirm}
                         disabled={isExecuting}
+                        aria-label={`Confirm ${actionLabel.toLowerCase()} ${count} selected ticket${count > 1 ? 's' : ''}`}
                         className="flex-1 bg-indigo-600 text-white rounded-2xl py-3.5 text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {isExecuting ? (
                             <>
-                                <Loader2 size={14} className="animate-spin" />
+                                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
                                 Processing…
                             </>
                         ) : (
@@ -80,8 +146,10 @@ const BulkConfirmModal = ({ action, count, onConfirm, onCancel, isExecuting }) =
                         )}
                     </button>
                     <button
+                        type="button"
                         onClick={onCancel}
                         disabled={isExecuting}
+                        aria-label="Cancel bulk action"
                         className="flex-1 bg-slate-100 text-slate-600 rounded-2xl py-3.5 text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors disabled:opacity-50"
                     >
                         Cancel
@@ -108,11 +176,15 @@ const BulkActionToolbar = ({
 }) => {
     const canApply = bulkAction === 'close' || (bulkAction && bulkValue);
     return (
-        <div className="bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 text-white px-6 py-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl shadow-indigo-500/25 animate-in slide-in-from-top-2 fade-in duration-300">
+        <div
+            role="region"
+            aria-label={`${selectedCount} selected ticket${selectedCount > 1 ? 's' : ''} bulk actions`}
+            className="bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 text-white px-6 py-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl shadow-indigo-500/25 animate-in slide-in-from-top-2 fade-in duration-300"
+        >
             {/* Left: selection count */}
             <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
-                    <CheckSquare size={18} />
+                    <CheckSquare size={18} aria-hidden="true" />
                 </div>
                 <span className="text-sm font-black uppercase tracking-widest">
                     {selectedCount} ticket{selectedCount > 1 ? 's' : ''} selected
@@ -122,10 +194,12 @@ const BulkActionToolbar = ({
             {/* Right: controls */}
             <div className="flex flex-wrap items-center gap-3">
                 {/* Action picker */}
+                <label htmlFor="bulk-action-select" className="sr-only">Bulk action</label>
                 <select
                     id="bulk-action-select"
                     value={bulkAction}
                     onChange={(e) => { setBulkAction(e.target.value); setBulkValue(''); }}
+                    aria-label="Bulk action for selected tickets"
                     className="bg-white/15 text-white text-xs font-black uppercase tracking-widest rounded-xl px-4 py-2.5 border border-white/20 outline-none cursor-pointer backdrop-blur-sm hover:bg-white/25 transition-colors"
                 >
                     <option value="" className="text-slate-900">Select Action…</option>
@@ -136,10 +210,13 @@ const BulkActionToolbar = ({
 
                 {/* Priority sub-select */}
                 {bulkAction === 'priority' && (
+                    <>
+                    <label htmlFor="bulk-priority-select" className="sr-only">Priority for selected tickets</label>
                     <select
                         id="bulk-priority-select"
                         value={bulkValue}
                         onChange={(e) => setBulkValue(e.target.value)}
+                        aria-label="Priority for selected tickets"
                         className="bg-white/15 text-white text-xs font-black uppercase tracking-widest rounded-xl px-4 py-2.5 border border-white/20 outline-none cursor-pointer backdrop-blur-sm animate-in fade-in slide-in-from-left-2 duration-200"
                     >
                         <option value="" className="text-slate-900">Pick Priority</option>
@@ -147,14 +224,18 @@ const BulkActionToolbar = ({
                             <option key={p} value={p.toLowerCase()} className="text-slate-900">{p}</option>
                         ))}
                     </select>
+                    </>
                 )}
 
                 {/* Agent sub-select */}
                 {bulkAction === 'assign' && (
+                    <>
+                    <label htmlFor="bulk-assign-select" className="sr-only">Agent for selected tickets</label>
                     <select
                         id="bulk-assign-select"
                         value={bulkValue}
                         onChange={(e) => setBulkValue(e.target.value)}
+                        aria-label="Agent for selected tickets"
                         className="bg-white/15 text-white text-xs font-black uppercase tracking-widest rounded-xl px-4 py-2.5 border border-white/20 outline-none cursor-pointer backdrop-blur-sm animate-in fade-in slide-in-from-left-2 duration-200"
                     >
                         <option value="" className="text-slate-900">Pick Agent</option>
@@ -162,13 +243,16 @@ const BulkActionToolbar = ({
                             <option key={a.id} value={a.id} className="text-slate-900">{a.full_name}</option>
                         ))}
                     </select>
+                    </>
                 )}
 
                 {/* Apply */}
                 {canApply && (
                     <button
                         id="bulk-apply-btn"
+                        type="button"
                         onClick={onApply}
+                        aria-label={`Review bulk action for ${selectedCount} selected ticket${selectedCount > 1 ? 's' : ''}`}
                         className="bg-white text-indigo-600 text-xs font-black uppercase tracking-widest rounded-xl px-5 py-2.5 hover:bg-indigo-50 transition-all shadow-lg shadow-black/10 animate-in fade-in zoom-in-95 duration-200"
                     >
                         Apply
@@ -178,11 +262,13 @@ const BulkActionToolbar = ({
                 {/* Clear */}
                 <button
                     id="bulk-clear-btn"
+                    type="button"
                     onClick={onClear}
+                    aria-label="Clear selected tickets"
                     className="p-2.5 hover:bg-white/15 rounded-xl transition-colors"
                     title="Clear selection"
                 >
-                    <X size={16} />
+                    <X size={16} aria-hidden="true" />
                 </button>
             </div>
         </div>
@@ -222,6 +308,7 @@ const AdminTickets = () => {
     const [bulkValue, setBulkValue] = useState('');
     const [showBulkConfirm, setShowBulkConfirm] = useState(false);
     const [isBulkExecuting, setIsBulkExecuting] = useState(false);
+    const [ticketAnnouncement, setTicketAnnouncement] = useState('');
 
     // ── Constants ───────────────────────────────────
     const categories = ['All', 'Network', 'Hardware', 'Software', 'Access', 'Account'];
@@ -247,6 +334,7 @@ const AdminTickets = () => {
 
     const handleRealtimeInsert = useCallback((ticket) => {
         showToast(`New Incident Reported: #${formatTicketId(ticket.id)}`, "success");
+        setTicketAnnouncement(`New ticket ${formatTicketId(ticket.id)} added to ticket management.`);
     }, [showToast]);
 
     const { lastChangedTicketId } = useTicketsRealtime({
@@ -344,6 +432,7 @@ const AdminTickets = () => {
 
                     const formattedId = String(ticketId).slice(0, 8).toUpperCase();
                     showToast(`⚠️ SLA BREACH: Ticket #${formattedId} ("${subject}") escalated from '${originalTeam}' to '${escalatedTeam}'!`, "error");
+                    setTicketAnnouncement(`SLA breach for ticket ${formattedId}. Escalated from ${originalTeam} to ${escalatedTeam}.`);
 
                     setNewlyBreachedTicketIds(prev => [...prev, ticketId]);
                     setTimeout(() => {
@@ -382,9 +471,11 @@ const AdminTickets = () => {
 
             setTickets(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
             showToast("System synchronization successful.", "success");
+            setTicketAnnouncement(`Ticket ${formatTicketId(id)} updated successfully.`);
         } catch (err) {
             console.error("Update failed:", err);
             showToast("Update failed: " + err.message, "error");
+            setTicketAnnouncement(`Ticket ${formatTicketId(id)} update failed: ${err.message}`);
         } finally {
             setIsUpdating(null);
         }
@@ -394,21 +485,27 @@ const AdminTickets = () => {
     const handleSelectAll = () => {
         if (selectedTickets.length === filteredTickets.length && filteredTickets.length > 0) {
             setSelectedTickets([]);
+            setTicketAnnouncement('All visible tickets deselected.');
         } else {
             setSelectedTickets(filteredTickets.map(t => t.id));
+            setTicketAnnouncement(`${filteredTickets.length} visible ticket${filteredTickets.length > 1 ? 's' : ''} selected.`);
         }
     };
 
     const handleSelectTicket = (id) => {
-        setSelectedTickets(prev =>
-            prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
-        );
+        setSelectedTickets(prev => {
+            const isSelected = prev.includes(id);
+            const next = isSelected ? prev.filter(t => t !== id) : [...prev, id];
+            setTicketAnnouncement(`Ticket ${formatTicketId(id)} ${isSelected ? 'deselected' : 'selected'}. ${next.length} ticket${next.length === 1 ? '' : 's'} selected.`);
+            return next;
+        });
     };
 
     const handleBulkClear = () => {
         setSelectedTickets([]);
         setBulkAction('');
         setBulkValue('');
+        setTicketAnnouncement('Bulk selection cleared.');
     };
 
     const handleBulkExecute = async () => {
@@ -435,6 +532,7 @@ const AdminTickets = () => {
 
             const actionLabel = bulkAction === 'close' ? 'closed' : bulkAction === 'priority' ? 'priority updated' : 'assigned';
             showToast(`✅ ${selectedTickets.length} ticket${selectedTickets.length > 1 ? 's' : ''} ${actionLabel} successfully.`, "success");
+            setTicketAnnouncement(`${selectedTickets.length} ticket${selectedTickets.length > 1 ? 's' : ''} ${actionLabel} successfully.`);
 
             setSelectedTickets([]);
             setBulkAction('');
@@ -443,6 +541,7 @@ const AdminTickets = () => {
         } catch (err) {
             console.error("Bulk update failed:", err);
             showToast("Bulk update failed: " + err.message, "error");
+            setTicketAnnouncement(`Bulk update failed: ${err.message}`);
         } finally {
             setIsBulkExecuting(false);
         }
@@ -505,6 +604,9 @@ const AdminTickets = () => {
     // ── Render ──────────────────────────────────────
     return (
         <div className="space-y-6 animate-in fade-in duration-700">
+            <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+                {ticketAnnouncement}
+            </div>
             {/* 1. Header & Utility Bar */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
@@ -516,23 +618,27 @@ const AdminTickets = () => {
                 <div className="flex items-center gap-3">
                     {/* Export CSV */}
                     <button
+                        type="button"
                         onClick={() => downloadCSV(filteredTickets, `tickets-export-${new Date().toISOString().slice(0, 10)}`)}
                         disabled={filteredTickets.length === 0}
+                        aria-label={`Export ${filteredTickets.length} filtered tickets as CSV`}
                         className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
                     >
-                        <Download size={14} />
+                        <Download size={14} aria-hidden="true" />
                         CSV
                     </button>
                     {/* Print Selected */}
                     {selectedTickets.length === 1 && (
                         <button
+                            type="button"
                             onClick={() => {
                                 const t = tickets.find(t => t.id === selectedTickets[0]);
                                 if (t) printTicket(t);
                             }}
+                            aria-label={`Print ticket ${formatTicketId(selectedTickets[0])}`}
                             className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shadow-sm"
                         >
-                            <Printer size={14} />
+                            <Printer size={14} aria-hidden="true" />
                             Print
                         </button>
                     )}
@@ -550,6 +656,7 @@ const AdminTickets = () => {
                             placeholder="Search..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            aria-label="Search tickets"
                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 focus:bg-white transition-all text-slate-700 placeholder:text-slate-400"
                         />
                     </div>
@@ -558,6 +665,7 @@ const AdminTickets = () => {
                     <Select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
+                        aria-label="Filter tickets by status"
                         buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={statuses.map(s => ({ value: s, label: s === 'All' ? 'All Statuses' : s }))}
                     />
@@ -566,6 +674,7 @@ const AdminTickets = () => {
                     <Select
                         value={categoryFilter}
                         onChange={(e) => setCategoryFilter(e.target.value)}
+                        aria-label="Filter tickets by category"
                         buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={categories.map(c => ({ value: c, label: c === 'All' ? 'All Categories' : c }))}
                     />
@@ -574,6 +683,7 @@ const AdminTickets = () => {
                     <Select
                         value={priorityFilter}
                         onChange={(e) => setPriorityFilter(e.target.value)}
+                        aria-label="Filter tickets by priority"
                         buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={priorities.map(p => ({ value: p, label: p === 'All' ? 'All Priorities' : p }))}
                     />
@@ -582,6 +692,7 @@ const AdminTickets = () => {
                     <Select
                         value={teamFilter}
                         onChange={(e) => setTeamFilter(e.target.value)}
+                        aria-label="Filter tickets by assigned team"
                         buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={teams.map(t => ({ value: t, label: t === 'All' ? 'All Teams' : t }))}
                     />
@@ -592,6 +703,7 @@ const AdminTickets = () => {
                     <Select
                         value={languageFilter}
                         onChange={(e) => setLanguageFilter(e.target.value)}
+                        aria-label="Filter tickets by language"
                         buttonClassName="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-sky-500/5 transition-all text-left flex justify-between items-center"
                         options={[
                             { value: 'All', label: '🌐 All Languages' },
@@ -601,14 +713,17 @@ const AdminTickets = () => {
                     />
 
                     <button
+                        type="button"
                         onClick={() => setSlaAtRisk(prev => !prev)}
+                        aria-label={slaAtRisk ? 'Disable SLA at risk filter' : 'Enable SLA at risk filter'}
+                        aria-pressed={slaAtRisk}
                         className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${
                             slaAtRisk
                                 ? 'bg-red-50 border-red-200 text-red-700 shadow-sm'
                                 : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-red-200 hover:text-red-600'
                         }`}
                     >
-                        <ShieldAlert size={14} />
+                        <ShieldAlert size={14} aria-hidden="true" />
                         SLA At Risk
                         {slaAtRisk && (
                             <span className="ml-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px]">
@@ -666,15 +781,19 @@ const AdminTickets = () => {
                     </div>
                 )}
 
-                <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                <div className="overflow-x-auto" role="region" aria-label="Ticket management results" tabIndex={0}>
+                    <table id="ticket-management-table" className="w-full border-collapse" aria-label="Ticket management table" aria-rowcount={filteredTickets.length}>
                         <thead>
                             <tr className="bg-slate-50/80 border-b border-slate-100">
                                 {/* Select All Checkbox */}
-                                <th className="px-4 py-5 text-center w-12">
+                                <th scope="col" className="px-4 py-5 text-center w-12">
                                     <button
                                         id="select-all-checkbox"
+                                        type="button"
                                         onClick={handleSelectAll}
+                                        aria-label={isAllSelected ? `Deselect all ${filteredTickets.length} visible tickets` : `Select all ${filteredTickets.length} visible tickets`}
+                                        aria-pressed={isAllSelected}
+                                        aria-controls="ticket-management-table"
                                         className="text-slate-400 hover:text-indigo-600 transition-colors relative"
                                         title={isAllSelected ? 'Deselect all' : 'Select all'}
                                     >
@@ -692,20 +811,20 @@ const AdminTickets = () => {
                                         )}
                                     </button>
                                 </th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <th scope="col" className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                     <div className="flex items-center gap-2">
                                         ID
                                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
                                     </div>
                                 </th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">User</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Score</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Agent</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">SLA</th>
-                                <th className="px-6 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                                <th scope="col" className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">User</th>
+                                <th scope="col" className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject</th>
+                                <th scope="col" className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority</th>
+                                <th scope="col" className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Score</th>
+                                <th scope="col" className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Agent</th>
+                                <th scope="col" className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                <th scope="col" className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">SLA</th>
+                                <th scope="col" className="px-6 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -720,6 +839,7 @@ const AdminTickets = () => {
                                 return (
                                 <tr
                                     key={ticket.id}
+                                    aria-selected={isSelected}
                                     className={`hover:bg-slate-50/50 transition-colors group ${
                                         wasLiveChanged ? 'bg-emerald-50/70 ring-1 ring-emerald-100' : slaRowClass
                                     } ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''} ${
@@ -729,7 +849,10 @@ const AdminTickets = () => {
                                     {/* Row Checkbox */}
                                     <td className="px-4 py-6 text-center">
                                         <button
+                                            type="button"
                                             onClick={() => handleSelectTicket(ticket.id)}
+                                            aria-label={`${isSelected ? 'Deselect' : 'Select'} ticket ${formatTicketId(ticket.id)}`}
+                                            aria-pressed={isSelected}
                                             className="text-slate-300 hover:text-indigo-600 transition-colors"
                                         >
                                             {isSelected
@@ -800,6 +923,7 @@ const AdminTickets = () => {
                                         <select
                                             value={String(ticket.priority || 'medium').toLowerCase()}
                                             onChange={(e) => handleUpdateTicket(ticket.id, { priority: e.target.value })}
+                                            aria-label={`Change priority for ticket ${formatTicketId(ticket.id)}`}
                                             className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border outline-none cursor-pointer transition-all flex items-center justify-between ${getPriorityStyle(ticket.priority)}`}
                                         >
                                             {priorities.filter(p => p !== 'All').map(p => (
@@ -844,6 +968,7 @@ const AdminTickets = () => {
                                                         assigned_agent_id: e.target.value,
                                                         status: 'in progress'
                                                     })}
+                                                    aria-label={`Change assigned agent for ticket ${formatTicketId(ticket.id)}`}
                                                     className="bg-transparent text-[10px] font-black text-indigo-600 uppercase tracking-tight italic border-none focus:ring-0 cursor-pointer hover:underline"
                                                 >
                                                     {agents.map(a => (
@@ -852,10 +977,12 @@ const AdminTickets = () => {
                                                 </select>
                                             ) : (
                                                 <button
+                                                    type="button"
                                                     onClick={() => handleUpdateTicket(ticket.id, {
                                                         assigned_agent_id: user.id,
                                                         status: 'in progress'
                                                     })}
+                                                    aria-label={`Claim ticket ${formatTicketId(ticket.id)}`}
                                                     className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                                                 >
                                                     Claim
@@ -877,6 +1004,7 @@ const AdminTickets = () => {
                                             <Select
                                                 value={String(ticket.status || 'open').toLowerCase()}
                                                 onChange={(e) => handleUpdateTicket(ticket.id, { status: e.target.value })}
+                                                aria-label={`Change status for ticket ${formatTicketId(ticket.id)}`}
                                                 buttonClassName="bg-transparent text-[10px] font-black text-slate-600 uppercase tracking-widest outline-none cursor-pointer flex justify-between items-center w-full"
                                                 options={statuses.filter(s => s !== 'All').map(s => ({ value: s.toLowerCase(), label: s }))}
                                             />
@@ -899,11 +1027,13 @@ const AdminTickets = () => {
                                     <td className="px-6 py-6 text-center">
                                         <div className="flex items-center justify-center gap-2">
                                             <button
+                                                type="button"
                                                 onClick={() => navigate(`/admin/ticket/${ticket.id}`)}
+                                                aria-label={`Open details for ticket ${formatTicketId(ticket.id)}`}
                                                 className="p-2 bg-slate-900 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-slate-900/10 hover:shadow-emerald-500/20"
                                                 title="Open Detailed View"
                                             >
-                                                <ArrowUpRight size={14} />
+                                                <ArrowUpRight size={14} aria-hidden="true" />
                                             </button>
                                         </div>
                                     </td>
