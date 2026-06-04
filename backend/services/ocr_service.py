@@ -100,6 +100,11 @@ class OCRService:
             # ── 5. Decode ─────────────────────────────────────────────────────
             image_bytes = base64.b64decode(image_base64)
 
+            # PDF detection — reject before PIL tries to open a PDF document
+            if image_bytes.startswith(b'%PDF'):
+                logger.warning("[OCRService] Rejected: PDF files are not supported. Please upload an image screenshot instead.")
+                return ""
+
             # ── 6. Decoded-bytes guard ────────────────────────────────────────
             if len(image_bytes) > MAX_DECODED_BYTES:
                 logger.warning(

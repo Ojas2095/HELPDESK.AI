@@ -42,6 +42,8 @@ const CreateTicket = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const MAX_CHARS = 1000;
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB max file size
+    const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'application/pdf'];
     const supportsSpeech = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     const [selectedLanguage, setSelectedLanguage] = useState('en');
     const [isTranslating, setIsTranslating] = useState(false);
@@ -359,13 +361,40 @@ const CreateTicket = () => {
         e.preventDefault();
         e.stopPropagation();
         const droppedFile = e.dataTransfer.files?.[0];
-        if (droppedFile && (droppedFile.type === 'image/png' || droppedFile.type === 'image/jpeg')) {
-            if (imagePreview) URL.revokeObjectURL(imagePreview);
-            setFile(droppedFile);
-            setImagePreview(URL.createObjectURL(droppedFile));
-            setError('');
-            processOCR(droppedFile);
+        if (!droppedFile) return;
+        if (!ALLOWED_FILE_TYPES.includes(droppedFile.type)) {
+            setError('Only PNG, JPG, and PDF files are allowed.');
+            return;
         }
+        if (droppedFile.size > MAX_FILE_SIZE) {
+            setError(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024} MB.`);
+            return;
+        }
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        setFile(droppedFile);
+        setImagePreview(URL.createObjectURL(droppedFile));
+        setError('');
+        processOCR(droppedFile);
+    };
+
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files?.[0];
+        if (!selectedFile) return;
+        if (!ALLOWED_FILE_TYPES.includes(selectedFile.type)) {
+            setError('Only PNG, JPG, and PDF files are allowed.');
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+        if (selectedFile.size > MAX_FILE_SIZE) {
+            setError(`File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024} MB.`);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        setFile(selectedFile);
+        setImagePreview(URL.createObjectURL(selectedFile));
+        setError('');
+        processOCR(selectedFile);
     };
 
     // ── Smart Template handlers (v2: highlight → activate → dismiss) ──
@@ -720,14 +749,14 @@ const CreateTicket = () => {
                                                         type="file"
                                                         ref={fileInputRef}
                                                         onChange={handleFileChange}
-                                                        accept="image/png, image/jpeg"
+                                                        accept="image/png, image/jpeg, application/pdf"
                                                         className="hidden"
                                                     />
                                                     <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform shadow-md">
                                                         <Upload className="text-emerald-400" size={16} />
                                                     </div>
                                                     <p className="text-sm font-extrabold text-slate-300 font-syne uppercase tracking-wider m-0">Uplink System Screenshot</p>
-                                                    <p className="text-xs text-slate-500 font-medium mt-1 m-0">PNG or JPG block array up to 10MB</p>
+                                                    <p className="text-xs text-slate-500 font-medium mt-1 m-0">PNG, JPG, or PDF up to 5MB</p>
                                                 </motion.div>
                                             ) : (
                                                 <motion.div
@@ -962,7 +991,7 @@ const CreateTicket = () => {
                             type='file'
                             ref={fileInputRef}
                             onChange={handleFileChange}
-                            accept='image/png, image/jpeg'
+                            accept='image/png, image/jpeg, application/pdf'
                             className='hidden'
                           />
                           <div className='w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform'>
@@ -971,7 +1000,7 @@ const CreateTicket = () => {
                           <p className='text-sm font-semibold text-gray-600'>
                             Drag and drop or click to upload
                           </p>
-                          <p className='text-xs text-gray-400 mt-1'>PNG or JPG up to 10MB</p>
+                          <p className='text-xs text-gray-400 mt-1'>PNG, JPG, or PDF up to 5MB</p>
                         </motion.div>
                       ) : (
                         <motion.div
