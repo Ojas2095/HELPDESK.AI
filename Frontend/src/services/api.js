@@ -3,7 +3,6 @@ import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
 
 const USE_MOCK = API_CONFIG.USE_MOCK;
-const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -34,11 +33,10 @@ const setStorage = (key, data) => {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
     console.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
-    // If quota exceeded, we could trim the data, but for now we fail gracefully.
   }
 };
 
-// Shared mock logic for createTicket
+// Shared mock logic for createTicket (only used when USE_MOCK is explicitly true)
 const createTicketMock = (ticketData) => {
   const tickets = getStorage('tickets', MOCK_TICKETS);
   const newTicket = {
@@ -54,7 +52,7 @@ const createTicketMock = (ticketData) => {
       }
     ]
   };
-  tickets.unshift(newTicket); // Add to beginning
+  tickets.unshift(newTicket);
   setStorage('tickets', tickets);
   return { data: newTicket };
 };
@@ -68,21 +66,17 @@ export const api = {
       await delay(500);
       return getStorage('tickets', MOCK_TICKETS);
     }
-    try {
-      const response = await apiClient.get(`/tickets`);
-      const data = response?.data;
+    // In production mode, surface backend errors so the UI can show a proper
+    // error state rather than silently returning stale mock data that could
+    // mislead users into believing they're seeing real tickets.
+    const response = await apiClient.get(`/tickets`);
+    const data = response?.data;
 
-      // Normalize to the mock shape: an array of tickets
-      if (Array.isArray(data)) return data;
-      if (data && Array.isArray(data.data)) return data.data;
-      if (data && Array.isArray(data.tickets)) return data.tickets;
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    if (data && Array.isArray(data.tickets)) return data.tickets;
 
-      return data;
-    } catch (error) {
-      console.error("Backend unavailable, falling back to mock:", error);
-      await delay(500);
-      return getStorage('tickets', MOCK_TICKETS);
-    }
+    return data;
   },
 
   createTicket: async (ticketData) => {
@@ -90,64 +84,53 @@ export const api = {
       await delay(800);
       return createTicketMock(ticketData);
     }
-    try {
-      const response = await apiClient.post(`/tickets/save`, ticketData);
-      const created = response?.data;
+    // In production mode, throw on failure. A silent mock fallback would
+    // create a ticket that appears to have been saved but was never persisted
+    // to the database — users would lose their support request silently.
+    const response = await apiClient.post(`/tickets/save`, ticketData);
+    const created = response?.data;
 
-      // Normalize to mock shape: { data: <createdTicket> }
-      if (created && created.data) return created;
-      return { data: created };
-    } catch (error) {
-      console.error("Backend unavailable, falling back to mock:", error);
-      await delay(800);
-      return createTicketMock(ticketData);
-    }
+    if (created && created.data) return created;
+    return { data: created };
   },
 
   predictTicket: async (issueText, imageBase64 = '') => {
-    try {
-      const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
-      // ALWAYS call the real backend for prediction if possible
-      const response = await apiClient.post('/ai/analyze_ticket', {
-        text: issueText,
-        image_base64: imageBase64,
-        image_text: "",
-        company_id: currentUser.company_id || currentUser.companyId || null
-      });
+    const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
+    const response = await apiClient.post('/ai/analyze_ticket', {
+      text: issueText,
+      image_base64: imageBase64,
+      image_text: "",
+      company_id: currentUser.company_id || currentUser.companyId || null
+    });
 
-      const result = response.data;
+    const result = response.data;
 
-      // Map backend response to frontend format
-      return {
-        data: {
-          ticket_id: 'TCKT-' + Math.floor(Math.random() * 10000),
-          category: result.category,
-          subcategory: result.subcategory,
-          priority: result.priority,
-          assigned_team: result.assigned_team,
-          auto_resolve: result.auto_resolve,
-          routing_confidence: result.confidence,
-          duplicate_probability: result.duplicate_ticket.similarity,
-          duplicate_ticket: result.duplicate_ticket.duplicate_ticket_id,
-          summary: result.summary,
-          entities: result.entities,
-          reasoning: result.reasoning,
-          decision_factors: result.decision_factors,
-          image_description: result.image_description,
-          ocr_text: result.ocr_text,
-          is_potential_duplicate: result.is_potential_duplicate || false,
-          parent_ticket_id: result.parent_ticket_id || result.duplicate_ticket?.duplicate_ticket_id || null,
-          sla_breach_at: result.sla_breach_at || getSlaBreachAt(result.priority),
-          source_language: result.source_language,
-          source_language_name: result.source_language_name,
-          was_translated: result.was_translated,
-          original_text: result.original_text
-        }
-      };
-    } catch (error) {
-      console.error("AI Backend Error:", error);
-      throw error;
-    }
+    return {
+      data: {
+        ticket_id: 'TCKT-' + Math.floor(Math.random() * 10000),
+        category: result.category,
+        subcategory: result.subcategory,
+        priority: result.priority,
+        assigned_team: result.assigned_team,
+        auto_resolve: result.auto_resolve,
+        routing_confidence: result.confidence,
+        duplicate_probability: result.duplicate_ticket?.similarity,
+        duplicate_ticket: result.duplicate_ticket?.duplicate_ticket_id,
+        summary: result.summary,
+        entities: result.entities,
+        reasoning: result.reasoning,
+        decision_factors: result.decision_factors,
+        image_description: result.image_description,
+        ocr_text: result.ocr_text,
+        is_potential_duplicate: result.is_potential_duplicate || false,
+        parent_ticket_id: result.parent_ticket_id || result.duplicate_ticket?.duplicate_ticket_id || null,
+        sla_breach_at: result.sla_breach_at || getSlaBreachAt(result.priority),
+        source_language: result.source_language,
+        source_language_name: result.source_language_name,
+        was_translated: result.was_translated,
+        original_text: result.original_text
+      }
+    };
   },
 
   getSlaEstimate: async (ticketId) => {
