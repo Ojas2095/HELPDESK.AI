@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { safePersist } from '../../store/middleware/safePersist';
 
 const useAdminStore = create(
-    persist(
+    safePersist(
         (set) => ({
             users: [], // System users for management
             settings: {
@@ -11,28 +11,38 @@ const useAdminStore = create(
                 enableAutoResolve: false,
                 autoCloseDays: 7,
                 emailNotifications: false,
-                adminAlerts: false
+                adminAlerts: false,
+                digestEnabled: false,
+                digestAdminEmail: "",
+                enableEncryption: false,
+                enablePiiRedaction: false,
+                backupEncryptionEnabled: false,
+                piiRedactionEnabled: false,
+                redactIpAddresses: false,
             },
 
-            setUsers: (users) => set({ users }),
-            updateSettings: (newSettings) => set((state) => ({
-                settings: { ...state.settings, ...newSettings }
-            })),
+      setUsers: (users) => set({ users }),
+      updateSettings: (newSettings) =>
+        set((state) => ({
+          settings: { ...state.settings, ...newSettings },
+        })),
 
-            // Mock function to add a user
-            addUser: (user) => set((state) => ({
-                users: [...state.users, { ...user, id: Date.now() }]
-            })),
+      // Mock function to add a user
+      addUser: (user) =>
+        set((state) => ({
+          users: [...state.users, { ...user, id: Date.now() }],
+        })),
 
-            // Mock function to delete a user
-            deleteUser: (userId) => set((state) => ({
-                users: state.users.filter(u => u.id !== userId)
-            })),
-        }),
-        {
-            name: 'admin-storage-settings',
-        }
-    )
+      // Mock function to delete a user
+      deleteUser: (userId) =>
+        set((state) => ({
+          users: state.users.filter((u) => u.id !== userId),
+        })),
+    }),
+    {
+      name: 'admin-storage-settings',
+    }
+  )
 );
 
 export default useAdminStore;

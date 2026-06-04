@@ -9,9 +9,9 @@ import useAuthStore from '../../store/authStore';
  * regular admins) are redirected back to the hidden login page.
  */
 const MasterAdminProtectedRoute = () => {
-    const { user, profile, loading } = useAuthStore();
+    const { user, profile, loading, isCheckingSession } = useAuthStore();
 
-    if (loading) {
+    if (loading || isCheckingSession) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-[#0a0a0f]">
                 <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
@@ -19,21 +19,31 @@ const MasterAdminProtectedRoute = () => {
         );
     }
 
-    // Not authenticated at all
-    if (!user) {
-        return <Navigate to="/master-admin-login" replace />;
-    }
-
-    // Authenticated but not a master_admin — redirect to hidden login
-    // (intentionally NOT to /dashboard to avoid leaking portal existence)
-    if (profile?.role !== 'master_admin') {
-        console.warn(
-            `[MasterAdminPortal] Unauthorized access attempt by ${user.email} (role: ${profile?.role})`
+    // If we have a user but no profile yet, wait for the database fetch
+    if (user && (!profile || profile.role === undefined)) {
+        return (
+            <div className="flex h-screen w-screen items-center justify-center bg-slate-950">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+            </div>
         );
-        return <Navigate to="/master-admin-login" replace />;
     }
 
-    return <Outlet />;
+  // Not authenticated at all
+  if (!user) {
+    return <Navigate to='/master-admin-login' replace />;
+  }
+
+  // Authenticated but not a master_admin — redirect to hidden login
+  // (intentionally NOT to /dashboard to avoid leaking portal existence)
+  if (profile?.role !== 'master_admin') {
+    console.warn(
+      `[MasterAdminPortal] Unauthorized access attempt by ${user.email} (role: ${profile?.role})`
+    );
+    return <Navigate to='/master-admin-login' replace />;
+  }
+
+  return <Outlet />;
 };
 
 export default MasterAdminProtectedRoute;
+
