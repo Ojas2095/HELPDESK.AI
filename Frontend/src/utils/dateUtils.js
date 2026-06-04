@@ -8,9 +8,16 @@ export const formatTimelineDate = (dateStr) => {
     
     // Ensure the date string is interpreted as UTC if it's an ISO string from DB
     let date;
-    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
-        // If it's a raw string without TZ, assume it was intended as UTC from our backend
-        date = new Date(dateStr + 'Z');
+    if (typeof dateStr === 'string') {
+        // Safari compatibility: replace hyphens with slashes for YYYY-MM-DD format
+        const normalized = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr.replace(/-/g, '/') : dateStr;
+        
+        if (!normalized.includes('Z') && !normalized.includes('+')) {
+            // Assume UTC if no timezone is provided
+            date = new Date(normalized + (normalized.includes('/') ? ' UTC' : 'Z'));
+        } else {
+            date = new Date(normalized);
+        }
     } else {
         date = new Date(dateStr);
     }
