@@ -25,6 +25,7 @@ from logging.handlers import RotatingFileHandler
 
 # Suppress harmless PyTorch CPU pin_memory warning
 from encryption import encrypt_pii, decrypt_pii, is_encrypted
+from services.encryption_service import encrypt_ticket_pii, decrypt_ticket_pii
 from pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
@@ -2029,7 +2030,7 @@ async def get_tickets(
         query = query.eq("company_id", company_scope)
         
     res = query.execute()
-    return res.data
+    return [decrypt_ticket_pii(t) for t in res.data]
 
 def trigger_webhook_for_new_ticket(company_id: str, ticket: dict) -> None:
     """Trigger Slack or Microsoft Teams webhook for new Critical/High tickets (Issue #175)."""
@@ -2246,6 +2247,9 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
 
         # Strip keys not accepted by the DB schema
         insert_data = {k: v for k, v in final_data.items() if k in VALID_TICKET_COLUMNS}
+
+        # Encrypt PII fields (subject, description) with AES-256-GCM before DB write
+        insert_data = encrypt_ticket_pii(insert_data)
 
         res = supabase.table("tickets").insert(insert_data).execute()
         
@@ -2519,7 +2523,7 @@ async def get_ticket_by_id(
         raise HTTPException(status_code=404, detail="Ticket not found")
     if company_scope and res.data.get("company_id") != company_scope:
         raise HTTPException(status_code=403, detail="User not authorized for this tenant")
-    return res.data
+    return decrypt_ticket_pii(res.data)
 
 
 @app.get("/tickets/{ticket_id}/sla-estimate")
@@ -2579,7 +2583,7 @@ async def search_tickets(
             "search_tickets",
             {"query_text": query_text, "company_id": company_scope},
         ).execute()
-        return rpc_res.data or []
+        return [decrypt_ticket_pii(t) for t in (rpc_res.data or [])]
     except Exception:
         # Fallback for environments without RPC function support.
         fallback = supabase.table("tickets").select("*").order("created_at", desc=True).execute()
@@ -2592,7 +2596,7 @@ async def search_tickets(
         ]
         if company_scope:
             filtered = [row for row in filtered if row.get("company_id") == company_scope]
-        return filtered
+        return [decrypt_ticket_pii(t) for t in filtered]
 
 
 class BulkUpdateResponse(BaseModel):
