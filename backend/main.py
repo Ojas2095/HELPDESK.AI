@@ -1948,7 +1948,19 @@ async def log_correction(request: Request, user: dict = Depends(get_current_user
         CORRECTIONS_LOG_MAX = int(os.getenv("CORRECTIONS_LOG_MAX", "10000"))
 
         def _read_write_log():
-            """Read-modify-write cycle with cross-process file locking."""
+            """Read-modify-write cycle with cross-process file locking.
+
+            Locking strategy (two layers):
+              1. asyncio.Lock (_corrections_lock) — serialises concurrent
+                 coroutine calls within a single process/worker.
+              2. fcntl.flock(LOCK_EX) — serialises concurrent OS-process
+                 writes when the app runs with multiple uvicorn workers.
+
+            Atomicity: data is written to a sibling .tmp file first, then
+            renamed via os.replace() which is POSIX-atomic. A crash mid-write
+            leaves the old file intact; the .tmp file is discarded on the
+            next start.
+            """
             CORRECTIONS_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
             lock_path = CORRECTIONS_LOG_PATH.with_suffix(".lock")
@@ -1956,11 +1968,19 @@ async def log_correction(request: Request, user: dict = Depends(get_current_user
                 if fcntl is not None:
                     fcntl.flock(lock_fd, fcntl.LOCK_EX)
                 try:
+                    logs: list = []
                     if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
-                        with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
-                            logs = json.load(f)
-                    else:
-                        logs = []
+                        try:
+                            with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
+                                parsed = json.load(f)
+                            # Guard against a file that was corrupted to a non-list value
+                            logs = parsed if isinstance(parsed, list) else []
+                        except (json.JSONDecodeError, OSError) as read_err:
+                            logging.warning(
+                                "[CORRECTION] Could not parse existing log; starting fresh: %s",
+                                read_err,
+                            )
+                            logs = []
 
                     if len(logs) >= CORRECTIONS_LOG_MAX:
                         logs = logs[-(CORRECTIONS_LOG_MAX - 1):]
@@ -1971,9 +1991,11 @@ async def log_correction(request: Request, user: dict = Depends(get_current_user
                     if fcntl is not None:
                         fcntl.flock(lock_fd, fcntl.LOCK_UN)
 
-        loop = asyncio.get_event_loop()
+        # Use asyncio.get_running_loop() (not the deprecated get_event_loop())
+        # to obtain the currently-running event loop inside this async function.
+        running_loop = asyncio.get_running_loop()
         async with _corrections_lock:
-            await loop.run_in_executor(None, _read_write_log)
+            await running_loop.run_in_executor(None, _read_write_log)
 
         logging.info(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
         return {"status": "saved", "changed_fields": changed_fields}
