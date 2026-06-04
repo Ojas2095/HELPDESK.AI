@@ -39,10 +39,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest, CollectorRegistry, REGISTRY
-from prometheus_fastapi_instrumentator import Instrumentator
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 import redis
@@ -1156,18 +1153,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=[
-        "Authorization",
-        "Content-Type",
-        "X-API-Key",
-        "X-CSRF-Token",
-        "Accept",
-        "Origin",
-        "X-Requested-With",
-    ],
-    expose_headers=["X-Request-ID"],
-    max_age=600,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 from backend.middleware.tenant_validator import TenantValidatorMiddleware
