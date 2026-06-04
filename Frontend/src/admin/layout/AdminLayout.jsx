@@ -15,6 +15,7 @@ import ShortcutsHelpModal from '../../admin/components/ShortcutsHelpModal';
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
     // Single hook call — handles G+key navigation, Ctrl+K search, Ctrl+/ and ?
     // shortcuts-help toggle, and Escape to close the help modal.
@@ -66,13 +67,16 @@ const AdminLayout = () => {
             {/* Keyboard Shortcuts Legend Modal */}
             <KeyboardLegend isOpen={showLegend} onClose={closeLegend} />
 
+            {/* Keyboard Shortcuts Help Overlay */}
+            <KeyboardShortcutsHelp open={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
+
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
                 <div
                     className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 lg:hidden flex transition-opacity duration-300"
                     onClick={() => setIsMobileNavOpen(false)}
                 >
-                    <div
+                    <div 
                         className="w-[85%] max-w-[280px] h-full shadow-2xl animate-in slide-in-from-left duration-300"
                         onClick={(e) => e.stopPropagation()}
                     >

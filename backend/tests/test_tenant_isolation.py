@@ -12,6 +12,7 @@ postgrest_exceptions.APIError = DummyAPIError
 import os
 os.environ["SUPABASE_URL"] = "https://mock-project.supabase.co"
 os.environ["SUPABASE_SERVICE_KEY"] = "mock-service-key"
+os.environ["ALLOW_DEGRADED_STARTUP"] = "1"
 
 # Create mock Supabase client
 class MockResult:
@@ -41,8 +42,16 @@ class MockSupabaseTable:
     def offset(self, *args, **kwargs):
         return self
 
+    def maybeSingle(self):
+        self._is_single = True
+        return self
+
     def single(self):
         self._is_single = True
+        return self
+
+    def insert(self, data):
+        self._insert_data = data
         return self
 
     def execute(self):
@@ -105,20 +114,16 @@ class MockSupabaseTable:
                 elif "admin" in user_id:
                     company = "companyA"
                     role = "admin"
-                profile_data = {"id": user_id, "company_id": company, "role": role}
+                profile_data = {"id": user_id, "company_id": company, "role": role, "company": company}
                 if self._is_single:
                     return MockResult(profile_data)
                 return MockResult([profile_data])
 
-            data = {"id": "user123", "company_id": "companyA", "role": "user"}
+            data = {"id": "user123", "company_id": "companyA", "role": "user", "company": "companyA"}
             if self._is_single:
                 return MockResult(data)
             return MockResult([data])
         return MockResult([])
-
-    def insert(self, data):
-        self._insert_data = data
-        return self
 
 class MockSupabaseClient:
     def __init__(self):

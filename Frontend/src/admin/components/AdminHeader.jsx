@@ -5,7 +5,6 @@ import NotificationPopover from '../../user/components/NotificationPopover';
 import ThemeToggle from '../../components/shared/ThemeToggle';
 import useAuthStore from '../../store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
-import ThemeToggle from '../../components/shared/ThemeToggle';
 
 /**
  * AdminHeader Component
@@ -13,7 +12,7 @@ import ThemeToggle from '../../components/shared/ThemeToggle';
  * Features a solid white background, specific search placeholder, 
  * and a functional avatar dropdown menu.
  */
-const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar }) => {
+const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar, onToggleShortcutsHelp }) => {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);

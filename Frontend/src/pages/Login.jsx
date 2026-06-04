@@ -19,11 +19,43 @@ function Login() {
 
   const [isMagicLink, setIsMagicLink] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [isSSO, setIsSSO] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
 
   const navigate = useNavigate();
   const { login, signInWithMagicLink, loginWithGoogle, loading, user, profile } = useAuthStore();
 
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleSSO = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError("Please enter your corporate email address");
+      return;
+    }
+    setError("");
+    setSsoLoading(true);
+    try {
+      const res = await fetch(`${API_CONFIG.BACKEND_URL}/auth/sso/resolve?email=${encodeURIComponent(email)}`);
+      if (!res.ok) {
+        throw new Error("Could not connect to authentication resolver.");
+      }
+      const data = await res.json();
+      if (data.sso_enabled) {
+        if (data.protocol === "saml") {
+          window.location.href = `${API_CONFIG.BACKEND_URL}/auth/sso/saml/login?provider_id=${data.provider_id}&frontend_origin=${window.location.origin}`;
+        } else if (data.protocol === "oauth" || data.protocol === "oidc") {
+          window.location.href = `${API_CONFIG.BACKEND_URL}/auth/sso/oauth/login?provider=${data.provider_name}&company_id=${data.company_id}&frontend_origin=${window.location.origin}`;
+        }
+      } else {
+        setError("Single Sign-On is not configured for your domain name. Please use email/password or contact your IT Admin.");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to connect to SSO resolver. Please try again later.");
+    } finally {
+      setSsoLoading(false);
+    }
+  };
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -139,7 +171,7 @@ function Login() {
     }
   };
 
-  const currentSubmitHandler = isMagicLink ? handleMagicLink : handleLogin;
+  const currentSubmitHandler = isSSO ? handleSSO : (isMagicLink ? handleMagicLink : handleLogin);
 
   return (
     <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">

@@ -16,7 +16,7 @@ _heavy_modules = [
     "transformers", "sentence_transformers", "easyocr",
     "datasets", "sklearn", "sklearn.metrics", "pandas", "openpyxl",
     "prometheus_client", "prometheus_fastapi_instrumentator",
-    "slowapi", "slowapi.util", "slowapi.errors",
+    "slowapi", "slowapi.util", "slowapi.errors", "slowapi.middleware",
     "apscheduler", "apscheduler.schedulers", "apscheduler.schedulers.asyncio",
     "apscheduler.triggers", "apscheduler.triggers.cron",
     "postgrest", "postgrest.exceptions", "postgrest._sync", "postgrest._sync.request_builder",
@@ -32,6 +32,7 @@ sys.modules["slowapi"].Limiter = MagicMock()
 sys.modules["slowapi"]._rate_limit_exceeded_handler = MagicMock()
 sys.modules["slowapi.util"].get_remote_address = MagicMock()
 sys.modules["slowapi.errors"].RateLimitExceeded = Exception
+sys.modules["slowapi.middleware"].SlowAPIMiddleware = MagicMock()
 
 # Make postgrest.exceptions.APIError a real exception
 class DummyAPIError(Exception):

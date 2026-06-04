@@ -6,6 +6,80 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
 
+const formatTime = (iso) => {
+    try {
+        return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch { return ''; }
+};
+
+const formatDate = (iso) => {
+    try {
+        const d = new Date(iso);
+        const today = new Date();
+        if (d.toDateString() === today.toDateString()) return 'Today';
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+        return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch { return ''; }
+};
+
+const ChatMessageItem = React.memo(({ msg, userId, isStaff, isMe, isAdmin, onMessageClick }) => {
+    return (
+        <div key={msg.id || msg.tempId} className={`flex gap-2.5 ${isMe ? 'justify-end' : 'justify-start'} group py-1`}>
+            {!isMe && (
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-auto mb-1 shadow-sm
+                    ${isAdmin ? 'bg-indigo-600' : 'bg-slate-200 border border-slate-300'}`}>
+                    {isAdmin ? <ShieldCheck size={13} className="text-white" /> : <User size={13} className="text-slate-500" />}
+                </div>
+            )}
+
+            <div className={`max-w-[80%] flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
+                <div className="flex items-center gap-2 px-1">
+                    <span className={`text-[9px] font-black uppercase tracking-widest ${msg.is_internal ? 'text-amber-600' : 'text-slate-400'}`}>
+                        {msg.is_internal ? '🔒 Internal Note' : (isMe ? 'You' : msg.sender_name || (isAdmin ? 'Support ' : 'User'))}
+                    </span>
+                    <span className="text-[8px] font-bold text-slate-300">
+                        {formatTime(msg.created_at)}
+                    </span>
+                </div>
+
+                <div style={
+                    !isMe && !msg.is_internal ? {
+                        padding: '14px 18px', fontSize: '13px', lineHeight: 1.5,
+                        background: '#f0fdf4', color: '#0f1f12', borderRadius: '14px', border: '1px solid #d1fae5'
+                    } : msg.is_internal ? {
+                        padding: '14px 18px', fontSize: '13px', lineHeight: 1.5,
+                        background: '#fef3c7', color: '#92400e', borderRadius: '14px', border: '1px solid #fde68a'
+                    } : {
+                        padding: '14px 18px', fontSize: '13px', lineHeight: 1.5,
+                        background: '#0f1f12', color: '#ffffff', borderRadius: '14px'
+                    }
+                }>
+                    {msg.message}
+                </div>
+            </div>
+
+            {isMe && (
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-auto mb-1 shadow-sm
+                    ${isAdmin ? 'bg-indigo-600' : 'bg-emerald-100 border border-emerald-200'}`}>
+                    {isAdmin ? <ShieldCheck size={13} className="text-white" /> : <User size={13} className="text-emerald-700" />}
+                </div>
+            )}
+        </div>
+    );
+});
+
+ChatMessageItem.displayName = 'ChatMessageItem';
+
+const ChatDivider = React.memo(({ label }) => (
+    <div className="flex items-center gap-3 py-2">
+        <div className="flex-1 h-px bg-slate-100" />
+        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
+        <div className="flex-1 h-px bg-slate-100" />
+    </div>
+));
+
 const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -41,6 +115,18 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     const scrollContainerRef = useRef(null);
     const inputRef = useRef(null);
     const channelRef = useRef(null);
+    const typingBroadcastTimerRef = useRef(null);
+    const typingIndicatorTimeoutRef = useRef(null);
+
+    // ─── Auto-scroll ─────────────────────────────────────────────────────
+    const scrollToBottom = useCallback((smooth = true) => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+                top: scrollContainerRef.current.scrollHeight,
+                behavior: smooth ? 'smooth' : 'instant'
+            });
+        }
+    }, []);
 
   // ─── Fetch Messages ──────────────────────────────────────────────────
   const fetchMessages = async () => {
@@ -213,7 +299,6 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
         const channel = supabase.channel(`ticket_chat_${ticketId}`);
         channelRef.current = channel;
 
-        // Subscribe to changes
         channel
             .on(
                 'postgres_changes',
@@ -226,14 +311,11 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                 (payload) => {
                     const newMessage = payload.new;
                     setMessages((prev) => {
-                        // Avoid duplicates if we already added it locally
                         if (prev.find(m => m.id === newMessage.id)) return prev;
-                        // Remove optimistic duplicates based on content and time
                         const filtered = prev.filter(m => !(String(m.id).startsWith('temp-') && m.message === newMessage.message && m.sender_id === newMessage.sender_id));
                         return [...filtered, newMessage];
                     });
 
-                    // Handle notification logic
                     if (newMessage.sender_id !== user?.id) {
                         if (!isAtBottom) {
                             setUnreadCount(prev => prev + 1);
@@ -249,9 +331,12 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                 (payload) => {
                     if (payload.payload.user_id !== user?.id) {
                         setIsTyping(true);
-                        clearTimeout(window.typingTimeout);
-                        window.typingTimeout = setTimeout(() => {
+                        if (typingIndicatorTimeoutRef.current) {
+                            clearTimeout(typingIndicatorTimeoutRef.current);
+                        }
+                        typingIndicatorTimeoutRef.current = window.setTimeout(() => {
                             setIsTyping(false);
+                            typingIndicatorTimeoutRef.current = null;
                         }, 3000);
                         setTimeout(() => scrollToBottom(), 50);
                     }
@@ -265,30 +350,14 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
             if (recordTimerRef.current) clearInterval(recordTimerRef.current);
             if (voicePlayTimerRef.current) clearInterval(voicePlayTimerRef.current);
         };
-     
- 
-    }, [ticketId]);
+    }, [ticketId, fetchMessages, scrollToBottom, user?.id, isAtBottom]);
 
     const handleInputChange = (e) => {
         setInputValue(e.target.value);
         if (channelRef.current && e.target.value.trim().length > 0) {
-            channelRef.current.send({
-                type: 'broadcast',
-                event: 'typing',
-                payload: { user_id: user?.id }
-            }).catch(() => { });
+            broadcastTyping();
         }
     };
-
-    // ─── Auto-scroll ─────────────────────────────────────────────────────
-    const scrollToBottom = useCallback((smooth = true) => {
-        if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTo({
-                top: scrollContainerRef.current.scrollHeight,
-                behavior: smooth ? 'smooth' : 'instant'
-            });
-        }
-    }, []);
 
     const handleScroll = () => {
         const el = scrollContainerRef.current;

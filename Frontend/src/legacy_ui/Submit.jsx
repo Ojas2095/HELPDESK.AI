@@ -178,7 +178,7 @@ function Submit() {
                       <div className='flex items-center gap-3 p-3 rounded-lg border border-[var(--stitch-border-light,#e2e8e5)] bg-[var(--stitch-background-light,#f6f8f7)]'>
                         <div className='size-10 rounded bg-slate-200 flex items-center justify-center text-slate-500 overflow-hidden'>
                           {imagePreview ? (
-                            <img src={imagePreview} className='w-full h-full object-cover' />
+                            <img src={imagePreview} alt="Attachment preview" className='w-full h-full object-cover' />
                           ) : (
                             <ImageIcon />
                           )}
