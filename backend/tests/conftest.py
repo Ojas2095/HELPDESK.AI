@@ -438,14 +438,17 @@ def _install_optional_ml_stubs():
     }
 
     for module_name, stub_module in stubs.items():
+        if module_name in sys.modules:
+            continue
+
         if module_name.startswith("backend."):
-            should_stub = module_name not in sys.modules
+            should_stub = True
         elif module_name == "encryption":
             try:
                 crypto_missing = importlib.util.find_spec("Crypto") is None
             except ModuleNotFoundError:
                 crypto_missing = True
-            should_stub = module_name not in sys.modules and crypto_missing
+            should_stub = crypto_missing
         else:
             if module_name in sys.modules:
                 should_stub = False
