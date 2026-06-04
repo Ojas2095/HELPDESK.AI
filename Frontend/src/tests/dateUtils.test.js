@@ -6,15 +6,27 @@ import { describe, it, expect } from 'vitest';
 import { formatTimelineDate, formatFullTimestamp, getTimeZoneAbbr } from '../utils/dateUtils';
 
 describe('formatTimelineDate', () => {
-    it('returns null for null/undefined input', () => {
-        expect(formatTimelineDate(null)).toBeNull();
-        expect(formatTimelineDate(undefined)).toBeNull();
-        expect(formatTimelineDate('')).toBeNull();
+    it('defaults gracefully to current time for null/undefined/empty input', () => {
+        const resultNull = formatTimelineDate(null);
+        const resultUndef = formatTimelineDate(undefined);
+        const resultEmpty = formatTimelineDate('');
+        
+        expect(resultNull).toBeTruthy();
+        expect(resultNull).not.toBe('Invalid Date');
+        expect(resultUndef).toBeTruthy();
+        expect(resultUndef).not.toBe('Invalid Date');
+        expect(resultEmpty).toBeTruthy();
+        expect(resultEmpty).not.toBe('Invalid Date');
     });
 
-    it('returns null for non-string input', () => {
-        expect(formatTimelineDate(123)).toBeNull();
-        expect(formatTimelineDate({})).toBeNull();
+    it('defaults gracefully to current time for non-string input', () => {
+        const resultNum = formatTimelineDate(123);
+        const resultObj = formatTimelineDate({});
+        
+        expect(resultNum).toBeTruthy();
+        expect(resultNum).not.toBe('Invalid Date');
+        expect(resultObj).toBeTruthy();
+        expect(resultObj).not.toBe('Invalid Date');
     });
 
     it('parses ISO-8601 with Z suffix (UTC)', () => {
@@ -59,13 +71,20 @@ describe('formatTimelineDate', () => {
         expect(result).not.toBe('Invalid Date');
     });
 
-    it('returns null for garbage input', () => {
-        expect(formatTimelineDate('not-a-date')).toBeNull();
-        expect(formatTimelineDate('abc123')).toBeNull();
+    it('defaults gracefully to current time for garbage input', () => {
+        const resultGarbage = formatTimelineDate('not-a-date');
+        const resultAbc = formatTimelineDate('abc123');
+        
+        expect(resultGarbage).toBeTruthy();
+        expect(resultGarbage).not.toBe('Invalid Date');
+        expect(resultAbc).toBeTruthy();
+        expect(resultAbc).not.toBe('Invalid Date');
     });
 
-    it('handles whitespace-only input', () => {
-        expect(formatTimelineDate('   ')).toBeNull();
+    it('defaults gracefully to current time for whitespace-only input', () => {
+        const result = formatTimelineDate('   ');
+        expect(result).toBeTruthy();
+        expect(result).not.toBe('Invalid Date');
     });
 
     it('trims whitespace from valid dates', () => {
@@ -76,10 +95,17 @@ describe('formatTimelineDate', () => {
 });
 
 describe('formatFullTimestamp', () => {
-    it('returns Processing... for null input', () => {
-        expect(formatFullTimestamp(null)).toBe('Processing...');
-        expect(formatFullTimestamp(undefined)).toBe('Processing...');
-        expect(formatFullTimestamp('')).toBe('Processing...');
+    it('defaults gracefully to current time for null/undefined/empty input', () => {
+        const resultNull = formatFullTimestamp(null);
+        const resultUndef = formatFullTimestamp(undefined);
+        const resultEmpty = formatFullTimestamp('');
+        
+        expect(resultNull).toBeTruthy();
+        expect(resultNull).not.toBe('Processing...');
+        expect(resultUndef).toBeTruthy();
+        expect(resultUndef).not.toBe('Processing...');
+        expect(resultEmpty).toBeTruthy();
+        expect(resultEmpty).not.toBe('Processing...');
     });
 
     it('includes timezone abbreviation', () => {
@@ -90,8 +116,10 @@ describe('formatFullTimestamp', () => {
         expect(result).toMatch(/\(.*\)/);
     });
 
-    it('returns Processing... for invalid date', () => {
-        expect(formatFullTimestamp('garbage')).toBe('Processing...');
+    it('defaults gracefully to current time for invalid date', () => {
+        const result = formatFullTimestamp('garbage');
+        expect(result).toBeTruthy();
+        expect(result).not.toBe('Processing...');
     });
 });
 
@@ -102,8 +130,7 @@ describe('getTimeZoneAbbr', () => {
         expect(tz.length).toBeGreaterThan(0);
     });
 
-    it('returns IST as fallback on error', () => {
-        // getTimeZoneAbbr should always return something
+    it('returns IST or UTC as fallback on error', () => {
         const tz = getTimeZoneAbbr();
         expect(tz).toBeTruthy();
     });

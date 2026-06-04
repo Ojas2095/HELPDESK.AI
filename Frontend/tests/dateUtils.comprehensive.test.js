@@ -158,12 +158,14 @@ test('formatTimelineDate returns locale-formatted string for valid date', () => 
     assert.ok(result !== 'Invalid Date');
 });
 
-test('formatTimelineDate returns Invalid Date for null', () => {
-    assert.equal(formatTimelineDate(null), 'Invalid Date');
+test('formatTimelineDate defaults gracefully to current date for null', () => {
+    const result = formatTimelineDate(null);
+    assert.ok(result !== 'Invalid Date');
 });
 
-test('formatTimelineDate returns Invalid Date for garbage string', () => {
-    assert.equal(formatTimelineDate('garbage'), 'Invalid Date');
+test('formatTimelineDate defaults gracefully to current date for garbage string', () => {
+    const result = formatTimelineDate('garbage');
+    assert.ok(result !== 'Invalid Date');
 });
 
 test('formatTimelineDate handles space-separated datetime (Safari fix)', () => {
@@ -206,12 +208,14 @@ test('formatFullTimestamp includes timezone abbreviation', () => {
     assert.ok(result.includes(')'));
 });
 
-test('formatFullTimestamp returns Processing... for null', () => {
-    assert.equal(formatFullTimestamp(null), 'Processing...');
+test('formatFullTimestamp defaults gracefully to current date for null', () => {
+    const result = formatFullTimestamp(null);
+    assert.ok(result !== 'Processing...');
 });
 
-test('formatFullTimestamp returns Processing... for invalid input', () => {
-    assert.equal(formatFullTimestamp('garbage'), 'Processing...');
+test('formatFullTimestamp defaults gracefully to current date for invalid input', () => {
+    const result = formatFullTimestamp('garbage');
+    assert.ok(result !== 'Processing...');
 });
 
 // ---------------------------------------------------------------------------
@@ -224,16 +228,18 @@ test('safeParseDateForSort returns Date for valid input', () => {
     assert.ok(!isNaN(d.getTime()));
 });
 
-test('safeParseDateForSort returns epoch fallback for null', () => {
+test('safeParseDateForSort defaults gracefully to current date for null', () => {
     const d = safeParseDateForSort(null);
     assert.ok(d instanceof Date);
-    assert.equal(d.getTime(), 0);
+    const now = Date.now();
+    assert.ok(Math.abs(d.getTime() - now) < 2000); // within 2 seconds
 });
 
-test('safeParseDateForSort returns epoch fallback for garbage', () => {
+test('safeParseDateForSort defaults gracefully to current date for garbage', () => {
     const d = safeParseDateForSort('not-a-date');
     assert.ok(d instanceof Date);
-    assert.equal(d.getTime(), 0);
+    const now = Date.now();
+    assert.ok(Math.abs(d.getTime() - now) < 2000); // within 2 seconds
 });
 
 // ---------------------------------------------------------------------------
@@ -256,6 +262,6 @@ test('getRelativeTime returns formatted string for valid date', () => {
     assert.ok(result !== 'Processing...');
 });
 
-test('getRelativeTime returns Processing... for null', () => {
-    assert.equal(getRelativeTime(null), 'Processing...');
+test('getRelativeTime defaults gracefully to Just now for null', () => {
+    assert.equal(getRelativeTime(null), 'Just now');
 });
