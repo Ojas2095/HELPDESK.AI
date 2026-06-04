@@ -1941,11 +1941,21 @@ async def get_current_user(request: Request) -> dict:
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid session")
-    if hasattr(user, "model_dump"):
-        return user.model_dump()
-    if hasattr(user, "dict"):
-        return user.dict()
-    return dict(user)
+    
+    user_payload = user.model_dump() if hasattr(user, "model_dump") else (user.dict() if hasattr(user, "dict") else dict(user))
+    
+    # Resolve company_id and role from profiles if missing or to ensure validity
+    try:
+        profile_res = supabase.table("profiles").select("company_id, role").eq("id", user_payload.get("id")).execute()
+        if profile_res.data:
+            user_payload["company_id"] = profile_res.data[0].get("company_id")
+            user_payload["role"] = profile_res.data[0].get("role")
+    except Exception:
+        pass
+        
+    request.state.user = user_payload
+    return user_payload
+
 
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
