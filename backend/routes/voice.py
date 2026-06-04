@@ -12,7 +12,9 @@ Issue #207: Voice-to-Ticket Feature
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+
+from backend.limiter import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,9 @@ MAX_UPLOAD_SIZE = 25 * 1024 * 1024
 
 
 @router.post("/transcribe")
+@limiter.limit("20/minute")
 async def transcribe_audio(
+    request: Request,
     audio: UploadFile = File(...),
     language: Optional[str] = Form(None),
 ):
@@ -68,7 +72,9 @@ async def transcribe_audio(
 
 
 @router.post("/create-ticket")
+@limiter.limit("20/minute")
 async def create_ticket_from_voice(
+    request: Request,
     audio: UploadFile = File(...),
     user_id: Optional[str] = Form(None),
     company: Optional[str] = Form(None),

@@ -2,10 +2,12 @@
 tag_router.py — REST endpoints for ticket tagging
 Issue #404 — Smart Ticket Tagging System
 """
-from fastapi import APIRouter, HTTPException, Header, Query
+from fastapi import APIRouter, HTTPException, Header, Query, Request
 from pydantic import BaseModel, field_validator
 from typing import Optional
 from tag_service import suggest_tags, save_tags, get_tags, get_popular_tags
+
+from backend.limiter import limiter
 
 router = APIRouter(prefix="/api/tags", tags=["tags"])
 
@@ -44,7 +46,9 @@ class SaveTagsRequest(BaseModel):
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/suggest")
+@limiter.limit("20/minute")
 async def suggest_tags_endpoint(
+    request: Request,
     req: SuggestRequest,
     authorization: Optional[str] = Header(None),
 ):

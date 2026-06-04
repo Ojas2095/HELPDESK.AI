@@ -132,6 +132,7 @@ from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sl
 from backend.services.redis_cache import redis_cache
 from backend.sla_predictor import get_sla_estimate
 from backend.sanitization import get_security_headers
+from backend.limiter import limiter, ML_HEAVY_LIMIT, ML_LIGHT_LIMIT
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 from backend.sanitization import sanitize_text
 
@@ -382,12 +383,6 @@ def classify_sla_status(sla_breach_at: str | None) -> str:
 # ── Rate limiter setup ────────────────────────────────────────────────────────
 # Uses client IP as the key. In production behind a proxy, set:
 #   get_remote_address to read X-Forwarded-For instead.
-limiter = Limiter(key_func=get_remote_address)
-
-# Limits (tune via env vars in production)
-ML_HEAVY_LIMIT  = "10/minute"   # NLP, OCR, Gemini — GPU/CPU intensive
-ML_LIGHT_LIMIT  = "30/minute"   # Similar incident search — lighter
-
 app = FastAPI(title="AI Helpdesk Ticket Analyzer")
 
 # ── Apply to FastAPI app ──────────────────────────────────────────────────────
@@ -1115,10 +1110,6 @@ body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', sy
 """
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-
-
 async def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
     """Custom 429 handler that returns JSON with retry_after field."""
     limit_str = str(exc.detail) if hasattr(exc, 'detail') else RATE_LIMIT_AI
@@ -1134,8 +1125,6 @@ async def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -
         headers={"Retry-After": str(retry_after)},
     )
 
-
-app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
 # ── Security Headers Middleware (Helmet.js equivalent) ────────────────────────
 from security_middleware import SecurityHeadersMiddleware, get_allowed_origins

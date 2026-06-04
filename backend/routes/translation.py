@@ -6,10 +6,11 @@ import logging
 import re
 from functools import lru_cache
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Optional
+from typing import Any, Optional
 
+from backend.limiter import limiter
 from backend.services.translation_service import (
     detect_language,
     get_supported_languages,
@@ -122,21 +123,22 @@ def _cached_supported_languages() -> dict[str, str]:
 
 
 @router.post("/translate", response_model=TranslateResponse)
-async def translate(request: TranslateTextRequest):
+@limiter.limit("30/minute")
+async def translate(request: Request, request_obj: TranslateTextRequest):
     """Translate text to target language with auto-detection."""
     logger.info(
         "translate: text_len=%d, target=%s, source=%s",
-        len(request.text), request.target_lang, request.source_lang,
+        len(request_obj.text), request_obj.target_lang, request_obj.source_lang,
     )
     try:
         result = translate_text(
-            text=request.text,
-            target_lang=request.target_lang,
-            source_lang=request.source_lang,
+            text=request_obj.text,
+            target_lang=request_obj.target_lang,
+            source_lang=request_obj.source_lang,
         )
         return {"success": True, "data": result}
     except Exception:
-        logger.exception("Translation failed for text_len=%d", len(request.text))
+        logger.exception("Translation failed for text_len=%d", len(request_obj.text))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Translation service temporarily unavailable. Please try again later.",
@@ -144,25 +146,26 @@ async def translate(request: TranslateTextRequest):
 
 
 @router.post("/translate-ticket", response_model=TranslateResponse)
-async def translate_ticket_endpoint(request: TranslateTicketRequest):
+@limiter.limit("30/minute")
+async def translate_ticket_endpoint(request: Request, request_obj: TranslateTicketRequest):
     """Translate entire ticket content to target language."""
     logger.info(
         "translate_ticket: target=%s, has_subject=%s, has_desc=%s, msg_count=%d",
-        request.target_lang,
-        request.subject is not None,
-        request.description is not None,
-        len(request.messages) if request.messages else 0,
+        request_obj.target_lang,
+        request_obj.subject is not None,
+        request_obj.description is not None,
+        len(request_obj.messages) if request_obj.messages else 0,
     )
     try:
         ticket_data: dict[str, Any] = {}
-        if request.subject:
-            ticket_data["subject"] = request.subject
-        if request.description:
-            ticket_data["description"] = request.description
-        if request.messages:
-            ticket_data["messages"] = [m.model_dump() for m in request.messages]
+        if request_obj.subject:
+            ticket_data["subject"] = request_obj.subject
+        if request_obj.description:
+            ticket_data["description"] = request_obj.description
+        if request_obj.messages:
+            ticket_data["messages"] = [m.model_dump() for m in request_obj.messages]
 
-        result = translate_ticket(ticket_data, target_lang=request.target_lang)
+        result = translate_ticket(ticket_data, target_lang=request_obj.target_lang)
         return {"success": True, "data": result}
     except ValueError as exc:
         raise HTTPException(
@@ -178,10 +181,11 @@ async def translate_ticket_endpoint(request: TranslateTicketRequest):
 
 
 @router.post("/detect", response_model=DetectResponse)
-async def detect(request: DetectLanguageRequest):
+@limiter.limit("30/minute")
+async def detect(request: Request, request_obj: DetectLanguageRequest):
     """Detect the language of the given text."""
-    logger.info("detect: text_len=%d", len(request.text))
-    lang = detect_language(request.text)
+    logger.info("detect: text_len=%d", len(request_obj.text))
+    lang = detect_language(request_obj.text)
     if not lang:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -199,6 +203,7 @@ async def detect(request: DetectLanguageRequest):
 
 
 @router.get("/languages", response_model=LanguagesResponse)
-async def list_languages():
+@limiter.limit("60/minute")
+async def list_languages(request: Request):
     """List supported languages for translation."""
     return {"success": True, "data": _cached_supported_languages()}

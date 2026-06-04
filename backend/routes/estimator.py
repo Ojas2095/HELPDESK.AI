@@ -2,10 +2,11 @@
 Response Time Estimator API Routes — AI-Powered SLA Breach Prediction
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import Optional
 
+from backend.limiter import limiter
 from backend.services.response_time_estimator import (
     estimate_response_time,
     generate_estimation_summary,
@@ -23,15 +24,16 @@ class EstimateRequest(BaseModel):
 
 
 @router.post("/estimate")
-async def estimate(request: EstimateRequest):
+@limiter.limit("30/minute")
+async def estimate(request: Request, request_obj: EstimateRequest):
     """Estimate response time and predict SLA breach risk."""
     try:
         estimation = estimate_response_time(
-            priority=request.priority,
-            team_workload=request.team_workload,
-            team_size=request.team_size,
-            category=request.category,
-            historical_avg_hours=request.historical_avg_hours,
+            priority=request_obj.priority,
+            team_workload=request_obj.team_workload,
+            team_size=request_obj.team_size,
+            category=request_obj.category,
+            historical_avg_hours=request_obj.historical_avg_hours,
         )
         summary = generate_estimation_summary(estimation)
 
