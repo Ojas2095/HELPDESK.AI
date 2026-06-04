@@ -84,6 +84,26 @@ class TestOCRServiceInputValidation:
             assert result == "hello"
 
     @pytest.mark.asyncio
+    async def test_accepts_mime_wrapped_base64(self):
+        svc = OCRService()
+        tiny = _make_tiny_png_bytes()
+        wrapped = base64.encodebytes(tiny).decode()
+
+        with patch.object(svc, "_run_ocr", return_value=["wrapped"]):
+            result = await svc.extract_text(wrapped)
+            assert result == "wrapped"
+
+    @pytest.mark.asyncio
+    async def test_accepts_mime_wrapped_data_uri(self):
+        svc = OCRService()
+        tiny = _make_tiny_png_bytes()
+        wrapped = base64.encodebytes(tiny).decode()
+
+        with patch.object(svc, "_run_ocr", return_value=["uri wrapped"]):
+            result = await svc.extract_text(f"data:image/png;base64,{wrapped}")
+            assert result == "uri wrapped"
+
+    @pytest.mark.asyncio
     async def test_rejects_unsupported_content_type(self):
         svc = OCRService()
         tiny = _make_tiny_png_bytes()

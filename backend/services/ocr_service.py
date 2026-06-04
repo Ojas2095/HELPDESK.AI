@@ -65,6 +65,12 @@ class OCRService:
             return ""
 
         image_base64 = image_base64.strip()
+        if len(image_base64) > MAX_BASE64_LENGTH:
+            logger.warning(
+                "[OCRService] Rejected: base64 length %d exceeds limit %d",
+                len(image_base64), MAX_BASE64_LENGTH,
+            )
+            return ""
 
         # ── 1. Strip data-URI prefix ─────────────────────────────────────────
         content_type = None
@@ -77,16 +83,15 @@ class OCRService:
                     logger.warning("[OCRService] Rejected: unsupported content type %s", content_type)
                     return ""
 
-        # ── 2. Re-add padding ─────────────────────────────────────────────────
+        # ── 2. Normalise MIME-wrapped base64 ──────────────────────────────────
+        image_base64 = "".join(image_base64.split())
+        if not image_base64:
+            return ""
+
+        # ── 3. Re-add padding ─────────────────────────────────────────────────
         missing_padding = len(image_base64) % 4
         if missing_padding:
             image_base64 += "=" * (4 - missing_padding)
-
-        # ── 3. Validate base64 characters ─────────────────────────────────────
-        _b64_chars = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
-        if not all(c in _b64_chars for c in image_base64):
-            logger.warning("[OCRService] Rejected: invalid base64 characters detected.")
-            return ""
 
         # ── 4. Base64 length guard ────────────────────────────────────────────
         if len(image_base64) > MAX_BASE64_LENGTH:
@@ -98,7 +103,7 @@ class OCRService:
 
         try:
             # ── 5. Decode ─────────────────────────────────────────────────────
-            image_bytes = base64.b64decode(image_base64)
+            image_bytes = base64.b64decode(image_base64, validate=True)
 
             # ── 6. Decoded-bytes guard ────────────────────────────────────────
             if len(image_bytes) > MAX_DECODED_BYTES:

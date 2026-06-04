@@ -528,6 +528,8 @@ def mock_ai_services(request):
         "test_notification_routing.py",
         "test_notification_routing_push.py",
         "test_notification_routing_admin_alert.py",
+        "test_ocr_service.py",
+        "test_ocr_dos_protection.py",
     }:
         yield
         return
