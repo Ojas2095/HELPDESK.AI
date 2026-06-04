@@ -1,47 +1,94 @@
-/**
- * Unified Date Utility for HELPDESK.AI
- * Fixes timezone shift issues by explicitly forcing local display.
- */
+const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_WITHOUT_TZ = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?$/;
+const ISO_WITH_TZ = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:?\d{2}|Z)$/i;
 
-export const formatTimelineDate = (dateStr) => {
-    if (!dateStr) return null;
-    
-    // Ensure the date string is interpreted as UTC if it's an ISO string from DB
-    let date;
-    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
-        // If it's a raw string without TZ, assume it was intended as UTC from our backend
-        date = new Date(dateStr + 'Z');
-    } else {
-        date = new Date(dateStr);
-    }
+export const normalizeDateInput = (value) => {
+  if (!value) {
+    return null;
+  }
 
-    if (isNaN(date.getTime())) return 'Invalid Date';
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
 
-    // Using the browser's default locale and timeZone (which is the user's local)
-    return date.toLocaleString(undefined, {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-    });
+  const input = String(value).trim();
+  if (!input) {
+    return null;
+  }
+
+  if (ISO_DATE_ONLY.test(input)) {
+    return `${input}T00:00:00`;
+  }
+
+  if (ISO_WITHOUT_TZ.test(input)) {
+    return input.replace(" ", "T");
+  }
+
+  if (ISO_WITH_TZ.test(input)) {
+    const normalized = input.replace(" ", "T").replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+    return normalized.endsWith("z") ? normalized.slice(0, -1) + "Z" : normalized;
+  }
+
+  return input;
 };
 
-export const getTimeZoneAbbr = () => {
-    try {
-        return new Intl.DateTimeFormat('en-US', {
-            timeZoneName: 'short'
-        })
-        .formatToParts(new Date())
-        .find(part => part.type === 'timeZoneName')?.value || 'IST';
-    } catch (_e) {
-        return 'IST';
-    }
+export const parseDateSafely = (value) => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? new Date() : value;
+  }
+
+  const normalized = normalizeDateInput(value);
+  if (!normalized) {
+    return new Date();
+  }
+
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 };
 
-export const formatFullTimestamp = (dateStr) => {
-    const formatted = formatTimelineDate(dateStr);
-    if (!formatted) return 'Processing...';
-    return `${formatted} (${getTimeZoneAbbr()})`;
+export const formatDate = (value, locale = undefined, options = {}) => {
+  const date = parseDateSafely(value);
+
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    ...options
+  }).format(date);
+};
+
+export const formatTime = (value, locale = undefined, options = {}) => {
+  const date = parseDateSafely(value);
+
+  return new Intl.DateTimeFormat(locale, {
+    hour: "numeric",
+    minute: "2-digit",
+    ...options
+  }).format(date);
+};
+
+export const formatDateTime = (value, locale = undefined, options = {}) => {
+  const date = parseDateSafely(value);
+
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    ...options
+  }).format(date);
+};
+
+export const formatTimelineDate = (value, locale = undefined, options = {}) => {
+  return formatDateTime(value, locale, options);
+};
+
+export default {
+  normalizeDateInput,
+  parseDateSafely,
+  formatDate,
+  formatTime,
+  formatDateTime,
+  formatTimelineDate
 };
