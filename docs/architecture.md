@@ -32,7 +32,7 @@ HELPDESK.AI is a multi-tenant SaaS ticketing platform driven by an AI processing
 
 ## 3. Storage and Scaling Strategy
 - **Client-Side:** Critical UI state cached in `localStorage` via Zustand persist. Direct `localStorage` access wrapped in `try-catch` blocks for adversarial resilience.
-- **API Rate Limiting:** Expected at the API Gateway level (or via Hugging Face limits).
+- **API Rate Limiting:** Enforced at the application layer via `slowapi`. `POST /ai/analyze_ticket` is limited to **10 requests per minute per client IP**; exceeding the limit returns HTTP 429 with a `Retry-After` header. See `backend/README.md` for configuration details.
 
 ## 4. Production Hardening (BMAD Phase 1 & 2)
 As part of the BMAD End-Game:
