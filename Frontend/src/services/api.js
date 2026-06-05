@@ -99,22 +99,8 @@ export const api = {
         }
       };
     } catch (error) {
-      console.error("AI Backend Error, falling back to mock:", error);
-      // Fallback to mock logic if backend fails
-      await delay(1000);
-      return {
-        data: {
-          ticket_id: "TCKT-MOCK-" + Math.floor(Math.random() * 10000),
-          category: "Hardware",
-          priority: "Medium",
-          assigned_team: "Hardware Support",
-          auto_resolve: false,
-          routing_confidence: 0.5,
-          duplicate_probability: 0.0,
-          summary: issueText.substring(0, 50) + "...",
-          entities: []
-        }
-      };
+       console.error("AI Backend Error:", error);
+       throw error;
     }
   },
 
