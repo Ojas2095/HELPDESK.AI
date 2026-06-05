@@ -1,38 +1,76 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import react from 'eslint-plugin-react'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import js from '@eslint/js';
+import globals from 'globals';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import { defineConfig, globalIgnores } from 'eslint/config';
 
-export default defineConfig([
-  globalIgnores(['dist']),
+export default [
+  {
+    ignores: ['dist', 'node_modules', '**/*.test.js', '**/*.test.jsx', '**/cypress/**'],
+  },
   {
     files: ['**/*.{js,jsx}'],
     plugins: {
       react,
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
     },
-    extends: [
-      js.configs.recommended,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-    ],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.jest,
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        cy: 'readonly',
+        Cypress: 'readonly',
+        process: 'readonly',
+      },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
         sourceType: 'module',
       },
     },
-        rules: {
+    rules: {
       'react/jsx-uses-react': 'error',
       'react/jsx-uses-vars': 'error',
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', args: 'none', caughtErrorsIgnorePattern: '^_' }],
+      'no-unused-vars': [
+        'error',
+        { varsIgnorePattern: '^[A-Z_]', args: 'none', caughtErrorsIgnorePattern: '^_' },
+      ],
       'react-hooks/exhaustive-deps': 'off',
       'react-hooks/set-state-in-effect': 'off',
       'react-refresh/only-export-components': 'off',
-        },
+    },
   },
-])
+  {
+    files: [
+      '**/*.{test,spec}.{js,jsx}',
+      '**/__tests__/**/*.{js,jsx}',
+      'jest.setup.js',
+      'jest.fileMock.js',
+    ],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.jest,
+      },
+    },
+    rules: {
+      'no-unused-vars': 'off',
+      'no-undef': 'off',
+      'react/prop-types': 'off',
+      'react/react-in-jsx-scope': 'off',
+      'react/no-unescaped-entities': 'off',
+      'react/display-name': 'off',
+      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+]

@@ -114,3 +114,13 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 ---
 *Happy coding, and let’s drive the future of Intelligent Enterprise Support together!*
+
+
+## Contributing Standards: Backend API Rate Limiting
+
+When writing new backend API routes in `backend/main.py`:
+- **Rate Limit Decorators**: Always apply `slowapi` decorators on public facing routes to limit spamming.
+- **Limit Guidelines**:
+    - Login/auth endpoints: max 5 requests per minute.
+    - Dataset query endpoints: max 30 requests per minute.
+- **Error Standard**: Ensure rate limit violations raise an HTTP 429 exception with standard payload formatting.
