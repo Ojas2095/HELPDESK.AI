@@ -317,11 +317,8 @@ class DuplicateService:
             threshold: Optional override for the similarity threshold.
 
         Returns:
-            {
-                "is_duplicate": bool,
-                "duplicate_ticket_id": str | None,
-                "similarity": float
-            }
+            dict with duplicate_ticket_id, similarity_score, original_text
+            or None if no duplicate found / service unavailable.
         """
         self.load()
 
@@ -331,9 +328,9 @@ class DuplicateService:
                 "[DuplicateService] DEGRADED: Duplicate check skipped (model not available)"
             )
             return {
-                "is_duplicate": False,
-                "duplicate_ticket_id": None,
-                "similarity": 0.0,
+                "duplicate_ticket_id": ticket_id,
+                "similarity_score": round(best_score, 4),
+                "original_text": original_text,
             }
 
         # Use provided threshold or default to global constant
