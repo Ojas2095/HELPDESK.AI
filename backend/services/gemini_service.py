@@ -172,6 +172,7 @@ class GeminiService:
         Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
         try:
+
             img = Image.open(io.BytesIO(image_bytes))
             img.verify()  # detect truncated/corrupted files early
         except Exception as exc:
@@ -260,6 +261,7 @@ class GeminiService:
             except Exception as exc:
                 logger.error("[GeminiService] Image Analysis Error: %s", exc)
                 return _error_response(f"Error analyzing image: {exc}")
+
 
     def get_summary(self, ticket_text: str) -> str:
         """Generate a concise, one-line summary of the ticket text."""
