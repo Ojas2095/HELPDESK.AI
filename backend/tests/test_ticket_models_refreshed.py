@@ -69,7 +69,6 @@ _STUBS = [
     "backend.services.encryption_service",
     "backend.services.semantic_duplicate_service",
     "backend.services.agent_scorecard",
-    "backend.services.benchmark_similarity",
     "backend.services.onnx_service",
     "backend.auth_cookie",
     "backend.sentiment_router",
