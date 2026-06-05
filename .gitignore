@@ -2,30 +2,44 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
 venv/
 env/
 .env
+.env.*
+!.env.example
 
-# Models (Keep them if they are small, but here they are large. 
-# We should probably only keep the ones we actually use if possible, 
-# but for now we'll just ignore the venv)
-# Models
-backend/venv/
-
-# Logs and Data
-data/low_confidence_log.json
-user_feedback_rows.csv
-
-# Git
-.git/
+# Backend
+backend/.venv/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.env
+backend/.env.*
+!backend/.env.example
 
 # Frontend
-node_modules/
-dist/
-.vercel
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.vercel/
+Frontend/.env
+Frontend/.env.*
+!Frontend/.env.example
 *.local
+
+# Logs and Data
+*.log
+data/low_confidence_log.json
+user_feedback_rows.csv
+docs/logs/
 
 # Docs / Artifacts
 docs/helpdesk*.pdf
-docs/logs/
-*.log
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/

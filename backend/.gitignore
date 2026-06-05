@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Models / runtime outputs
+models/
+data/
+training/
+*.log
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
