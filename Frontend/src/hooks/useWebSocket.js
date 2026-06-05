@@ -1,6 +1,9 @@
 /**
  * useWebSocket — auto-reconnecting WebSocket hook with bidirectional heartbeat.
  *
+ * Authenticates via a Supabase access token passed as a query parameter
+ * so the server can validate the session before accepting the connection.
+ *
  * Heartbeat protocol (client-initiated):
  *   Client sends  {"type": "ping"}  every PING_INTERVAL_MS.
  *   Server echoes {"type": "pong"}  immediately.
@@ -14,7 +17,7 @@
  *
  * Usage:
  *   const { isConnected, sendMessage, lastMessage, connectionError } =
- *     useWebSocket(companyId);
+ *     useWebSocket(companyId, accessToken);
  *
  *   useEffect(() => {
  *     if (lastMessage?.type === "ticket_update") {
@@ -39,7 +42,7 @@ const INITIAL_RECONNECT_DELAY_MS = 1_000;
 // Hook
 // ---------------------------------------------------------------------------
 
-export default function useWebSocket(companyId) {
+export default function useWebSocket(companyId, accessToken) {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState(null);
   const [connectionError, setConnectionError] = useState(null);
@@ -51,6 +54,7 @@ export default function useWebSocket(companyId) {
   const reconnectAttemptRef = useRef(0);
   const mountedRef = useRef(true);
   const companyIdRef = useRef(companyId);
+  const tokenRef = useRef(accessToken);
 
   // ---- Cleanup helpers ---------------------------------------------------
 
@@ -165,7 +169,10 @@ export default function useWebSocket(companyId) {
     const cid = companyIdRef.current;
     if (!cid) return;
 
-    const url = `${WS_BASE_URL}/ws/${encodeURIComponent(cid)}`;
+    const tok = tokenRef.current;
+    const url = tok
+      ? `${WS_BASE_URL}/ws/${encodeURIComponent(cid)}?token=${encodeURIComponent(tok)}`
+      : `${WS_BASE_URL}/ws/${encodeURIComponent(cid)}`;
     setConnectionError(null);
 
     let socket;
@@ -250,6 +257,7 @@ export default function useWebSocket(companyId) {
   useEffect(() => {
     mountedRef.current = true;
     companyIdRef.current = companyId;
+    tokenRef.current = accessToken;
 
     if (companyId) {
       connect();
@@ -259,7 +267,7 @@ export default function useWebSocket(companyId) {
       mountedRef.current = false;
       cleanup();
     };
-  }, [companyId, connect, cleanup]);
+  }, [companyId, accessToken, connect, cleanup]);
 
   return { isConnected, lastMessage, connectionError, sendMessage };
 }

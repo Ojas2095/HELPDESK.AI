@@ -2507,13 +2507,20 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
 async def websocket_endpoint(ws: WebSocket, company_id: str):
     """Real-time WebSocket feed for a company's ticket dashboard.
 
+    Authentication is required via the ``token`` query parameter
+    (a Supabase session JWT).  Clients that do not provide a valid
+    token, or whose token does not grant access to the given
+    ``company_id``, are rejected.
+
     Protocol:
         - Server sends ``{"type": "ping"}`` every 30s (heartbeat).
         - Client must respond with ``{"type": "pong"}`` within 10s.
         - Server pushes ``{"type": "ticket_update", ...}`` on changes.
 
     Usage (frontend):
-        const socket = new WebSocket("ws://host:7860/ws/{company_id}");
+        const socket = new WebSocket(
+            "ws://host:7860/ws/{company_id}?token=" + encodeURIComponent(accessToken)
+        );
         socket.onmessage = (event) => { const msg = JSON.parse(event.data); };
     """
     if not company_id or not company_id.strip():
@@ -2521,6 +2528,52 @@ async def websocket_endpoint(ws: WebSocket, company_id: str):
         return
 
     company_id = company_id.strip()
+
+    # --- Authentication --------------------------------------------------
+    ws_token = ws.query_params.get("token") or ws.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not ws_token:
+        await ws.close(code=4001, reason="Authentication required")
+        return
+
+    try:
+        from supabase import create_client as _ws_create
+        _ws_url = os.environ.get("SUPABASE_URL")
+        _ws_key = os.environ.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_SERVICE_KEY")
+        if not _ws_url or not _ws_key:
+            await ws.close(code=4001, reason="Auth backend not configured")
+            return
+        _ws_supabase = _ws_create(_ws_url, _ws_key)
+        _ws_result = _ws_supabase.auth.get_user(ws_token)
+    except Exception:
+        await ws.close(code=4001, reason="Invalid or expired token")
+        return
+
+    _ws_user = getattr(_ws_result, "user", None) or (_ws_result.get("user") if isinstance(_ws_result, dict) else None)
+    if not _ws_user:
+        await ws.close(code=4001, reason="Invalid session")
+        return
+
+    # Verify user belongs to the requested company
+    try:
+        _ws_profile = (
+            supabase.table("profiles")
+            .select("company_id, role")
+            .eq("id", _ws_user.id if hasattr(_ws_user, "id") else _ws_user.get("id"))
+            .single()
+            .execute()
+        )
+        _ws_profile_data = _ws_profile.data if _ws_profile else None
+    except Exception:
+        _ws_profile_data = None
+
+    if _ws_profile_data:
+        _ws_user_company = _ws_profile_data.get("company_id")
+        _ws_user_role = str(_ws_profile_data.get("role", "")).lower()
+        _ws_is_master = _ws_user_role in {"master_admin", "super_admin", "superadmin", "owner"}
+        if not _ws_is_master and _ws_user_company and str(_ws_user_company) != company_id:
+            await ws.close(code=4003, reason="Forbidden: tenant mismatch")
+            return
+
     accepted = await connection_manager.connect(company_id, ws)
     if not accepted:
         await ws.close(code=4001, reason="Connection limit reached")

@@ -181,8 +181,14 @@ const AdminDashboard = () => {
     const [isLoading, setIsLoading] = React.useState(true);
     const [nowMs, setNowMs] = React.useState(() => Date.now());
 
-    // WebSocket connection for real-time ticket updates
-    const { isConnected: wsConnected, lastMessage } = useWebSocket(profile?.company);
+    // WebSocket connection for real-time ticket updates (authenticated)
+    const [wsToken, setWsToken] = React.useState(null);
+    React.useEffect(() => {
+      supabase.auth.getSession().then(({ data }) => {
+        setWsToken(data?.session?.access_token || null);
+      });
+    }, []);
+    const { isConnected: wsConnected, lastMessage } = useWebSocket(profile?.company, wsToken);
 
     // Read tickets from the Zustand store (populated below and updated by WS)
     const tickets = useTicketStore((s) => s.tickets);
