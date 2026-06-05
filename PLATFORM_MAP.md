@@ -10,15 +10,16 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Login / Signup** | User & Admin entry points. | Secure JWT-based entry, Role-aware redirection. |
 | **Forgot/Reset Password** | Recovery workflows. | Email-based secure recovery flows. |
 | **Knowledge Check** | Pre-support interactive guide. | Self-service assessment before ticket submission. |
+| **About Us** | Project background and mission. | Information about the mission, 6-stage AI pipeline timeline, tech stack, and resource links. |
 
 ## 👤 Layer 2: Standard User Portal
 | Page | Description | Key Features |
 | :--- | :--- | :--- |
 | **User Lobby** | Central entry point for employees. | Quick-start actions, high-level ticket status. |
-| **Create Ticket** | The core submission engine. | AI Processing simulator, OCR image analysis, duplicate detection. |
+| **Create Ticket** | The core submission engine. | AI Processing simulator, OCR image analysis, semantic duplicate detection, parent-ticket warnings. |
 | **My Tickets** | Personal ticket ledger. | Live status tracking, filterable history. |
 | **Ticket Detail** | Deep-dive into a specific issue. | Timeline tracking, resolution summaries. |
-| **AI Processing** | Real-time analysis view. | Visual feedback of DistilBERT and NER extraction in progress. |
+| **AI Processing** | Real-time analysis view. | Visual feedback of DistilBERT and NER extraction in progress, semantic duplicate scoring. |
 | **Auto-Resolve** | AI troubleshooting hub. | Interactive chat for self-resolution. |
 | **Notifications** | Activity center. | Real-time updates on ticket movement. |
 | **User Profile** | Identity management. | Personal details, company affiliation. |
@@ -31,6 +32,9 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Admin Users** | Workforce management. | Invite-only onboarding, user role auditing. |
 | **Admin Analytics** | Performance dashboard. | Sentiment heatmaps, tech-stack recurring issue analysis. |
 | **Admin Settings** | Organizational configuration. | Custom branding, SLA threshold definitions. |
+| **API Token Management** | Secure API credential hub. | Scoped token creation, IP allowlisting, one-time secret display, revocation, rotation, and usage analytics. |
+| **Knowledge Insights** | AI-powered gap detection dashboard. | Recurring issue clustering, gap score analytics, missing doc alerts. |
+| **Ticket-to-Article** | Resolution-to-Article Pipeline. | Convert resolved tickets to KB drafts with one-click AI generation. |
 | **Admin Profile** | Managerial settings. | Administrative credentials and settings. |
 
 ## 👑 Layer 4: Master Admin Portal
@@ -42,6 +46,16 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **All Admins** | Administrator directory. | Cross-company admin auditing. |
 | **Pending Requests** | Onboarding queue. | Approve/Reject new company registrations. |
 | **Master Bug Reports** | Platform diagnostics. | System-wide error tracking and resolution. |
+
+## 🛡️ Security Infrastructure
+
+| Component | Location | Responsibility |
+| :--- | :--- | :--- |
+| **Security Headers Middleware** | `backend/middleware/security_headers.py` | Injects CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, and Permissions-Policy into every HTTP response. |
+| **Vite Dev-Server Headers** | `Frontend/vite.config.js` | Mirrors production security headers in the local development environment. |
+| **Vercel Production Headers** | `Frontend/vercel.json` | Enforces full security header suite (including HSTS and CSP) on the deployed frontend via Vercel edge layer. |
+| **SRI Attributes** | `Frontend/index.html` | `crossorigin="anonymous"` on external stylesheet links enables browser SRI verification. |
+| **Security Header Tests** | `backend/tests/test_security_headers.py` | 25+ unit and integration tests validating every header directive and env-driven configuration. |
 
 ---
 *Documented with millisecond precision for Helpdesk.ai Platform.*

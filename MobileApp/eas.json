@@ -6,12 +6,22 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "development"
     },
     "preview": {
       "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "REPLACE_WITH_SUPABASE_URL",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "REPLACE_WITH_ANON_KEY"
+      },
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://your-project-ref.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "your-supabase-anon-key",
+        "EXPO_PUBLIC_BACKEND_URL": "http://localhost:7860"
       }
     },
     "preview_apk": {
@@ -19,11 +29,21 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://your-project-ref.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "your-supabase-anon-key",
+        "EXPO_PUBLIC_BACKEND_URL": "http://localhost:7860"
       }
     },
     "production": {
       "channel": "production",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://your-project-ref.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "your-supabase-anon-key",
+        "EXPO_PUBLIC_BACKEND_URL": "http://localhost:7860"
+      }
     }
   },
   "submit": {
