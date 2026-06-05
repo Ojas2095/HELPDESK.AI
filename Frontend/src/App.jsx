@@ -182,6 +182,7 @@ function TitleUpdater() {
     else if (path === '/create-ticket') title = 'Create Ticket';
     else if (path === '/my-tickets') title = 'My Tickets';
     else if (path === '/profile') title = 'User Profile';
+    else if (path === '/privacy') title = 'Privacy & Data Controls';
     else if (path === '/notifications') title = 'Notifications';
     else if (path === '/docs') title = 'Documentation';
     else if (path === '/api-reference') title = 'API Reference';
@@ -266,6 +267,7 @@ function AppContent() {
           <Route path="/ticket-tracking" element={<TicketTracking />} />
           <Route path="/ticket-result" element={<TicketResult />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/privacy" element={<PrivacySettings />} />
           <Route path="/help" element={<Help />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>
