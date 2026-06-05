@@ -23,6 +23,9 @@ permissions:
 permissions:
   contents: read
 
+permissions:
+  contents: read
+
 jobs:
   smoke-test:
     name: Smoke Test & Unit Tests
