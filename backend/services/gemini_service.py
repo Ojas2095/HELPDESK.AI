@@ -143,6 +143,11 @@ class GeminiService:
             logger.warning("[GeminiService] Malformed base64: %s", exc)
             return None, "[Image Error] Malformed base64 data."
 
+        # PDF detection — reject before PIL tries to open a PDF document
+        if image_bytes.startswith(b'%PDF'):
+            logger.warning("[GeminiService] Rejected: PDF files are not supported. Please upload an image screenshot instead.")
+            return None, "[Image Error] PDF files are not supported. Please upload a PNG or JPG image."
+
         # 5. Decoded byte length gate
         if len(image_bytes) > MAX_DECODED_BYTES:
             logger.warning(

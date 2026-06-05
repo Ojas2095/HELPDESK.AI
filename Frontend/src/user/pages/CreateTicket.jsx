@@ -43,6 +43,8 @@ const CreateTicket = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const MAX_CHARS = 1000;
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB max file size
+    const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'application/pdf'];
     const supportsSpeech = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     const [selectedLanguage, setSelectedLanguage] = useState('en');
     const [isTranslating, setIsTranslating] = useState(false);
