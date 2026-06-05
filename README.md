@@ -188,3 +188,62 @@ Helpdesk.ai is now available as a native Android application. It features a comp
 <div align="center">
 Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team. 
 </div>
+
+---
+
+## 🛠️ Tech Stack
+
+A complete breakdown of every technology powering HelpDesk.AI across all five layers:
+
+### 🎨 Frontend
+| Technology | Version | Role |
+|-----------|---------|------|
+| [React](https://react.dev/) | 19.2 | UI Framework |
+| [Vite](https://vitejs.dev/) | 7.x | Build Tool & Dev Server |
+| [TailwindCSS](https://tailwindcss.com/) | 3.4 | Utility-first CSS |
+| [React Router](https://reactrouter.com/) | 7.x | Client-side Routing |
+| [Zustand](https://zustand-demo.pmnd.rs/) | 5.x | Lightweight State Management |
+| [Ant Design (antd)](https://ant.design/) | 6.x | Enterprise UI Components |
+| [Recharts](https://recharts.org/) | 3.x | Data Visualization / Charts |
+| [Framer Motion](https://www.framer.com/motion/) | 12.x | Animations |
+| [Tesseract.js](https://tesseract.projectnaptha.com/) | 7.x | Browser-side OCR |
+| [Axios](https://axios-http.com/) | 1.x | HTTP Client |
+
+### 📱 Mobile
+| Technology | Version | Role |
+|-----------|---------|------|
+| [React Native](https://reactnative.dev/) | 0.81 | Cross-platform Mobile Framework |
+| [Expo](https://expo.dev/) | SDK 54 | React Native Toolchain |
+| [Expo Router / Navigation](https://docs.expo.dev/router/introduction/) | 7.x | Screen Navigation |
+| [Zustand](https://zustand-demo.pmnd.rs/) | 5.x | State Management |
+
+### ⚙️ Backend
+| Technology | Version | Role |
+|-----------|---------|------|
+| [Python](https://www.python.org/) | 3.10 | Runtime |
+| [FastAPI](https://fastapi.tiangolo.com/) | 0.104+ | REST API Framework |
+| [Uvicorn](https://www.uvicorn.org/) | 0.24+ | ASGI Server |
+| [PyTorch](https://pytorch.org/) | 2.0+ | Deep Learning Runtime |
+| [HuggingFace Transformers](https://huggingface.co/docs/transformers) | 4.35+ | Pretrained NLP Models |
+| [Sentence-Transformers](https://www.sbert.net/) | 2.2+ | Semantic Similarity / Duplicate Detection |
+| [EasyOCR](https://github.com/JaidedAI/EasyOCR) | latest | Server-side Optical Character Recognition |
+| [SlowAPI](https://slowapi.readthedocs.io/) | 0.1.9+ | Rate Limiting (via slowapi + redis) |
+
+### 🤖 AI / ML
+| Technology | Details | Role |
+|-----------|---------|------|
+| [Google Gemini](https://ai.google.dev/) | google-genai SDK | Generative AI for ticket resolution suggestions |
+| DistilBERT Classifier | Custom fine-tuned | Category & Sub-category classification |
+| NER Model | Custom fine-tuned | Named Entity Recognition from ticket text |
+| [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | Pretrained | Duplicate ticket detection via cosine similarity |
+
+### 🗄️ Database & Deployment
+| Technology | Version | Role |
+|-----------|---------|------|
+| [Supabase](https://supabase.com/) (PostgreSQL) | 2.22 | Primary Database + Auth |
+| [Docker](https://www.docker.com/) | python:3.10-slim | Backend Containerization |
+| [Vercel](https://vercel.com/) | Production | Frontend Hosting |
+| [HuggingFace Spaces](https://huggingface.co/spaces) | Docker runtime | Backend API Hosting |
+
+<br/>
+
