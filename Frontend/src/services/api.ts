@@ -1,10 +1,11 @@
 import apiClient from './apiClient';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
+import { Ticket, AIAnalysisResult } from '../types';
 
 const USE_MOCK = API_CONFIG.USE_MOCK;
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const getSlaBreachAt = (priority = 'Low') => {
   const hoursMap = { Critical: 2, High: 8, Medium: 24, Low: 72 };
@@ -13,14 +14,14 @@ const getSlaBreachAt = (priority = 'Low') => {
 };
 
 // Safe helper to get data from storage or default
-const getStorage = (key, defaultData) => {
+const getStorage = <T>(key: string, defaultData: T): T => {
   try {
     const stored = localStorage.getItem(key);
     if (!stored) {
       setStorage(key, defaultData);
       return defaultData;
     }
-    return JSON.parse(stored);
+    return JSON.parse(stored) as T;
   } catch (error) {
     console.warn(`[Storage Error] Failed to read or parse '${key}':`, error);
     return defaultData;
@@ -28,7 +29,7 @@ const getStorage = (key, defaultData) => {
 };
 
 // Safe helper to set data and handle QuotaExceeded
-const setStorage = (key, data) => {
+const setStorage = <T>(key: string, data: T): void => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
@@ -64,7 +65,7 @@ export const api = {
   getTickets: async () => {
     if (USE_MOCK) {
       await delay(500);
-      return getStorage('tickets', MOCK_TICKETS);
+      return getStorage<Ticket[]>('tickets', MOCK_TICKETS as Ticket[]);
     }
     // In production mode, surface backend errors so the UI can show a proper
     // error state rather than silently returning stale mock data that could
@@ -79,7 +80,7 @@ export const api = {
     return data;
   },
 
-  createTicket: async (ticketData) => {
+  createTicket: async (ticketData: Partial<Ticket>): Promise<{ data: Ticket } | undefined> => {
     if (USE_MOCK) {
       await delay(800);
       return createTicketMock(ticketData);
@@ -143,7 +144,7 @@ export const api = {
     }
   },
 
-  logCorrection: async (correctionPayload) => {
+  logCorrection: async (correctionPayload: any): Promise<void> => {
     try {
       await apiClient.post(`/ai/log_correction`, correctionPayload);
     } catch (error) {
