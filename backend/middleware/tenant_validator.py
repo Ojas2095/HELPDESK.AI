@@ -7,6 +7,19 @@ Enforces tenant isolation on every API request by:
 3. Preventing context spoofing via header manipulation
 4. Logging all cross-tenant access attempts for audit
 
+The following paths are skipped (PUBLIC_PATHS) and do not receive the
+X-Audit-Timestamp response header or the slow-request log line:
+    /            /health       /ready        /docs
+    /openapi.json  /redoc        /favicon.ico
+
+Additionally, paths starting with /auth, /static, /docs, /redoc, or
+/openapi are treated as public by the path-prefix matcher, and any
+path whose final segment contains a dot (e.g. /static/main.js,
+/favicon.ico) is treated as a static asset and bypassed.
+
+The ADMIN_PATHS set lists routes that require an elevated role:
+    /api/security/audit     /api/security/report     /api/admin
+
 Usage in main.py:
     from backend.middleware.tenant_validator import add_tenant_validator_middleware
     add_tenant_validator_middleware(app)
