@@ -42,8 +42,9 @@
     --radius: 0.5rem;
   }
 
+  /* Use CSS variable tokens so body respects the .dark class applied by ThemeContext */
   body {
-    @apply bg-[#f6f8f7] text-slate-900;
+    @apply bg-background text-foreground;
   }
 
   .dark {
