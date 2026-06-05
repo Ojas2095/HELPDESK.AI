@@ -84,10 +84,12 @@ class TestOCRServiceInputValidation:
             assert result == "hello"
 
     @pytest.mark.asyncio
-    async def test_rejects_unsupported_content_type(self):
+    async def test_accepts_pdf_content_type(self):
         svc = OCRService()
         tiny = _make_tiny_png_bytes()
         b64 = _b64(tiny)
+        # PDF is now supported — routes to PDF extraction; since the blob
+        # is not a real PDF, the extraction fails gracefully and returns "".
         result = await svc.extract_text(f"data:application/pdf;base64,{b64}")
         assert result == ""
 
