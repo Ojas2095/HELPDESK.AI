@@ -475,6 +475,9 @@ def load() -> IncidentService:
 def get_instance() -> Optional[IncidentService]:
     """Get the singleton instance if already loaded."""
     return _instance
+
+
+"""
 Incident Correlation Service
 Detects enterprise-wide outages by clustering semantically similar tickets
 inside a rolling time window. When configurable thresholds (ticket count,

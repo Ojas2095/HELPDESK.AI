@@ -14,9 +14,15 @@ from fastapi import FastAPI
 def create_test_app():
     """Create a FastAPI test app with the translation router mounted."""
     app = FastAPI()
+    from backend.services.rate_limit_config import limiter
+    from slowapi.errors import RateLimitExceeded
+    from slowapi import _rate_limit_exceeded_handler
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     from backend.routes.translation import router
     app.include_router(router)
     return app
+
 
 
 # ── POST /api/translation/translate ────────────────────────────
@@ -84,7 +90,7 @@ class TestTranslateEndpoint(unittest.TestCase):
             "text": "Hello", "target_lang": "es"
         })
         self.assertEqual(resp.status_code, 500)
-        self.assertIn("Translation failed", resp.json()["detail"])
+        self.assertIn("temporarily unavailable", resp.json()["detail"])
 
     @patch("backend.routes.translation.translate_text")
     def test_translate_unicode_text(self, mock_translate):
@@ -160,29 +166,26 @@ class TestTranslateTicketEndpoint(unittest.TestCase):
         })
         self.assertEqual(resp.status_code, 200)
         mock_translate.assert_called_once_with(
-            {"subject": "Bug", "description": "Desc", "messages": [{"body": "Msg"}]},
+            {"subject": "Bug", "description": "Desc", "messages": [{"id": None, "body": "Msg", "author": None}]},
             target_lang="fr",
         )
 
-    @patch("backend.routes.translation.translate_ticket")
-    def test_translate_ticket_empty_body(self, mock_translate):
-        """Empty body (no fields) should still be accepted by route but pass empty dict."""
-        mock_translate.return_value = {}
+    def test_translate_ticket_empty_body(self):
+        """Empty body (no fields) should return 422."""
         resp = self.client.post("/api/translation/translate-ticket", json={
             "target_lang": "en"
         })
-        self.assertEqual(resp.status_code, 200)
-        mock_translate.assert_called_once_with({}, target_lang="en")
+        self.assertEqual(resp.status_code, 422)
 
     @patch("backend.routes.translation.translate_ticket")
     def test_translate_ticket_service_exception(self, mock_translate):
         """Service exception should return 500."""
-        mock_translate.side_effect = ValueError("Invalid ticket data")
+        mock_translate.side_effect = Exception("Service error")
         resp = self.client.post("/api/translation/translate-ticket", json={
             "subject": "Test", "target_lang": "en"
         })
         self.assertEqual(resp.status_code, 500)
-        self.assertIn("Ticket translation failed", resp.json()["detail"])
+        self.assertIn("temporarily unavailable", resp.json()["detail"])
 
     def test_translate_ticket_missing_target_lang_uses_default(self):
         """Missing target_lang should default to 'en'."""
@@ -261,6 +264,8 @@ class TestLanguagesEndpoint(unittest.TestCase):
     @patch("backend.routes.translation.get_supported_languages")
     def test_languages_returns_dict(self, mock_langs):
         """Should return a dictionary of supported languages."""
+        from backend.routes.translation import _cached_supported_languages
+        _cached_supported_languages.cache_clear()
         mock_langs.return_value = {"en": "English", "es": "Spanish", "fr": "French"}
         resp = self.client.get("/api/translation/languages")
         self.assertEqual(resp.status_code, 200)
@@ -272,6 +277,8 @@ class TestLanguagesEndpoint(unittest.TestCase):
     @patch("backend.routes.translation.get_supported_languages")
     def test_languages_empty_list(self, mock_langs):
         """Should handle empty languages dict."""
+        from backend.routes.translation import _cached_supported_languages
+        _cached_supported_languages.cache_clear()
         mock_langs.return_value = {}
         resp = self.client.get("/api/translation/languages")
         self.assertEqual(resp.status_code, 200)

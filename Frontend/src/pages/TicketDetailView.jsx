@@ -15,6 +15,7 @@ import {
   BrainCircuit,
   ImageIcon,
 } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 import useTicketStore from '../store/ticketStore';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import SLACountdownTimer from "../components/shared/SLACountdownTimer";

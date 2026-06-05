@@ -11,9 +11,15 @@ from fastapi import FastAPI
 def create_test_app():
     """Create a FastAPI test app with the estimator router mounted."""
     app = FastAPI()
+    from backend.services.rate_limit_config import limiter
+    from slowapi.errors import RateLimitExceeded
+    from slowapi import _rate_limit_exceeded_handler
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     from backend.routes.estimator import router
     app.include_router(router)
     return app
+
 
 
 # ── POST /api/estimator/estimate ───────────────────────────────
@@ -273,7 +279,7 @@ class TestSlaTargetsEndpoint(unittest.TestCase):
         self.app = create_test_app()
         self.client = TestClient(self.app)
 
-    @patch("backend.routes.estimator.SLA_TARGETS", {
+    @patch("backend.services.response_time_estimator.SLA_TARGETS", {
         "critical": 1.0,
         "high": 4.0,
         "medium": 8.0,
@@ -291,7 +297,7 @@ class TestSlaTargetsEndpoint(unittest.TestCase):
         self.assertIn("medium", targets)
         self.assertIn("low", targets)
 
-    @patch("backend.routes.estimator.SLA_TARGETS", {
+    @patch("backend.services.response_time_estimator.SLA_TARGETS", {
         "critical": 1.0, "high": 4.0, "medium": 8.0, "low": 24.0,
     })
     def test_sla_targets_correct_values(self):
@@ -302,7 +308,7 @@ class TestSlaTargetsEndpoint(unittest.TestCase):
         self.assertEqual(data["data"]["medium"], 8.0)
         self.assertEqual(data["data"]["low"], 24.0)
 
-    @patch("backend.routes.estimator.SLA_TARGETS", {})
+    @patch("backend.services.response_time_estimator.SLA_TARGETS", {})
     def test_sla_targets_empty(self):
         """Should handle empty SLA targets."""
         resp = self.client.get("/api/estimator/sla-targets")

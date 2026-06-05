@@ -30,12 +30,15 @@ import {
     Users,
     XCircle,
     ArrowUpDown,
+    Download,
+    Printer,
 } from 'lucide-react';
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatTimelineDate } from "../../utils/dateUtils";
 import { sanitizeSearchQuery } from "../../utils/sanitizeText";
+import { downloadCSV, printTicket } from "../../utils/exportUtils";
 
 /* ────────────────────────────────────────────────────────────
    Confirmation Modal  – reusable for any destructive bulk op
@@ -509,6 +512,30 @@ const AdminTickets = () => {
                     <p className="text-sm font-bold text-slate-400 mt-1 flex items-center gap-2">
                         <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} tickets matching current filters.
                     </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    {/* Export CSV */}
+                    <button
+                        onClick={() => downloadCSV(filteredTickets, `tickets-export-${new Date().toISOString().slice(0, 10)}`)}
+                        disabled={filteredTickets.length === 0}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                    >
+                        <Download size={14} />
+                        CSV
+                    </button>
+                    {/* Print Selected */}
+                    {selectedTickets.length === 1 && (
+                        <button
+                            onClick={() => {
+                                const t = tickets.find(t => t.id === selectedTickets[0]);
+                                if (t) printTicket(t);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shadow-sm"
+                        >
+                            <Printer size={14} />
+                            Print
+                        </button>
+                    )}
                 </div>
             </div>
 
