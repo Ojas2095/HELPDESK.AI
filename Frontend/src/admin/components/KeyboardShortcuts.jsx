@@ -13,6 +13,11 @@ const KeyboardShortcuts = () => {
 
     useEffect(() => {
         const handleKeyDown = (e) => {
+            // Block shortcuts if help modal is open, except Escape and ?
+            if (showHelpModal && e.key !== 'Escape' && e.key !== '?') {
+                return;
+            }
+
             // Safely check active element
             const activeElement = document.activeElement;
             const activeTag = activeElement ? activeElement.tagName.toLowerCase() : '';
@@ -100,23 +105,29 @@ const KeyboardShortcuts = () => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [navigate, role]);
+    }, [navigate, role, showHelpModal]);
 
     if (!showHelpModal) return null;
 
     return (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div 
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shortcuts-modal-title"
+        >
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between p-5 border-b border-slate-100">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-emerald-50 rounded-lg text-emerald-600">
                             <Keyboard size={20} />
                         </div>
-                        <h2 className="font-bold text-slate-800 text-lg">Keyboard Shortcuts</h2>
+                        <h2 id="shortcuts-modal-title" className="font-bold text-slate-800 text-lg">Keyboard Shortcuts</h2>
                     </div>
                     <button 
                         onClick={() => setShowHelpModal(false)}
                         className="text-slate-400 hover:bg-slate-50 hover:text-slate-600 p-2 rounded-xl transition-colors"
+                        aria-label="Close shortcuts"
                     >
                         <X size={20} />
                     </button>
