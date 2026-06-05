@@ -5,17 +5,37 @@ Issue #404 — Smart Ticket Tagging System
 from fastapi import APIRouter, HTTPException, Header, Query, Request
 from pydantic import BaseModel, field_validator
 from typing import Optional
+from supabase import create_client
 from tag_service import suggest_tags, save_tags, get_tags, get_popular_tags
 from backend.services.rate_limit_config import limiter
 
 
 router = APIRouter(prefix="/api/tags", tags=["tags"])
 
+_sb = None
+
+
+def _get_sb():
+    global _sb
+    if _sb is None:
+        url = os.getenv("SUPABASE_URL", "")
+        key = os.getenv("SUPABASE_SERVICE_KEY", "")
+        if url and key:
+            _sb = create_client(url, key)
+    return _sb
+
 
 # ── Auth helper ───────────────────────────────────────────────────────────────
 def _require_auth(authorization: Optional[str]) -> None:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized — Bearer token required")
+    token = authorization[7:]
+    sb = _get_sb()
+    if sb:
+        try:
+            sb.auth.get_user(token)
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 # ── Request models ────────────────────────────────────────────────────────────

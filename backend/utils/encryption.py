@@ -26,9 +26,18 @@ PII_PATTERNS = {
 def get_encryption_key(password: str | None = None, salt: bytes | None = None) -> bytes:
     """Derive a 256-bit encryption key from password using PBKDF2."""
     if password is None:
-        password = os.getenv("ENCRYPTION_PASSWORD", "helpdesk-default-key")
+        password = os.getenv("ENCRYPTION_PASSWORD")
+    if password is None:
+        raise ValueError(
+            "ENCRYPTION_PASSWORD environment variable must be set. "
+            "Encryption is disabled without a configured password."
+        )
     if salt is None:
-        salt = os.getenv("ENCRYPTION_SALT", "helpdesk-salt").encode()
+        salt_env = os.getenv("ENCRYPTION_SALT")
+        if salt_env:
+            salt = salt_env.encode()
+        else:
+            salt = os.urandom(16)
     elif isinstance(salt, str):
         salt = salt.encode()
 
