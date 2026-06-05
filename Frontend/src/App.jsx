@@ -1,7 +1,17 @@
-/**
- * App.jsx — Unified React Router configuration for HELPDESK.AI
- * Consolidates all routes and fix syntax/duplication issues.
- */
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation
+} from "react-router-dom";
+import React, { useEffect, Suspense } from "react";
+import { AnimatePresence } from "framer-motion";
+import { NotFound } from "./components/ui/not-found-2";
+import useTicketStore from "./store/ticketStore";
+import Toaster from "./components/shared/Toaster";
+import BugReportWidget from "./components/shared/BugReportWidget";
+import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
 
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -17,61 +27,61 @@ import BackToTop from './components/shared/BackToTop';
 import BackToTopButton from './components/shared/BackToTopButton';
 import ScrollToTopButton from './components/ScrollToTopButton';
 
-// ---------------------------------------------------------------------------
-// Eagerly-loaded auth pages
-// ---------------------------------------------------------------------------
-import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Signup from './pages/Signup';
-import AdminSignup from './pages/AdminSignup';
-import LandingPage from './pages/LandingPage';
-import NotApproved from './pages/NotApproved';
-import AuthCallback from './pages/AuthCallback';
+// Legacy components
+const DuplicateDetection = React.lazy(() => import("./user/pages/DuplicateDetection"));
+const AutoResolveChat = React.lazy(() => import("./user/pages/AutoResolveChat"));
+const Resolved = React.lazy(() => import("./user/pages/Resolved"));
+const TicketTracking = React.lazy(() => import("./user/pages/TicketTracking"));
+// Layouts
+const UserLayout = React.lazy(() => import("./user/UserLayout"));
+const AdminLayout = React.lazy(() => import("./admin/layout/AdminLayout"));
 
-// Route guards
-import AdminProtectedRoute from './components/shared/AdminProtectedRoute';
-import MasterAdminProtectedRoute from './components/shared/MasterAdminProtectedRoute';
-import ProtectedRoute from './components/shared/ProtectedRoute';
+// User Pages
+const Dashboard = React.lazy(() => import("./user/pages/Dashboard"));
+const CreateTicket = React.lazy(() => import("./user/pages/CreateTicket"));
+const MyTickets = React.lazy(() => import("./user/pages/MyTickets"));
+const TicketResult = React.lazy(() => import("./user/pages/TicketResult"));
+const Profile = React.lazy(() => import("./user/pages/Profile"));
+const TicketDetail = React.lazy(() => import("./user/pages/TicketDetail"));
+import TicketProcessing from "./user/pages/AIProcessing"; // Renamed generic import just in case, but keeping AIProcessing
+const AIProcessing = React.lazy(() => import("./user/pages/AIProcessing"));
+const AIUnderstanding = React.lazy(() => import("./user/pages/AIUnderstanding"));
+const Notifications = React.lazy(() => import("./user/pages/Notifications"));
+const Help = React.lazy(() => import("./user/pages/Help"));
+const DocsPortal = React.lazy(() => import("./docs/pages/DocsPortal"));
 
-// ---------------------------------------------------------------------------
-// Lazily-loaded layouts
-// ---------------------------------------------------------------------------
-const UserLayout  = lazy(() => import('./user/UserLayout'));
-const AdminLayout = lazy(() => import('./admin/layout/AdminLayout'));
-const MasterAdminLayout = lazy(() => import('./master-admin/layout/MasterAdminLayout'));
+// New Showcase Pages
+const ApiReference = React.lazy(() => import("./pages/ApiReference"));
+const Changelog = React.lazy(() => import("./pages/Changelog"));
+const StatusPage = React.lazy(() => import("./pages/StatusPage"));
+const AboutUs = React.lazy(() => import("./pages/AboutUs"));
+const Careers = React.lazy(() => import("./pages/Careers"));
+const CookiePolicy = React.lazy(() => import("./pages/legal/CookiePolicy"));
 
-// ---------------------------------------------------------------------------
-// Lazily-loaded pages
-// ---------------------------------------------------------------------------
-const AdminLobby = lazy(() => import('./pages/AdminLobby'));
-const UserLobby  = lazy(() => import('./pages/UserLobby'));
-const MasterAdminLogin = lazy(() => import('./pages/MasterAdminLogin'));
+// NEW Admin Pages (Refactored)
+const AdminDashboard = React.lazy(() => import("./admin/pages/AdminDashboard"));
+const AdminTickets = React.lazy(() => import("./admin/pages/AdminTickets"));
+const AdminTicketDetail = React.lazy(() => import("./admin/pages/AdminTicketDetail"));
+const AdminUsers = React.lazy(() => import("./admin/pages/AdminUsers"));
+const AdminAnalytics = React.lazy(() => import("./admin/pages/AdminAnalytics"));
+const AdminProfile = React.lazy(() => import("./admin/pages/AdminProfile"));
+const AdminSettings = React.lazy(() => import("./admin/pages/AdminSettings"));
+const MasterBugReports = React.lazy(() => import("./master-admin/pages/MasterBugReports"));
 
-const Dashboard          = lazy(() => import('./user/pages/Dashboard'));
-const CreateTicket       = lazy(() => import('./user/pages/CreateTicket'));
-const MyTickets          = lazy(() => import('./user/pages/MyTickets'));
-const TicketResult       = lazy(() => import('./user/pages/TicketResult'));
-const Profile            = lazy(() => import('./user/pages/Profile'));
-const TicketDetail       = lazy(() => import('./user/pages/TicketDetail'));
-const AIProcessing       = lazy(() => import('./user/pages/AIProcessing'));
-const AIUnderstanding    = lazy(() => import('./user/pages/AIUnderstanding'));
-const Notifications      = lazy(() => import('./user/pages/Notifications'));
-const Help               = lazy(() => import('./user/pages/Help'));
-const DuplicateDetection = lazy(() => import('./user/pages/DuplicateDetection'));
-const AutoResolveChat    = lazy(() => import('./user/pages/AutoResolveChat'));
-const Resolved           = lazy(() => import('./user/pages/Resolved'));
-const TicketTracking     = lazy(() => import('./user/pages/TicketTracking'));
+// Feature Pages
+const AutoCategorizationFeature = React.lazy(() => import("./pages/features/AutoCategorizationFeature"));
+const PriorityDetectionFeature = React.lazy(() => import("./pages/features/PriorityDetectionFeature"));
+const SmartResolutionFeature = React.lazy(() => import("./pages/features/SmartResolutionFeature"));
 
-const AdminDashboard    = lazy(() => import('./admin/pages/AdminDashboard'));
-const AdminTickets      = lazy(() => import('./admin/pages/AdminTickets'));
-const AdminTicketDetail = lazy(() => import('./admin/pages/AdminTicketDetail'));
-const AdminUsers        = lazy(() => import('./admin/pages/AdminUsers'));
-const AdminAnalytics    = lazy(() => import('./admin/pages/AdminAnalytics'));
-const AdminProfile      = lazy(() => import('./admin/pages/AdminProfile'));
-const AdminSettings     = lazy(() => import('./admin/pages/AdminSettings'));
-const AdminScorecard    = lazy(() => import('./admin/components/AgentScorecard'));
-const SLAPage           = lazy(() => import('./admin/pages/SLAPage'));
+// Legal Pages
+const TermsOfService = React.lazy(() => import("./pages/legal/TermsOfService"));
+const PrivacyPolicy = React.lazy(() => import("./pages/legal/PrivacyPolicy"));
+const Security = React.lazy(() => import("./pages/legal/Security"));
+import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
+import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedRoute";
+import ProtectedRoute from "./components/shared/ProtectedRoute";
+import useAuthStore from "./store/authStore";
+const NotApproved = React.lazy(() => import("./pages/NotApproved"));
 
 // Master Admin Components
 import MasterAdminLogin from "./pages/MasterAdminLogin";
@@ -233,67 +243,31 @@ function AppContent() {
 
   return (
     <>
-      <ShortcutsHelp isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} shortcuts={shortcuts} />
-      <Routes>
-        <Route path='/knowledge-check' element={<DuplicateDetection />} />
-        <Route path='/auto-resolve' element={<AutoResolveChat />} />
-        <Route path='/resolved' element={<Resolved />} />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <Routes>
+        <Route path="/knowledge-check" element={<DuplicateDetection />} />
+        <Route path="/auto-resolve" element={<AutoResolveChat />} />
+        <Route path="/resolved" element={<Resolved />} />
 
-        {/* ── Public / Auth routes ─────────────────────────────────────── */}
-        <Route path="/"               element={<LandingPage />} />
-        <Route path="/login"          element={<Login />} />
-        <Route path="/signup"         element={<Signup />} />
-        <Route path="/admin-signup"   element={<AdminSignup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/not-approved" element={<NotApproved />} />
-
-        {/* Lobby Routes */}
-        <Route path="/admin-lobby" element={<Suspense fallback={<MinimalSkeleton />}><AdminLobby /></Suspense>} />
-        <Route path="/user-lobby"  element={<Suspense fallback={<MinimalSkeleton />}><UserLobby /></Suspense>} />
-
-        {/* Marketing / Resources */}
-        <Route path="/contact-sales" element={<Suspense fallback={<MinimalSkeleton />}><ContactSales /></Suspense>} />
-        <Route path="/docs"          element={<Suspense fallback={<PageSkeleton />}><DocsPortal /></Suspense>} />
-        <Route path="/api-reference" element={<Suspense fallback={<PageSkeleton />}><ApiReference /></Suspense>} />
-        <Route path="/changelog"     element={<Suspense fallback={<PageSkeleton />}><Changelog /></Suspense>} />
-        <Route path="/status"        element={<Suspense fallback={<MinimalSkeleton />}><StatusPage /></Suspense>} />
-        <Route path="/about"         element={<Suspense fallback={<PageSkeleton />}><AboutUs /></Suspense>} />
-        <Route path="/careers"       element={<Suspense fallback={<PageSkeleton />}><Careers /></Suspense>} />
-
-        {/* Features */}
-        <Route path="/features/auto-categorization" element={<Suspense fallback={<PageSkeleton />}><AutoCategorizationFeature /></Suspense>} />
-        <Route path="/features/priority-detection"  element={<Suspense fallback={<PageSkeleton />}><PriorityDetectionFeature /></Suspense>} />
-        <Route path="/features/smart-resolution"    element={<Suspense fallback={<PageSkeleton />}><SmartResolutionFeature /></Suspense>} />
-
-        {/* Legal */}
-        <Route path="/terms"    element={<Suspense fallback={<MinimalSkeleton />}><TermsOfService /></Suspense>} />
-        <Route path="/privacy"  element={<Suspense fallback={<MinimalSkeleton />}><PrivacyPolicy /></Suspense>} />
-        <Route path="/security" element={<Suspense fallback={<MinimalSkeleton />}><Security /></Suspense>} />
-        <Route path="/cookies"  element={<Suspense fallback={<MinimalSkeleton />}><CookiePolicy /></Suspense>} />
-
-        {/* Protected User Routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/user" element={<Suspense fallback={<PageSkeleton />}><UserLayout /></Suspense>}>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard"           element={<Dashboard />} />
-            <Route path="create-ticket"       element={<CreateTicket />} />
-            <Route path="my-tickets"          element={<MyTickets />} />
-            <Route path="ticket-result"       element={<TicketResult />} />
-            <Route path="ticket/:id"          element={<TicketDetail />} />
-            <Route path="ai-processing"       element={<AIProcessing />} />
-            <Route path="ai-understanding"    element={<AIUnderstanding />} />
-            <Route path="notifications"       element={<Notifications />} />
-            <Route path="help"                element={<Help />} />
-            <Route path="duplicate-detection" element={<DuplicateDetection />} />
-            <Route path="auto-resolve"        element={<AutoResolveChat />} />
-            <Route path="resolved"            element={<Resolved />} />
-            <Route path="ticket-tracking"     element={<TicketTracking />} />
-            <Route path="profile"             element={<Profile />} />
-          </Route>
-          {/* Support legacy paths */}
-          <Route path="/dashboard" element={<Navigate to="/user/dashboard" replace />} />
+        {/* --- User Portal --- */}
+        <Route element={
+          profile?.role === 'master_admin' ? <Navigate to="/master-admin/dashboard" replace /> :
+            (profile?.role === 'admin' || profile?.role === 'super_admin') ? <Navigate to="/admin/dashboard" replace /> :
+              profile?.status === 'pending_approval' ? <Navigate to="/user-lobby" replace /> :
+                profile?.status === 'rejected' ? <Navigate to="/not-approved" replace /> :
+                  <UserLayout />
+        }>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/create-ticket" element={<CreateTicket />} />
+          <Route path="/my-tickets" element={<MyTickets />} />
+          <Route path="/ticket/:ticket_id" element={<TicketDetail />} />
+          <Route path="/ai-processing" element={<AIProcessing />} />
+          <Route path="/ai-understanding" element={<AIUnderstanding />} />
+          <Route path="/ticket-tracking" element={<TicketTracking />} />
+          <Route path="/ticket-result" element={<TicketResult />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
 
         {/* Protected Admin Routes */}
@@ -327,6 +301,7 @@ function AppContent() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+        </Suspense>
     </>
   );
 }
@@ -370,15 +345,58 @@ function App() {
     <ThemeProvider>
     <BrowserRouter>
       <ScrollToTop />
-      <ErrorBoundary>
-        <Suspense fallback={<PageSkeleton />}>
-          <AppContent />
-          <Toaster />
-          <BugReportWidget />
-          <ScrollToTopButton />
-          <BackToTop />
+      <Toaster />
+      <BugReportWidget />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <Routes>
+        {/* Public */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/admin-signup" element={<AdminSignup />} />
+        <Route path="/admin-lobby" element={<AdminLobby />} />
+        <Route path="/user-lobby" element={<UserLobby />} />
+        <Route path="/not-approved" element={<NotApproved />} />
+        <Route path="/contact-sales" element={<ContactSales />} />
+        <Route path="/docs" element={<DocsPortal />} />
+        <Route path="/api-reference" element={<ApiReference />} />
+        <Route path="/changelog" element={<Changelog />} />
+        <Route path="/status" element={<StatusPage />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/careers" element={<Careers />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
+
+        {/* Feature Pages */}
+        <Route path="/features/categorization" element={<AutoCategorizationFeature />} />
+        <Route path="/features/priority" element={<PriorityDetectionFeature />} />
+        <Route path="/features/resolution" element={<SmartResolutionFeature />} />
+
+        {/* Legal Pages */}
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/security" element={<Security />} />
+
+        {/* Master Admin Portal */}
+        <Route path="/master-admin-login" element={<MasterAdminLogin />} />
+
+        <Route element={<MasterAdminProtectedRoute />}>
+          <Route element={<MasterAdminLayout />}>
+            <Route path="/master-admin/dashboard" element={<MasterAdminDashboard />} />
+            <Route path="/master-admin/admin-requests" element={<PendingAdminRequests />} />
+            <Route path="/master-admin/companies" element={<AllCompanies />} />
+            <Route path="/master-admin/all-admins" element={<AllAdmins />} />
+            <Route path="/master-admin/bug-reports" element={<MasterBugReports />} />
+          </Route>
+        </Route>
+
+        {/* Protected */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/*" element={<AppLayout />} />
+        </Route>
+      </Routes>
         </Suspense>
-      </ErrorBoundary>
     </BrowserRouter>
   </ThemeProvider>
   );
