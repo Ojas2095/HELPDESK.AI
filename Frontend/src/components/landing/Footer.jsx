@@ -19,13 +19,13 @@ export default function Footer({ setShowDemo = () => {} }) {
                         </p>
                         <p className="text-[11px] text-white/30 dark:text-slate-500">Made with ❤️ in India 🇮🇳</p>
                         <div className="flex gap-2.5 pt-1">
-                            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors">
+                            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
                                 <Twitter className="w-3.5 h-3.5" />
                             </a>
-                            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors">
+                            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
                                 <Linkedin className="w-3.5 h-3.5" />
                             </a>
-                            <a href="https://github.com/ritesh-1918/HELPDESK.AI" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors">
+                            <a href="https://github.com/ritesh-1918/HELPDESK.AI" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
                                 <Github className="w-3.5 h-3.5" />
                             </a>
                         </div>
@@ -77,12 +77,12 @@ export default function Footer({ setShowDemo = () => {} }) {
                                         {href.startsWith('/') ? (
                                             <button
                                                 onClick={() => navigate(href)}
-                                                className="text-xs sm:text-sm text-white/65 dark:text-slate-400 hover:text-white dark:hover:text-slate-200 transition-colors text-left w-full bg-transparent border-none p-0 cursor-pointer"
+                                                className="relative text-xs sm:text-sm text-white/65 dark:text-slate-400 hover:text-white dark:hover:text-slate-200 transition-all duration-300 text-left w-full bg-transparent border-none p-0 cursor-pointer hover:-translate-y-0.5 after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-[1px] after:w-full after:bg-emerald-400/60 dark:after:bg-emerald-400/60 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left"
                                             >
                                                 {label}
                                             </button>
                                         ) : (
-                                            <a href={href} className="text-xs sm:text-sm text-white/65 dark:text-slate-400 hover:text-white dark:hover:text-slate-200 transition-colors block">{label}</a>
+                                            <a href={href} className="relative text-xs sm:text-sm text-white/65 dark:text-slate-400 hover:text-white dark:hover:text-slate-200 transition-all duration-300 block hover:-translate-y-0.5 after:content-[''] after:absolute after:bottom-0 after:left-0 after:h-[1px] after:w-full after:bg-emerald-400/60 dark:after:bg-emerald-400/60 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left">{label}</a>
                                         )}
                                     </li>
                                 ))}
@@ -97,11 +97,11 @@ export default function Footer({ setShowDemo = () => {} }) {
                     </p>
                     <div className="flex flex-col sm:flex-row items-center gap-4 order-1 md:order-2 w-full md:w-auto justify-center md:justify-end">
                         <div className="flex items-center gap-5 justify-center">
-                            <button onClick={() => navigate('/terms')} className="text-xs text-white/40 dark:text-slate-500 hover:text-white dark:hover:text-slate-300 transition-colors bg-transparent border-none p-0 cursor-pointer">Terms</button>
-                            <button onClick={() => navigate('/privacy')} className="text-xs text-white/40 dark:text-slate-500 hover:text-white dark:hover:text-slate-300 transition-colors bg-transparent border-none p-0 cursor-pointer">Privacy</button>
-                            <button onClick={() => navigate('/security')} className="text-xs text-white/40 dark:text-slate-500 hover:text-white dark:hover:text-slate-300 transition-colors bg-transparent border-none p-0 cursor-pointer">Security</button>
+                            <button onClick={() => navigate('/terms')} className="relative text-xs text-white/40 dark:text-slate-500 hover:text-white dark:hover:text-slate-300 transition-all duration-300 bg-transparent border-none p-0 cursor-pointer hover:-translate-y-0.5 after:content-[''] after:absolute after:bottom-[-2px] after:left-0 after:h-[1px] after:w-full after:bg-emerald-400/60 dark:after:bg-emerald-400/60 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left">Terms</button>
+                            <button onClick={() => navigate('/privacy')} className="relative text-xs text-white/40 dark:text-slate-500 hover:text-white dark:hover:text-slate-300 transition-all duration-300 bg-transparent border-none p-0 cursor-pointer hover:-translate-y-0.5 after:content-[''] after:absolute after:bottom-[-2px] after:left-0 after:h-[1px] after:w-full after:bg-emerald-400/60 dark:after:bg-emerald-400/60 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left">Privacy</button>
+                            <button onClick={() => navigate('/security')} className="relative text-xs text-white/40 dark:text-slate-500 hover:text-white dark:hover:text-slate-300 transition-all duration-300 bg-transparent border-none p-0 cursor-pointer hover:-translate-y-0.5 after:content-[''] after:absolute after:bottom-[-2px] after:left-0 after:h-[1px] after:w-full after:bg-emerald-400/60 dark:after:bg-emerald-400/60 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left">Security</button>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-white/40 dark:text-slate-500 border border-white/10 dark:border-slate-800 rounded-lg px-2.5 py-1 cursor-pointer hover:bg-white/10 dark:hover:bg-slate-800/50 transition-colors">
+                        <div className="flex items-center gap-1.5 text-xs text-white/40 dark:text-slate-500 border border-white/10 dark:border-slate-800 rounded-lg px-2.5 py-1 cursor-pointer hover:bg-white/10 dark:hover:bg-slate-800/50 transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
                             <Globe className="w-3.5 h-3.5" />
                             <span>English (IN)</span>
                         </div>
