@@ -188,7 +188,7 @@ class GeminiService:
                     "Please upload a smaller screenshot."
                 ),
                 "ocr_text": "",
-                "detected_problem": ""
+                "detected_problem": "",
             }
 
         try:
