@@ -155,8 +155,14 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar, o
                 setIsSearchFocused(false);
             }
         };
+        const handleCloseModals = () => setIsProfileOpen(false);
+
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        window.addEventListener('close-modals', handleCloseModals);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('close-modals', handleCloseModals);
+        };
     }, []);
 
         {/* Desktop Sidebar Toggle */}
@@ -192,6 +198,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar, o
                 <div className="flex-1 max-w-xl relative hidden md:block">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-4 h-4 pointer-events-none" />
                     <input
+                        id="admin-search-input"
                         ref={searchRef}
                         type="text"
                         value={searchQuery}
