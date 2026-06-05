@@ -429,7 +429,9 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
 
     const formatDate = (iso) => {
         try {
-            const d = new Date(iso);
+            // Safari-safe date parsing: normalize space-separated timestamps to ISO 8601
+            const normalized = String(iso || '').trim().replace(' ', 'T');
+            const d = new Date(normalized);
             const today = new Date();
             if (d.toDateString() === today.toDateString()) return 'Today';
             const yesterday = new Date(today);
