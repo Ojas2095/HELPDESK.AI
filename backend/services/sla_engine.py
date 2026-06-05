@@ -134,7 +134,7 @@ class SLAEngine:
     def evaluate_ticket(self, ticket: dict) -> dict:
         """
         Evaluate a single ticket's SLA status.
-        
+
         Returns dict with:
           - sla_status: SLAStatus value
           - remaining_seconds: seconds until breach (negative if breached)
