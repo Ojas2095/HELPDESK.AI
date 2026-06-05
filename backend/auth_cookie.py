@@ -310,7 +310,8 @@ async def auth_me_role(user: dict = Depends(get_current_user)):
         result = client.table("profiles").select("role, status").eq("id", user_id).single().execute()
         data = getattr(result, "data", None) or {}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Profile lookup failed: {exc}") from exc
+        logger.error("Profile lookup failed for user_id=%s", user_id, exc_info=exc)
+        raise HTTPException(status_code=500, detail="Profile lookup failed.") from exc
 
     return {
         "role": data.get("role", "user"),

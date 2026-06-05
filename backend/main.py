@@ -17,6 +17,7 @@ import datetime
 import traceback
 import warnings
 import logging
+logger = logging.getLogger(__name__)
 import hashlib
 import re
 import tempfile
@@ -1615,7 +1616,8 @@ async def send_digest_now(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to send digest emails", exc_info=e)
+        raise HTTPException(status_code=500, detail="Failed to send digest emails. Please try again later.")
 
 
 
@@ -1719,7 +1721,8 @@ async def agent_scorecard(company_id: str | None = None):
         res = query.execute()
         tickets = res.data or []
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch tickets: {exc}")
+        logger.error("Failed to fetch scorecard tickets", exc_info=exc)
+        raise HTTPException(status_code=500, detail="Failed to fetch tickets. Please try again later.")
 
     if not tickets:
         return {"scorecards": [], "generated_at": datetime.datetime.utcnow().isoformat() + "Z"}
@@ -1847,9 +1850,10 @@ async def get_current_user(request: Request) -> dict:
     try:
         result = supabase.auth.get_user(token)
     except Exception as exc:
+        logger.error("Session validation failed", exc_info=exc)
         raise HTTPException(
             status_code=401,
-            detail=f"Invalid session: {exc}",
+            detail="Invalid session",
         ) from exc
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
@@ -2066,9 +2070,10 @@ async def get_current_user(request: Request) -> dict:
     try:
         result = supabase.auth.get_user(token)
     except Exception as exc:
+        logger.error("Session validation failed", exc_info=exc)
         raise HTTPException(
             status_code=401,
-            detail=f"Invalid session: {exc}",
+            detail="Invalid session",
         ) from exc
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
@@ -2504,7 +2509,8 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
         raise
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to save ticket", exc_info=e)
+        raise HTTPException(status_code=500, detail="Failed to save ticket. Please try again.")
 
 @app.websocket("/ws/{company_id}")
 async def websocket_endpoint(ws: WebSocket, company_id: str):
@@ -3472,7 +3478,8 @@ async def analyze_ticket_v2(request: Request, body: TicketRequest):
             "confidence": prediction["category"]["confidence"]
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Ticket analysis prediction failed", exc_info=e)
+        raise HTTPException(status_code=500, detail="Analysis failed. Please try again.")
 
 
 # ---------------------------------------------------------------------------
@@ -3535,7 +3542,8 @@ async def sla_stats(company_id: str | None = None, current_user: dict = Depends(
             query = query.eq("company_id", company_scope)
         res = query.execute()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("SLA stats query failed", exc_info=e)
+        raise HTTPException(status_code=500, detail="Failed to fetch SLA statistics. Please try again later.")
 
     return _aggregate_sla_stats(res.data or [])
 
@@ -3808,7 +3816,8 @@ async def convert_ticket_to_kb(ticket_id: str, current_user: dict = Depends(get_
         res = await kgs.convert_ticket_to_article(ticket_id, company_id)
         return res
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to convert ticket to knowledge article", exc_info=e)
+        raise HTTPException(status_code=500, detail="Failed to convert ticket. Please try again later.")
 
 
 def _format_system_settings_payload(rows: list[dict]) -> dict:
@@ -3881,7 +3890,8 @@ async def update_system_settings(body: dict, current_user: dict = Depends(get_cu
         supabase.table("system_settings").upsert(payload).execute()
         return {"status": "updated", "company_id": company_scope}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to update system settings", exc_info=e)
+        raise HTTPException(status_code=500, detail="Failed to update settings. Please try again later.")
 
 
 @app.get("/sla/tickets/{ticket_id}")
@@ -4203,7 +4213,8 @@ async def create_api_token(
         )
         return token
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        logger.error("API token creation failed", exc_info=exc)
+        raise HTTPException(status_code=400, detail="Invalid token configuration.")
 
 
 @app.get("/api-tokens", tags=["API Tokens"], summary="List tokens for the caller company")
@@ -4245,7 +4256,8 @@ async def rotate_api_token(
         )
         return new_token
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        logger.error("Failed to rotate API token", exc_info=exc)
+        raise HTTPException(status_code=404, detail="Token not found or invalid.")
 
 
 @app.get("/api-tokens/{token_id}/usage", tags=["API Tokens"], summary="Get usage statistics")

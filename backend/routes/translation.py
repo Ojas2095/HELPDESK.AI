@@ -229,9 +229,10 @@ async def translate_ticket_endpoint(request: Request, body: TranslateTicketReque
         result = translate_ticket(ticket_data, target_lang=body.target_lang)
         return {"success": True, "data": result}
     except ValueError as exc:
+        logger.warning("translate-ticket: request_id=%s validation error", rid, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
+            detail="Translation request contains invalid data.",
         )
     except Exception:
         logger.exception("translate-ticket: request_id=%s failed", rid)
