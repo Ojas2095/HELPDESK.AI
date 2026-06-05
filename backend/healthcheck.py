@@ -323,6 +323,30 @@ def _single_attempt(cfg: Config, attempt: int) -> CheckResult:
 # ─── Retry Loop ───────────────────────────────────────────────────────────────
 
 def run_check(cfg: Config) -> CheckResult:
+    """
+    Run a single health-check Config, with retries and exponential backoff.
+
+    Returns the final CheckResult (either the first success or the last
+    failure after exhausting retries). The caller can inspect
+    ``result.success`` and ``result.failure_reason`` to decide what to
+    do next.
+
+    Usage example (programmatic):
+
+        from backend.healthcheck import Config, run_check, main
+
+        cfg = Config(
+            url="https://helpdeskaiv1.vercel.app/ready",
+            timeout=3.0,
+            retries=2,
+            expected_status=(200, 299),
+            expected_json_key="status",
+            expected_json_value="ok",
+        )
+        result = run_check(cfg)
+        if not result.success:
+            raise SystemExit(f"health check failed: {result.failure_reason}")
+    """
     delay = cfg.retry_delay
     last: Optional[CheckResult] = None
 
