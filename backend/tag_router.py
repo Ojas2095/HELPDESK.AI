@@ -10,6 +10,8 @@ from tag_service import suggest_tags, save_tags, get_tags, get_popular_tags
 from backend.services.rate_limit_config import limiter
 
 
+from backend.limiter import limiter
+
 router = APIRouter(prefix="/api/tags", tags=["tags"])
 
 _sb = None

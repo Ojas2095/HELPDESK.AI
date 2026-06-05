@@ -15,6 +15,8 @@ from backend.services.rate_limit_config import limiter
 
 logger = logging.getLogger(__name__)
 
+from backend.limiter import limiter
+
 ACCESS_COOKIE = "access_token"
 REFRESH_COOKIE = "refresh_token"
 ACCESS_MAX_AGE = 60 * 60

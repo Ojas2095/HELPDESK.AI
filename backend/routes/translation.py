@@ -15,6 +15,7 @@ from backend.services.rate_limit_config import limiter
 
 
 
+from backend.limiter import limiter
 from backend.services.translation_service import (
     detect_language,
     get_supported_languages,

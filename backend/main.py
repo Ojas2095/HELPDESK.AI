@@ -137,6 +137,7 @@ from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sl
 from backend.services.redis_cache import redis_cache
 from backend.sla_predictor import get_sla_estimate
 from backend.sanitization import get_security_headers
+from backend.limiter import limiter, ML_HEAVY_LIMIT, ML_LIGHT_LIMIT
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 from backend.sanitization import sanitize_text
 
@@ -1206,8 +1207,6 @@ async def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -
         headers={"Retry-After": str(retry_after)},
     )
 
-
-app.add_exception_handler(RateLimitExceeded, _custom_rate_limit_handler)
 
 # ── Security Headers Middleware (Helmet.js equivalent) ────────────────────────
 from security_middleware import SecurityHeadersMiddleware, get_allowed_origins

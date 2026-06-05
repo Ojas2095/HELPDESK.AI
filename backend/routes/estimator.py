@@ -10,6 +10,7 @@ from backend.services.rate_limit_config import limiter
 
 
 
+from backend.limiter import limiter
 from backend.services.response_time_estimator import (
     estimate_response_time,
     generate_estimation_summary,
