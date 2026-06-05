@@ -31,6 +31,7 @@ import AuthCallback from './pages/AuthCallback';
 import AdminProtectedRoute from './components/shared/AdminProtectedRoute';
 import MasterAdminProtectedRoute from './components/shared/MasterAdminProtectedRoute';
 import ProtectedRoute from './components/shared/ProtectedRoute';
+import { ThemeProvider } from './components/shared/ThemeProvider';
 
 // ---------------------------------------------------------------------------
 // Lazily-loaded layouts
@@ -70,6 +71,8 @@ const AdminProfile      = lazy(() => import('./admin/pages/AdminProfile'));
 const AdminSettings     = lazy(() => import('./admin/pages/AdminSettings'));
 const AdminScorecard    = lazy(() => import('./admin/components/AgentScorecard'));
 const SLAPage           = lazy(() => import('./admin/pages/SLAPage'));
+// #1592 — API Token Management
+const APITokenManagement = lazy(() => import('./admin/pages/APITokenManagement'));
 
 const MasterAdminDashboard = lazy(() => import('./master-admin/pages/MasterAdminDashboard'));
 const AllAdmins            = lazy(() => import('./master-admin/pages/AllAdmins'));
@@ -108,8 +111,10 @@ function TitleUpdater() {
     else if (path.startsWith('/admin/tickets')) title = 'Admin Tickets';
     else if (path.startsWith('/admin/users')) title = 'Manage Users | Admin';
     else if (path.startsWith('/admin/analytics')) title = 'Analytics | Admin';
+    else if (path.startsWith('/admin/audit')) title = 'Audit Logs | Admin';
     else if (path.startsWith('/admin/profile')) title = 'Admin Profile';
     else if (path.startsWith('/admin/settings')) title = 'Settings | Admin';
+    else if (path.startsWith('/admin/api-tokens')) title = 'API Tokens | Admin';
     // Master Admin Routes
     else if (path.startsWith('/master-admin/dashboard')) title = 'Master Dashboard';
     else if (path.startsWith('/master-admin/admin-requests'))
@@ -126,6 +131,7 @@ function TitleUpdater() {
     else if (path === '/create-ticket') title = 'Create Ticket';
     else if (path === '/my-tickets') title = 'My Tickets';
     else if (path === '/profile') title = 'User Profile';
+    else if (path === '/privacy-settings') title = 'Privacy Settings';
     else if (path === '/notifications') title = 'Notifications';
     else if (path === '/docs') title = 'Documentation';
     else if (path === '/api-reference') title = 'API Reference';
@@ -172,7 +178,6 @@ class ErrorBoundary extends React.Component {
 function AppContent() {
   const { profile } = useAuthStore();
   const [showShortcuts, setShowShortcuts] = useState(false);
-  useRealtimeNotifications();
 
   const { shortcuts } = useKeyboardShortcuts(
     profile?.role === 'admin'
@@ -250,15 +255,17 @@ function AppContent() {
         <Route element={<AdminProtectedRoute />}>
           <Route path="/admin" element={<Suspense fallback={<PageSkeleton />}><AdminLayout /></Suspense>}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="tickets"   element={<AdminTickets />} />
+            <Route path="dashboard"  element={<AdminDashboard />} />
+            <Route path="tickets"    element={<AdminTickets />} />
             <Route path="tickets/:id" element={<AdminTicketDetail />} />
-            <Route path="users"     element={<AdminUsers />} />
-            <Route path="analytics" element={<AdminAnalytics />} />
-            <Route path="settings"  element={<AdminSettings />} />
-            <Route path="profile"   element={<AdminProfile />} />
-            <Route path="scorecard" element={<AdminScorecard />} />
-            <Route path="sla"       element={<SLAPage />} />
+            <Route path="users"      element={<AdminUsers />} />
+            <Route path="analytics"  element={<AdminAnalytics />} />
+            <Route path="settings"   element={<AdminSettings />} />
+            <Route path="profile"    element={<AdminProfile />} />
+            <Route path="scorecard"  element={<AdminScorecard />} />
+            <Route path="sla"        element={<SLAPage />} />
+            {/* #1592 — API Token Management */}
+            <Route path="api-tokens" element={<Suspense fallback={<PageSkeleton />}><APITokenManagement /></Suspense>} />
           </Route>
         </Route>
 
@@ -287,51 +294,10 @@ export default function App() {
     initialize().catch(err => console.error('Auth init failed:', err)); 
   }, [initialize]);
 
-  // Handle docs subdomain if applicable
-  const isDocsSubdomain = window.location.hostname.startsWith('docs.');
-
-  if (isDocsSubdomain) {
-    return (
-      <ThemeProvider>
-        <BrowserRouter>
-          <TitleUpdater />
-          <ScrollToTop />
-          <Toaster />
-          <BugReportWidget />
-          <Routes>
-            <Route path="/" element={<DocsPortal />} />
-            <Route path="/docs" element={<Navigate to="/" replace />} />
-            <Route path="/api-reference" element={<ApiReference />} />
-            <Route path="/changelog" element={<Changelog />} />
-            <Route path="/status" element={<StatusPage />} />
-            <Route path="*" element={<DocsPortal />} />
-          </Routes>
-        </BrowserRouter>
-      </ThemeProvider>
-    );
-  }
-
-  return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <Toaster />
-        <BugReportWidget />
-        <BackToTopButton />
-        <Routes>
-          <Route path='/' element={<DocsPortal />} />
-          <Route path='/docs' element={<Navigate to='/' replace />} />
-          <Route path='/api-reference' element={<ApiReference />} />
-          <Route path='/changelog' element={<Changelog />} />
-          <Route path='/status' element={<StatusPage />} />
-          <Route path='*' element={<DocsPortal />} />
-        </Routes>
-      </BrowserRouter>
-    );
-
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <TitleUpdater />
       <ErrorBoundary>
         <Suspense fallback={<PageSkeleton />}>
           <AppContent />

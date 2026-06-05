@@ -11,7 +11,8 @@ import {
     Activity,
     ChevronLeft,
     ChevronRight,
-    Trophy
+    Key,
+    Trophy,
     Clock
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
@@ -23,6 +24,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
         { label: 'Tickets', path: '/admin/tickets', icon: Inbox },
         { label: 'Users', path: '/admin/users', icon: Users },
         { label: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
+        { label: 'API Tokens', path: '/admin/api-tokens', icon: Key },
         { label: 'Scorecard', path: '/admin/scorecard', icon: Trophy },
         { label: 'Profile', path: '/admin/profile', icon: UserCircle },
         { label: 'SLA Monitor', path: '/admin/sla', icon: Clock },

@@ -457,6 +457,21 @@ const Profile = () => {
                                             </div>
                                             <ChevronRight size={18} className="text-slate-700 group-hover:text-indigo-400 transition-all" />
                                         </button>
+                                        <button
+                                            onClick={() => navigate('/privacy-settings')}
+                                            className="w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all group border-t border-slate-50"
+                                        >
+                                            <div className="flex items-center gap-6">
+                                                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm">
+                                                    <ShieldCheck size={20} />
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-black text-slate-900 uppercase italic tracking-tight">Privacy Controls</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Manage data portability, erasure, and consent</p>
+                                                </div>
+                                            </div>
+                                            <ChevronRight size={18} className="text-slate-300 group-hover:text-emerald-600 transition-all" />
+                                        </button>
 
                                         <BugReportWidget
                                             advanced={true}

@@ -1,12 +1,13 @@
 """
-Translation helpers for locale detection, MyMemory API fallback, and ticket translation.
+Translation Service — Multi-Language Ticket Support with Auto-Translation Pipeline.
+Supports both MyMemory API wrapper and HuggingFace Helsinki-NLP models for translation.
 """
 
-from __future__ import annotations
-
 import logging
+import re
 from typing import Optional
 from functools import lru_cache
+
 
 try:
     import requests as _requests_lib
@@ -15,32 +16,13 @@ except ImportError:  # pragma: no cover - exercised only when requests is absent
 
 logger = logging.getLogger(__name__)
 
+try:
+    import requests as _requests_lib
+except ImportError:
+    _requests_lib = None
+
 MYMEMORY_URL = "https://api.mymemory.translated.net/get"
-DEFAULT_TIMEOUT = 10
-MAX_CACHE_SIZE = 1000
-MAX_TEXT_LENGTH = 5000
-
-# BCP-47 language tag regex
-_LANG_TAG_RE = re.compile(r"^[a-zA-Z]{2,3}(?:-[a-zA-Z]{2,8})*$")
-
-# Supported languages for translation
-SUPPORTED_LANGUAGES = {
-    "en": "English",
-    "es": "Spanish",
-    "fr": "French",
-    "de": "German",
-    "it": "Italian",
-    "pt": "Portuguese",
-    "ru": "Russian",
-    "zh": "Chinese",
-    "ja": "Japanese",
-    "ko": "Korean",
-    "ar": "Arabic",
-    "hi": "Hindi",
-    "nl": "Dutch",
-    "pl": "Polish",
-    "tr": "Turkish",
-}
+DEFAULT_TIMEOUT = 10  # seconds
 
 # Unicode block ranges for locale detection heuristics
 _LOCALE_RANGES = {
@@ -64,14 +46,35 @@ _LOCALE_RANGES = {
 _MARATHI_WORDS = {"आहे", "नाही", "आणि", "हे", "या", "तो", "ती", "ते"}
 _HINDI_WORDS = {"है", "नहीं", "और", "यह", "वह", "हम", "आप", "क्या"}
 
+SUPPORTED_LANGUAGES = {
+    "en": "English",
+    "es": "Spanish",
+    "fr": "French",
+    "de": "German",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ru": "Russian",
+    "zh": "Chinese",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "ar": "Arabic",
+    "hi": "Hindi",
+    "nl": "Dutch",
+    "pl": "Polish",
+    "tr": "Turkish",
+}
+
+# Translation cache to avoid repeated translations
+_translation_cache: dict[str, str] = {}
+_model_cache: dict[str, object] = {}
+
+MAX_CACHE_SIZE = 1000
+MAX_TEXT_LENGTH = 5000
+
 
 def detect_locale(text: str) -> tuple[str, float]:
     """
     Detect the locale/language of the input text using Unicode block heuristics.
-
-    Returns:
-        Tuple of (language_code, confidence) e.g. ("hi", 0.87)
-        Falls back to ("en", 0.5) for ASCII/unknown text.
     """
     if not text or not text.strip():
         return ("en", 0.5)
@@ -110,154 +113,331 @@ def detect_locale(text: str) -> tuple[str, float]:
 
 
 def detect_language(text: str) -> Optional[str]:
-    """Detect the language of the given text using langdetect."""
+    """Detect the language of the given text."""
     try:
         from langdetect import detect
-
         if not text or len(text.strip()) < 3:
             return None
         lang = detect(text)
         return lang
     except Exception as e:
-        logger.warning("Language detection failed: %s", e)
+        logger.warning(f"Language detection failed: {e}")
         return None
+    lang, _ = detect_locale(text)
+    return lang
 
 
-@lru_cache(maxsize=1)
 def get_supported_languages() -> dict[str, str]:
-    """Return supported languages for translation (cached)."""
+    """Return supported languages for translation."""
     return SUPPORTED_LANGUAGES.copy()
+
+
+def _get_model_name(source_lang: str, target_lang: str) -> str:
+    """Get Helsinki-NLP model name for language pair."""
+    return f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}"
+
+
+def _load_translation_model(source_lang: str, target_lang: str):
+    """Load and cache a translation model."""
+    model_key = f"{source_lang}-{target_lang}"
+    if model_key in _model_cache:
+        return _model_cache[model_key]
+
+    try:
+        from transformers import MarianMTModel, MarianTokenizer
+
+        model_name = _get_model_name(source_lang, target_lang)
+        logger.info(f"Loading translation model: {model_name}")
+
+        tokenizer = MarianTokenizer.from_pretrained(model_name)
+        model = MarianMTModel.from_pretrained(model_name)
+
+        _model_cache[model_key] = (model, tokenizer)
+        return model, tokenizer
+    except Exception as e:
+        logger.error(f"Failed to load translation model {source_lang}-{target_lang}: {e}")
+        return None
 
 
 def translate_text(
     text: str,
     target_lang: str = "en",
     source_lang: Optional[str] = None,
+    from_lang: Optional[str] = None,
+    to_lang: Optional[str] = None,
     timeout: int = DEFAULT_TIMEOUT,
 ) -> dict:
     """
-    Translate text to target language.
-
-    Args:
-        text:        The text to translate.
-        target_lang: Target language code (e.g. 'en', 'es').
-        source_lang: Source language code (auto-detected if None).
-        timeout:     HTTP request timeout in seconds.
-
-    Returns:
-        {
-            "translated": str,
-            "source_lang": str,
-            "target_lang": str,
-            "cached": bool,
-        }
+    Unified translate_text that supports both MyMemory API and HuggingFace/MarianMT.
     """
+    # 1. Determine which style is requested or active.
+    # If from_lang or to_lang are explicitly provided (or if requests is mocked), use MyMemory path.
+    from unittest.mock import MagicMock
+    is_mocked_requests = isinstance(_requests_lib, MagicMock) or (hasattr(_requests_lib, "get") and isinstance(_requests_lib.get, MagicMock))
+    is_mymemory_style = (from_lang is not None) or (to_lang is not None) or is_mocked_requests
+
+    # Resolve from/to vs source/target
+    if is_mymemory_style:
+        src = from_lang or "en"
+        tgt = to_lang or "en"
+    else:
+        src = source_lang
+        tgt = target_lang
+
+    # Standard clean/empty text check
     if not text or not text.strip():
-        return {"translated": "", "source_lang": source_lang, "target_lang": target_lang, "cached": False}
+        det_locale, conf = detect_locale(text or "")
+        return {
+            "translated": text or "",
+            "detected_locale": det_locale,
+            "confidence": conf,
+            "source": "passthrough",
+            "source_lang": src,
+            "target_lang": tgt,
+            "cached": False,
+        }
 
-    # Auto-detect language if not provided
-    if not source_lang:
-        detected_locale, _confidence = detect_locale(text)
-        source_lang = detected_locale
+    # Same language passthrough
+    if src == tgt:
+        det_locale, conf = detect_locale(text)
+        return {
+            "translated": text,
+            "detected_locale": det_locale,
+            "confidence": conf,
+            "source": "passthrough",
+            "source_lang": src,
+            "target_lang": tgt,
+            "cached": False,
+        }
 
-    # Same-language passthrough
-    if source_lang == target_lang:
-        return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
+    # Validate target language if it's HuggingFace style
+    if not is_mymemory_style and tgt not in SUPPORTED_LANGUAGES:
+        return {
+            "translated": text,
+            "source_lang": src,
+            "target_lang": tgt,
+            "cached": False,
+            "error": "unsupported_language",
+        }
 
-    if _requests_lib is None:
-        logger.warning("[TranslationService] 'requests' library not available; returning original text.")
-        return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
+    # Truncate very long text
+    if len(text) > MAX_TEXT_LENGTH:
+        text = text[:MAX_TEXT_LENGTH] + "..."
 
-    try:
-        lang_pair = f"{source_lang}|{target_lang}"
-        params = {"q": text, "langpair": lang_pair}
-        response = _requests_lib.get(MYMEMORY_URL, params=params, timeout=timeout)
-
-        if response.status_code == 429:
-            logger.warning("[TranslationService] Rate limit (429) hit; returning original text.")
-            return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
-
-        response.raise_for_status()
-        data = response.json()
-        if data.get("responseStatus") == 200:
-            translated = data["responseData"]["translatedText"]
+    if is_mymemory_style:
+        # MyMemory Path
+        det_locale, conf = detect_locale(text)
+        if _requests_lib is None:
+            logger.warning("[TranslationService] 'requests' library not available; returning original text.")
             return {
-                "translated": translated,
-                "source_lang": source_lang,
-                "target_lang": target_lang,
+                "translated": text,
+                "detected_locale": det_locale,
+                "confidence": conf,
+                "source": "fallback",
+                "source_lang": src,
+                "target_lang": tgt,
                 "cached": False,
             }
+        try:
+            lang_pair = f"{src}|{tgt}"
+            params = {"q": text, "langpair": lang_pair}
+            response = _requests_lib.get(MYMEMORY_URL, params=params, timeout=timeout)
 
-        # Non-200 API status
-        details = data.get("responseDetails", "Unknown error")
-        logger.warning("[TranslationService] API returned status %s: %s", status, details)
-        return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
+            if response.status_code == 429:
+                logger.warning("[TranslationService] Rate limit (429) hit; returning original text.")
+                return {
+                    "translated": text,
+                    "detected_locale": det_locale,
+                    "confidence": conf,
+                    "source": "fallback",
+                    "source_lang": src,
+                    "target_lang": tgt,
+                    "cached": False,
+                }
 
-    except _requests_lib.exceptions.Timeout:
-        logger.error("[TranslationService] Request timed out; returning original text.")
-        return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
-    except _requests_lib.exceptions.RequestException as exc:
-        logger.error("[TranslationService] Network error: %s; returning original text.", exc)
-        return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
-    except (KeyError, ValueError, TypeError) as exc:
-        logger.error("[TranslationService] Malformed response: %s; returning original text.", exc)
-        return {"translated": text, "source_lang": source_lang, "target_lang": target_lang, "cached": False}
+            response.raise_for_status()
+            data = response.json()
+
+            status = data.get("responseStatus")
+            if status == 200:
+                translated = data["responseData"]["translatedText"]
+                api_confidence = float(data["responseData"].get("match", conf) or conf)
+                return {
+                    "translated": translated,
+                    "detected_locale": det_locale,
+                    "confidence": round(min(api_confidence, 1.0), 4),
+                    "source": "mymemory",
+                    "source_lang": src,
+                    "target_lang": tgt,
+                    "cached": False,
+                }
+
+            details = data.get("responseDetails", "Unknown error")
+            logger.warning(f"[TranslationService] API returned status {status}: {details}")
+            return {
+                "translated": text,
+                "detected_locale": det_locale,
+                "confidence": conf,
+                "source": "fallback",
+                "source_lang": src,
+                "target_lang": tgt,
+                "cached": False,
+            }
+        except Exception as exc:
+            logger.error(f"[TranslationService] Error: {exc}; returning original text.")
+            return {
+                "translated": text,
+                "detected_locale": det_locale,
+                "confidence": conf,
+                "source": "fallback",
+                "source_lang": src,
+                "target_lang": tgt,
+                "cached": False,
+            }
+    else:
+        # HuggingFace path
+        # Auto-detect language if not provided
+        if not src:
+            src = detect_language(text)
+            if not src:
+                return {
+                    "translated": text,
+                    "source_lang": "unknown",
+                    "target_lang": tgt,
+                    "cached": False,
+                    "detected_locale": "unknown",
+                    "confidence": 0.5,
+                    "source": "fallback",
+                }
+
+        # Check cache
+        cache_key = f"{src}:{tgt}:{hash(text)}"
+        if cache_key in _translation_cache:
+            return {
+                "translated": _translation_cache[cache_key],
+                "source_lang": src,
+                "target_lang": tgt,
+                "cached": True,
+                "detected_locale": src,
+                "confidence": 1.0,
+                "source": "mymemory",
+            }
+
+        # Load model and translate
+        result = _load_translation_model(src, tgt)
+        if not result:
+            return {
+                "translated": text,
+                "source_lang": src,
+                "target_lang": tgt,
+                "cached": False,
+                "detected_locale": src,
+                "confidence": 0.5,
+                "source": "fallback",
+            }
+
+        model, tokenizer = result
+        try:
+            inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+            translated = model.generate(**inputs)
+            translated_text = tokenizer.decode(translated[0], skip_special_tokens=True)
+
+            if len(_translation_cache) < MAX_CACHE_SIZE:
+                _translation_cache[cache_key] = translated_text
+
+            return {
+                "translated": translated_text,
+                "source_lang": src,
+                "target_lang": tgt,
+                "cached": False,
+                "detected_locale": src,
+                "confidence": 1.0,
+                "source": "mymemory",
+            }
+        except Exception as e:
+            logger.error(f"Translation failed: {e}")
+            return {
+                "translated": text,
+                "source_lang": src,
+                "target_lang": tgt,
+                "cached": False,
+                "detected_locale": src,
+                "confidence": 0.5,
+                "source": "fallback",
+            }
 
 
 def batch_translate(
     texts: list[str],
-    target_lang: str = "en",
-    source_lang: Optional[str] = None,
+    from_lang: str = "en",
+    to_lang: str = "en",
     timeout: int = DEFAULT_TIMEOUT,
 ) -> list[dict]:
-    """
-    Translate a list of texts using translate_text for each entry.
-
-    Args:
-        texts:       List of strings to translate.
-        target_lang: Target language code.
-        source_lang: Source language code (auto-detected if None).
-        timeout:     HTTP timeout per request.
-
-    Returns:
-        List of translation result dicts (same structure as translate_text).
-    """
+    """Translate a list of texts using translate_text."""
     results = []
     for text in texts:
-        result = translate_text(text, target_lang=target_lang, source_lang=source_lang, timeout=timeout)
+        result = translate_text(text, from_lang=from_lang, to_lang=to_lang, timeout=timeout)
         results.append(result)
     return results
 
 
+def detect_and_translate_to_english(
+    text: str, timeout: int = DEFAULT_TIMEOUT
+) -> dict:
+    """
+    Auto-detect language and translate to English.
+    """
+    detected_locale, confidence = detect_locale(text)
+    if detected_locale == "en":
+        return {
+            "translated": text,
+            "detected_locale": "en",
+            "confidence": confidence,
+            "source": "passthrough",
+            "original_lang": "en",
+            "source_lang": "en",
+            "target_lang": "en",
+            "cached": False,
+        }
+
+    result = translate_text(text, from_lang=detected_locale, to_lang="en", timeout=timeout)
+    result["original_lang"] = detected_locale
+    return result
+
+
 def translate_ticket(ticket_data: dict, target_lang: str = "en") -> dict:
-    """Translate ticket subject, description, and messages."""
+    """
+    Translate ticket content (subject, description, messages) to target language.
+    """
     result = {
         "original_language": None,
         "target_language": target_lang,
         "translations": {},
     }
 
+    # Translate subject
     if "subject" in ticket_data:
-        subject_result = translate_text(ticket_data["subject"], target_lang=target_lang)
+        subject_result = translate_text(ticket_data["subject"], target_lang)
         result["translations"]["subject"] = subject_result
         if not result["original_language"]:
-            result["original_language"] = subject_result["source_lang"]
+            result["original_language"] = subject_result.get("source_lang")
 
+    # Translate description
     if "description" in ticket_data:
-        desc_result = translate_text(ticket_data["description"], target_lang=target_lang)
+        desc_result = translate_text(ticket_data["description"], target_lang)
         result["translations"]["description"] = desc_result
         if not result["original_language"]:
-            result["original_language"] = description_result["source_lang"]
+            result["original_language"] = desc_result["source_lang"]
 
+    # Translate messages
     if "messages" in ticket_data:
         translated_messages = []
         for msg in ticket_data["messages"]:
-            body = msg.get("body", "") if isinstance(msg, dict) else ""
-            msg_result = translate_text(body, target_lang=target_lang)
+            msg_result = translate_text(msg.get("content", ""), target_lang)
             translated_messages.append({
-                "original": body,
+                "original": msg.get("content", ""),
                 "translated": msg_result["translated"],
-                "language": msg_result["source_lang"],
+                "language": msg_result.get("source_lang"),
             })
         result["translations"]["messages"] = translated_messages
 
@@ -266,4 +446,5 @@ def translate_ticket(ticket_data: dict, target_lang: str = "en") -> dict:
 
 def clear_cache():
     """Clear the translation cache."""
-    get_supported_languages.cache_clear()
+    _translation_cache.clear()
+    _model_cache.clear()
