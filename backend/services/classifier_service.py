@@ -167,6 +167,9 @@ class ClassifierService:
         Results are cached in Redis by input text so repeated identical tickets
         skip the full transformer forward-pass entirely.
         """
+        if text is None or not text.strip():
+            raise ValueError("Classifier input text must not be empty")
+
         start_time = time.perf_counter()
         try:
             self.load()

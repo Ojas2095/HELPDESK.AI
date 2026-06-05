@@ -216,12 +216,13 @@ class TestClassifierPredict:
         assert result["category"] == "Unknown"
         assert result["subcategory"] == "Unknown"
 
-    def test_predict_empty_text(self, predict_fixture):
-        """predict() handles empty string input."""
-        svc, predict = predict_fixture
-        svc.id2label = {"0": "General | Unknown"}
-        result = predict("", confidence_val=0.30)
-        assert result["category"] == "General"
+    @pytest.mark.parametrize("text", [None, "", "   "])
+    def test_predict_empty_text_raises(self, predict_fixture, text):
+        """predict() rejects missing or whitespace-only text at the boundary."""
+        _svc, predict = predict_fixture
+
+        with pytest.raises(ValueError, match="must not be empty"):
+            predict(text)
 
     def test_predict_auto_resolve_subcategories(self, predict_fixture):
         """predict() marks auto_resolve=True for known simple issues."""
