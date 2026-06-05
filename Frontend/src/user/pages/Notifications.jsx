@@ -43,42 +43,51 @@ const NotificationsPage = () => {
 
       <div className='space-y-4'>
         {notifications.length > 0 ? (
-          notifications.map((notif) => (
-            <Card
-              key={notif.id}
-              onClick={() => navigate(`/ticket/${notif.ticketId}`)}
-              className={`p-6 rounded-2xl border transition-all cursor-pointer group flex gap-5 items-start ${!notif.read ? 'border-emerald-200 bg-emerald-50/20 shadow-sm' : 'border-gray-100 hover:border-gray-200'}`}
-            >
-              <div
-                className={`p-3 rounded-xl shrink-0 ${!notif.read ? 'bg-emerald-100/50' : 'bg-gray-100 group-hover:bg-gray-200'}`}
+          notifications.map((notif) => {
+            const hasTicketId =
+              notif.ticketId !== undefined &&
+              notif.ticketId !== null &&
+              String(notif.ticketId).trim() !== '';
+
+            return (
+              <Card
+                key={notif.id}
+                onClick={hasTicketId ? () => navigate(`/ticket/${notif.ticketId}`) : undefined}
+                className={`p-6 rounded-2xl border transition-all group flex gap-5 items-start ${hasTicketId ? 'cursor-pointer' : 'cursor-default'} ${!notif.read ? 'border-emerald-200 bg-emerald-50/20 shadow-sm' : `border-gray-100 ${hasTicketId ? 'hover:border-gray-200' : ''}`}`}
               >
-                {getIcon(notif.type)}
-              </div>
-              <div className='flex-1 min-w-0'>
-                <div className='flex items-center justify-between gap-4'>
-                  <h3
-                    className={`text-base leading-tight ${!notif.read ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}
-                  >
-                    {notif.title}
-                  </h3>
-                  <span className='text-[10px] font-bold text-gray-400 uppercase tracking-wider tabular-nums whitespace-nowrap'>
-                    {new Date(notif.timestamp).toLocaleString()}
-                  </span>
+                <div
+                  className={`p-3 rounded-xl shrink-0 ${!notif.read ? 'bg-emerald-100/50' : `bg-gray-100 ${hasTicketId ? 'group-hover:bg-gray-200' : ''}`}`}
+                >
+                  {getIcon(notif.type)}
                 </div>
-                <p className='text-sm text-gray-600 mt-2 leading-relaxed max-w-2xl'>
-                  {notif.message}
-                </p>
-                <div className='flex items-center gap-3 mt-4'>
-                  <span className='text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-100'>
-                    Ticket #{formatTicketId(notif.ticketId)}
-                  </span>
-                  {!notif.read && (
-                    <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse'></span>
-                  )}
+                <div className='flex-1 min-w-0'>
+                  <div className='flex items-center justify-between gap-4'>
+                    <h3
+                      className={`text-base leading-tight ${!notif.read ? 'font-bold text-gray-900' : 'font-semibold text-gray-700'}`}
+                    >
+                      {notif.title}
+                    </h3>
+                    <span className='text-[10px] font-bold text-gray-400 uppercase tracking-wider tabular-nums whitespace-nowrap'>
+                      {new Date(notif.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className='text-sm text-gray-600 mt-2 leading-relaxed max-w-2xl'>
+                    {notif.message}
+                  </p>
+                  <div className='flex items-center gap-3 mt-4'>
+                    {hasTicketId && (
+                      <span className='text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-100'>
+                        Ticket #{formatTicketId(notif.ticketId)}
+                      </span>
+                    )}
+                    {!notif.read && (
+                      <span className='w-2 h-2 rounded-full bg-emerald-500 animate-pulse'></span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))
+              </Card>
+            );
+          })
         ) : (
           <div className='text-center py-20 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200'>
             <Bell className='w-12 h-12 text-gray-200 mx-auto mb-4' />
