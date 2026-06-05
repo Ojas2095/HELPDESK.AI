@@ -202,6 +202,7 @@ class DuplicateService:
                         data = json.load(f)
                     if not isinstance(data, list):
                         data = []
+                    data = data[-MAX_CACHE_ENTRIES:]
                     for item in data:
                         text = item["text"]
                         embedding = self._encode(text)
@@ -245,6 +246,7 @@ class DuplicateService:
                         data = []
 
             data.append({"ticket_id": ticket_id, "text": text})
+            data = data[-MAX_CACHE_ENTRIES:]
             with open(self.storage_file, "w") as f:
                 json.dump(data, f, indent=2)
             print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
