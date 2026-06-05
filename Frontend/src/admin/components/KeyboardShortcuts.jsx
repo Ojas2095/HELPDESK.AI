@@ -1,22 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Keyboard, X } from 'lucide-react';
 
 const KeyboardShortcuts = () => {
     const navigate = useNavigate();
     const [showHelpModal, setShowHelpModal] = useState(false);
-    const [lastKeyPressed, setLastKeyPressed] = useState({ key: '', time: 0 });
+    const lastKeyRef = useRef({ key: '', time: 0 });
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            // Do not trigger shortcuts if user is typing in an input, textarea, or contenteditable
-            const activeTag = document.activeElement.tagName.toLowerCase();
-            const isInput = activeTag === 'input' || activeTag === 'textarea' || document.activeElement.isContentEditable;
+            // Safely check active element
+            const activeElement = document.activeElement;
+            const activeTag = activeElement ? activeElement.tagName.toLowerCase() : '';
+            const isInput = activeTag === 'input' || activeTag === 'textarea' || (activeElement && activeElement.isContentEditable);
             
             if (isInput) {
                 // Allow Escape to blur inputs
                 if (e.key === 'Escape') {
-                    document.activeElement.blur();
+                    if (activeElement) activeElement.blur();
                     window.dispatchEvent(new Event('close-modals'));
                 }
                 return;
@@ -51,38 +52,42 @@ const KeyboardShortcuts = () => {
 
             // Handle sequence commands (e.g. G + T)
             // Time window for sequence is 500ms
+            const lastKeyPressed = lastKeyRef.current;
             if (lastKeyPressed.key === 'g' && now - lastKeyPressed.time < 500) {
                 if (currentKey === 't') {
                     e.preventDefault();
                     navigate('/admin/tickets');
-                    setLastKeyPressed({ key: '', time: 0 });
+                    lastKeyRef.current = { key: '', time: 0 };
                     return;
                 }
                 if (currentKey === 'a') {
                     e.preventDefault();
                     navigate('/admin/analytics');
-                    setLastKeyPressed({ key: '', time: 0 });
+                    lastKeyRef.current = { key: '', time: 0 };
                     return;
                 }
                 if (currentKey === 's') {
                     e.preventDefault();
                     navigate('/admin/settings');
-                    setLastKeyPressed({ key: '', time: 0 });
+                    lastKeyRef.current = { key: '', time: 0 };
                     return;
                 }
             }
 
             // Update last key pressed
             if (currentKey === 'g') {
-                setLastKeyPressed({ key: 'g', time: now });
+                lastKeyRef.current = { key: 'g', time: now };
             } else {
-                setLastKeyPressed({ key: '', time: 0 });
+                // Only reset if it's not a modifier key to avoid breaking sequences if they hold shift
+                if (!['shift', 'control', 'alt', 'meta'].includes(currentKey)) {
+                    lastKeyRef.current = { key: '', time: 0 };
+                }
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [navigate, lastKeyPressed]);
+    }, [navigate]);
 
     if (!showHelpModal) return null;
 
