@@ -90,6 +90,7 @@ import MasterAdminDashboard from "./master-admin/pages/MasterAdminDashboard";
 import PendingAdminRequests from "./master-admin/pages/PendingAdminRequests";
 import AllCompanies from "./master-admin/pages/AllCompanies";
 import AllAdmins from "./master-admin/pages/AllAdmins";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 
 function TitleUpdater() {
@@ -252,6 +253,7 @@ function App() {
   }
 
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <TitleUpdater />
       <ScrollToTop />
@@ -306,8 +308,8 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+  </ThemeProvider>
   );
 }
 
 export default App;
-
