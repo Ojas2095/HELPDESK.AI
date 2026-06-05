@@ -10,7 +10,6 @@ import useTicketStore from "../../store/ticketStore";
 import NotificationPopover from "./NotificationPopover";
 
 import useAuthStore from "../../store/authStore";
-import ThemeToggle from "../../components/shared/ThemeToggle";
 
 const TopNav = () => {
     const navigate = useNavigate();
