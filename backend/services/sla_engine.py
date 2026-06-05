@@ -143,7 +143,14 @@ class SLAEngine:
           - needs_notification: bool
           - policy: the applied SLA policy
         """
-        priority_key = (ticket.get("priority") or "medium").lower().strip()
+        original_priority = ticket.get("priority")
+        priority_key = (original_priority or "medium").lower().strip()
+        if priority_key not in SLA_POLICIES:
+            logger.warning(
+                "[SLA] Unknown priority %r for ticket %s; falling back to medium policy.",
+                original_priority,
+                ticket.get("id") or ticket.get("ticket_id") or "<unknown>",
+            )
         policy = SLA_POLICIES.get(priority_key, SLA_POLICIES["medium"])
 
         # Resolve the start time: use sla_started_at if set, else created_at
