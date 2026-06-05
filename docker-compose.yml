@@ -24,7 +24,7 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
       - RATE_LIMIT_AI=${RATE_LIMIT_AI:-10/minute}
       - RATE_LIMIT_AUTH=${RATE_LIMIT_AUTH:-5/minute}
     volumes:
