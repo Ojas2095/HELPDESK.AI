@@ -251,6 +251,10 @@ export default function LandingPage() {
             popular: false,
         },
     ];
+    const footerLinkClass =
+        'relative inline-block text-sm text-white/65 transition-all duration-200 ease-out after:absolute after:left-0 after:-bottom-0.5 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-emerald-300 after:transition-transform after:duration-200 hover:-translate-y-0.5 hover:text-white hover:after:scale-x-100 focus-visible:-translate-y-0.5 focus-visible:text-white focus-visible:outline-none focus-visible:after:scale-x-100';
+    const footerBottomLinkClass =
+        'relative inline-block text-xs text-white/40 transition-all duration-200 ease-out after:absolute after:left-0 after:-bottom-0.5 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-emerald-300 after:transition-transform after:duration-200 hover:-translate-y-0.5 hover:text-white hover:after:scale-x-100 focus-visible:-translate-y-0.5 focus-visible:text-white focus-visible:outline-none focus-visible:after:scale-x-100';
 
     const handlePricingClick = (planName) => {
         if (planName === 'Growth') {
