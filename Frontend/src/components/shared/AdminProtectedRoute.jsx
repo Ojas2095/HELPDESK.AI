@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
+import { API_CONFIG } from '../../config';
 
 /**
  * AdminProtectedRoute — Security-hardened admin route guard.
@@ -17,7 +18,7 @@ import { supabase } from '../../lib/supabaseClient';
  *   4. Only allow access once the server confirms admin/super_admin role.
  */
 const AdminProtectedRoute = () => {
-    const { user, loading, isCheckingSession } = useAuthStore();
+    const { user, profile, loading, isCheckingSession } = useAuthStore();
     const [serverRole, setServerRole] = useState(null);
     const [serverStatus, setServerStatus] = useState(null);
     const [verifying, setVerifying] = useState(true);
@@ -38,7 +39,7 @@ const AdminProtectedRoute = () => {
             try {
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 5000);
-                const res = await fetch(`${BACKEND_URL}/auth/me/role`, {
+                const res = await fetch(`${API_CONFIG.BACKEND_URL}/auth/me/role`, {
                     method: 'GET',
                     credentials: 'include',
                     headers: { Accept: 'application/json' },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 
 /**
@@ -9,6 +9,7 @@ import useAuthStore from '../../store/authStore';
  */
 const ProtectedRoute = () => {
     const { user, profile, loading, isCheckingSession } = useAuthStore();
+    const location = useLocation();
 
     if (loading || isCheckingSession) {
         return (
@@ -18,31 +19,35 @@ const ProtectedRoute = () => {
         );
     }
 
-    // If we have a user but no profile yet, wait for the database fetch
-    if (user && (!profile || profile.role === undefined)) {
+    if (!user) {
+        return <Navigate to='/login' replace />;
+    }
+
+    if (!profile || profile.role === undefined) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-slate-950">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
             </div>
         );
     }
+
     if (
       profile.role === 'admin' &&
       profile.status === 'active' &&
-      !currentPath.startsWith('/admin')
+      !location.pathname.startsWith('/admin')
     ) {
       return <Navigate to='/admin/dashboard' replace />;
     }
+
     if (
       profile.role === 'user' &&
       profile.status !== 'active' &&
-      !currentPath.startsWith('/user-lobby')
+      !location.pathname.startsWith('/user-lobby')
     ) {
       return <Navigate to='/user-lobby' replace />;
     }
-  }
 
-  return <Outlet />;
+    return <Outlet />;
 };
 
 export default ProtectedRoute;
