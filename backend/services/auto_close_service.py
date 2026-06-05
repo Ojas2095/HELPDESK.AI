@@ -212,6 +212,10 @@ class AutoCloseService:
                 logger.info("No resolved tickets to process")
                 return stats
 
+            if not resolved_tickets:
+                logger.info("No resolved tickets to process")
+                return stats
+
             # Group by company
             company_tickets: Dict[str, List] = {}
             for ticket in resolved_tickets:

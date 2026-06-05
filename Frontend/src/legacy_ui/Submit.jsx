@@ -28,6 +28,7 @@ function Submit() {
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
 
+const Submit = () => {
   const navigate = useNavigate();
   const setAITicket = useTicketStore((state) => state.setAITicket);
   const setActiveTicket = useTicketStore((state) => state.setActiveTicket);
@@ -110,7 +111,7 @@ function Submit() {
     }
   };
 
-  if (loading) {
+  if (submitStatus === "success") {
     return (
       <div className='flex-1 flex flex-col items-center justify-start py-12 px-4 sm:px-6'>
         {/* Main Content */}
@@ -434,8 +435,7 @@ function Submit() {
                 <ArrowRight className='w-5 h-5 transition-transform group-hover:translate-x-1' />
               </button>
             </div>
-          </form>
-        </div>
+          </div>
 
         {/* Footer Text */}
         <p className='text-center text-xs text-[var(--stitch-text-muted,#618975)] dark:text-slate-500 mt-8'>
@@ -448,6 +448,6 @@ function Submit() {
       </motion.div>
     </main>
   );
-}
+};
 
 export default Submit;
