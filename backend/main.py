@@ -262,10 +262,53 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# OpenAPI / Swagger tag groups — organises the /docs UI into sections
+# ---------------------------------------------------------------------------
+_tags_metadata = [
+    {
+        "name": "AI",
+        "description": "Ticket analysis, image OCR, streaming, troubleshooting, and bug-report endpoints.",
+    },
+    {
+        "name": "Tickets",
+        "description": "CRUD operations for support tickets stored in Supabase.",
+    },
+    {
+        "name": "Auth",
+        "description": "User authentication and session management (Supabase Auth wrapper).",
+    },
+    {
+        "name": "Health",
+        "description": "Service liveness and readiness probes.",
+    },
+]
+
 app = FastAPI(
-    title="AI Helpdesk Backend",
-    description="Ticket classification, entity extraction, and duplicate detection",
-    version="1.0.0",
+    title="HELPDESK.AI API",
+    description=(
+        "AI-powered helpdesk backend: ticket classification (DistilBERT V3), "
+        "named-entity recognition, duplicate detection, RAG knowledge base, "
+        "and Gemini-powered vision/troubleshooting. "
+        "\n\n**Import into Postman:** `File → Import → Link` and paste "
+        "`https://<host>/openapi.json`."
+    ),
+    version="3.0.0-PRO",
+    contact={
+        "name": "HELPDESK.AI Team",
+        "url": "https://github.com/ritesh-1918/HELPDESK.AI",
+        "email": "support@helpdeskai.example.com",
+    },
+    license_info={"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
+    openapi_tags=_tags_metadata,
+    swagger_ui_parameters={
+        "defaultModelsExpandDepth": -1,
+        "syntaxHighlight.theme": "monokai",
+        "docExpansion": "list",
+        "filter": True,
+        "tryItOutEnabled": True,
+        "persistAuthorization": True,
+    },
     lifespan=lifespan,
 )
 
@@ -375,6 +418,8 @@ async def root():
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
+        """Return service liveness — classifier_loaded and ner_loaded booleans.
+        """
     return HealthResponse(
         status="ok",
         classifier_loaded=classifier_service._loaded,
@@ -384,6 +429,8 @@ async def health_check():
 
 @app.get("/ready", response_model=ReadinessResponse)
 async def readiness_check():
+        """Return full service readiness: ML models, Supabase, optional RAG/duplicate checks.
+        """
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
     allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
     
@@ -425,6 +472,7 @@ class TroubleshootResponse(BaseModel):
     options: list[str]
     is_final: bool
 
+@limiter.limit("10/minute")
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
 async def troubleshoot(request: TroubleshootRequest):
     """Get dynamic troubleshooting steps from Gemini."""
@@ -452,6 +500,7 @@ class BugReportAnalysisRequest(BaseModel):
 class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 async def analyze_bug(request: BugReportAnalysisRequest):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
@@ -474,8 +523,9 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 # ---------------------------------------------------------------------------
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
+@limiter.limit("10/minute")
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
+async def log_correction(request: Request, raw_request: Request):
     """Log an admin correction when the AI prediction differs from the human decision."""
     try:
         body = await raw_request.json()
@@ -535,8 +585,9 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
+@limiter.limit("30/minute")
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(request: Request, company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -548,6 +599,7 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
+@limiter.limit("30/minute")
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
@@ -651,8 +703,9 @@ async def save_ticket(request_body: TicketSaveRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@limiter.limit("30/minute")
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(request: Request, ticket_id: str):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -663,8 +716,9 @@ async def get_ticket_by_id(ticket_id: str):
     return res.data
 
 
+@limiter.limit("30/minute")
 @app.post("/tickets", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+async def create_ticket(request: Request, ticket: TicketRecord):
     """Save a new ticket into the system."""
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
@@ -676,8 +730,9 @@ async def create_ticket(ticket: TicketRecord):
     return ticket
 
 
+@limiter.limit("30/minute")
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(request: Request, ticket_id: str, updates: dict):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
@@ -694,6 +749,7 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
 async def analyze_ticket(request_body: TicketRequest, request: Request):
@@ -730,6 +786,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     # Initalize Timeline
     return await analyze_only(request_body)
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze")
 async def analyze_only(request_body: TicketRequest):
     """
@@ -891,6 +948,7 @@ async def analyze_only(request_body: TicketRequest):
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_stream")
 async def analyze_stream(request_body: TicketRequest):
     """
@@ -1043,6 +1101,7 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_ticket/legacy")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
@@ -1051,6 +1110,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     return await analyze_only(request_body)
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
@@ -1150,8 +1210,9 @@ class SignupBody(BaseModel):
     role: str | None = "user"
     company: str | None = None
 
+@limiter.limit("5/minute")
 @app.post("/auth/login")
-async def auth_login(body: LoginBody, response: Response):
+async def auth_login(request: Request, body: LoginBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     try:
@@ -1170,8 +1231,9 @@ async def auth_login(body: LoginBody, response: Response):
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
     return {"user": user_payload, "message": "Session cookies set"}
 
+@limiter.limit("5/minute")
 @app.post("/auth/signup")
-async def auth_signup(body: SignupBody, response: Response):
+async def auth_signup(request: Request, body: SignupBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     metadata = {}
@@ -1200,12 +1262,14 @@ async def auth_signup(body: SignupBody, response: Response):
     user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
     return {"user": user_payload, "message": "Signup complete"}
 
+@limiter.limit("5/minute")
 @app.post("/auth/logout")
-async def auth_logout(response: Response):
+async def auth_logout(request: Request, response: Response):
     _clear_session_cookies(response)
     return {"ok": True}
 
+@limiter.limit("5/minute")
 @app.get("/auth/me")
-async def auth_me(user: dict = Depends(get_current_user)):
+async def auth_me(request: Request, user: dict = Depends(get_current_user)):
     return {"user": user}
 
