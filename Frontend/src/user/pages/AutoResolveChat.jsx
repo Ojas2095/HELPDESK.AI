@@ -414,6 +414,7 @@ const AutoResolveChat = () => {
                         {msg.role === 'bot' ? (
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeSanitize]}
                             components={{
                               ul: ({ ...props }) => (
                                 <ul className='list-disc ml-4 space-y-2 mb-3' {...props} />
