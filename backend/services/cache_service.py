@@ -22,7 +22,12 @@ _TTL_DUPLICATE = int(os.getenv("REDIS_TTL_DUPLICATE", 1800))        # 30 min
 _KEY_PREFIX    = os.getenv("REDIS_KEY_PREFIX", "helpdesk")
 
 # Redis connection settings
-_REDIS_URL     = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+_REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+_REDIS_URL_BASE = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+if _REDIS_PASSWORD and _REDIS_PASSWORD not in _REDIS_URL_BASE:
+    _REDIS_URL = f"redis://:{_REDIS_PASSWORD}@{_REDIS_URL_BASE.split('://', 1)[-1]}"
+else:
+    _REDIS_URL = _REDIS_URL_BASE
 _POOL_MAX      = int(os.getenv("REDIS_POOL_MAX_CONNECTIONS", 20))
 _SOCKET_TIMEOUT = float(os.getenv("REDIS_SOCKET_TIMEOUT", 1.0))     # fail fast
 

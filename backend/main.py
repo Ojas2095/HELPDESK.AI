@@ -98,7 +98,10 @@ except (ImportError, Exception) as e:
     Client = None
 
 # Initialize Redis Client
+_REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD")
 redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+if _REDIS_PASSWORD and _REDIS_PASSWORD not in redis_url:
+    redis_url = f"redis://:{_REDIS_PASSWORD}@{redis_url.split('://', 1)[-1]}"
 try:
     redis_client = redis.from_url(redis_url, decode_responses=True)
     redis_client.ping()
