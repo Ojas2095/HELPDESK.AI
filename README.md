@@ -188,3 +188,5 @@ Helpdesk.ai is now available as a native Android application. It features a comp
 <div align="center">
 Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team. 
 </div>
+
+<!-- fix #1583: Implement Encryption at Rest for PII Fields with Key Rotatio -->
