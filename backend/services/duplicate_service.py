@@ -310,6 +310,10 @@ class DuplicateService:
                 "similarity": float
             }
         """
+        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
+        if not 0.0 <= active_threshold <= 1.0:
+            raise ValueError("Duplicate similarity threshold must be between 0.0 and 1.0")
+
         self.load()
 
         # If model is not available, return no duplicate found
@@ -323,8 +327,6 @@ class DuplicateService:
                 "similarity": 0.0,
             }
 
-        # Use provided threshold or default to global constant
-        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
         use_default_threshold = threshold is None
 
         # Try the result cache only when using the default threshold so we
