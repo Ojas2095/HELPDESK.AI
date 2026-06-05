@@ -4,6 +4,7 @@ Issue #775
 """
 
 import os
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Header
@@ -11,6 +12,8 @@ from pydantic import BaseModel
 from supabase import create_client
 
 from sentiment_service import analyze_and_save, get_frustration_heatmap
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/sentiment", tags=["sentiment"])
 
@@ -66,7 +69,8 @@ async def get_ticket_sentiment(ticket_id: str, authorization: Optional[str] = He
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.error("Sentiment analysis failed", exc_info=exc)
+        raise HTTPException(status_code=500, detail="Analysis failed. Please try again later.")
 
 
 @router.get("/heatmap/{company_id}")

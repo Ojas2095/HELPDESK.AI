@@ -63,10 +63,9 @@ async def transcribe_audio(
         return result
 
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        logger.warning("transcribe: request_id=%s validation error", rid, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request. Please check your input.")
     except RuntimeError as exc:
-        # FIX 2: renamed from `re` (shadowed the re module) to `exc`
-        # FIX 1: log internally; return a safe message to the client
         logger.error("transcribe: request_id=%s runtime error", rid, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -135,9 +134,9 @@ async def create_ticket_from_voice(
         )
 
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        logger.warning("create-ticket: request_id=%s validation error", rid, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request. Please check your input.")
     except RuntimeError as exc:
-        # FIX 2 + FIX 1: renamed alias, safe client message, full log internally
         logger.error("create-ticket: request_id=%s runtime error", rid, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

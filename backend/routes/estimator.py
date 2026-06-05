@@ -2,6 +2,7 @@
 Response Time Estimator API Routes — AI-Powered SLA Breach Prediction
 """
 
+import logging
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -13,6 +14,8 @@ from backend.services.response_time_estimator import (
     estimate_response_time,
     generate_estimation_summary,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/estimator", tags=["estimator"])
 
@@ -47,7 +50,8 @@ async def estimate(request: Request, body: EstimateRequest):
             },
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Estimation failed: {str(e)}")
+        logger.error("Response time estimation failed", exc_info=e)
+        raise HTTPException(status_code=500, detail="Estimation failed. Please try again later.")
 
 
 @router.get("/sla-targets")
