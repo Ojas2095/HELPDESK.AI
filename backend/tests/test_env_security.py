@@ -24,6 +24,7 @@ ALLOWED_PATTERNS = [
     "*.env.example",
     "*.env.template",
     "test_env_security.py",  # this file
+    "test_pii_redaction.py",  # test for PII redaction (contains fake JWT)
     "*.md",
     ".env",
     ".env.*",

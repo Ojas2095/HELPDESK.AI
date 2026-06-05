@@ -1242,12 +1242,49 @@ METRICS_ALLOWED_IPS = {
     if ip.strip()
 }
 
+import ipaddress
+from fastapi import Response
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+
 instrumentator = Instrumentator(
     should_group_status_codes=True,
     should_group_untemplated=True,
     excluded_handlers=["/metrics", "/health"],
 )
 instrumentator.instrument(app)
+
+@app.get("/metrics", tags=["System"])
+async def metrics(request: Request):
+    # Verify Token
+    if METRICS_TOKEN:
+        auth = request.headers.get("authorization")
+        if not auth or not auth.startswith("Bearer "):
+            raise HTTPException(status_code=403, detail="Forbidden: missing or invalid token")
+        token = auth.split("Bearer ")[1].strip()
+        if token != METRICS_TOKEN:
+            raise HTTPException(status_code=403, detail="Forbidden: invalid token")
+
+    # Verify IP range if set
+    client_ip = request.client.host if request.client else None
+    if METRICS_ALLOWED_IPS and client_ip:
+        allowed = False
+        for pattern in METRICS_ALLOWED_IPS:
+            try:
+                if "/" in pattern:
+                    if ipaddress.ip_address(client_ip) in ipaddress.ip_network(pattern, strict=False):
+                        allowed = True
+                        break
+                else:
+                    if ipaddress.ip_address(client_ip) == ipaddress.ip_address(pattern):
+                        allowed = True
+                        break
+            except ValueError:
+                continue
+        if not allowed:
+            raise HTTPException(status_code=403, detail=f"Forbidden: IP {client_ip} not allowed")
+
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 
 # Translation service routes
 from backend.routes.translation import router as translation_router

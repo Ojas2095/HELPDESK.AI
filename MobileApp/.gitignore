@@ -8,5 +8,8 @@ dist/
 *.mobileprovision
 *.orig.*
 web-build/
+
+# local env files
 .env
 .env.local
+.env*.local
