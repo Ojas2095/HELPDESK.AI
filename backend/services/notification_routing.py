@@ -36,6 +36,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+CACHE_TTL_SECONDS = int(os.getenv("NOTIFICATION_CACHE_TTL_SECONDS", "300"))  # 5 minutes default
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
