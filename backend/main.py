@@ -1128,19 +1128,7 @@ TAGS_METADATA = [
 ]
 
 app = FastAPI(
-    title="HELPDESK.AI Backend",
-    description=API_DESCRIPTION,
-    version="1.0.0",
-    lifespan=lifespan,
-    openapi_tags=TAGS_METADATA,
-    swagger_ui_parameters={
-        "defaultModelsExpandDepth": -1,
-        "docExpansion": "none",
-        "filter": True,
-        "syntaxHighlight.theme": "monokai",
-    },
-    swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
-    swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
+
 )
 app.state.supabase = supabase
 
@@ -2209,8 +2197,21 @@ def trigger_webhook_for_new_ticket(company_id: str, ticket: dict) -> None:
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_current_user)):
     """
-    OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
-    This is called AFTER the user confirms the analysis results.
+    Persist an analyzed ticket to the Supabase database.
+    
+    This is the official persistence endpoint, intended to be called after 
+    the user has reviewed and confirmed the AI analysis results. It saves 
+    the ticket data into the 'tickets' table in Supabase.
+
+    Args:
+        request_body (TicketSaveRequest): Contains the finalized ticket data 
+                                          ready for storage.
+
+    Returns:
+        dict: Confirmation of the save operation and the stored ticket details.
+
+    Raises:
+        HTTPException: 500 if the Supabase database connection is unavailable.
     """
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
@@ -2226,81 +2227,7 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
         request_body.user_id = auth_user_id
 
     logger = logging.getLogger(__name__)
-    final_data = request_body.model_dump()
-    original_subject = final_data.get("subject", "") or ""
-    original_description = final_data.get("description", "") or ""
 
-    # Detect language and translate subject/description into English before downstream routing/indexing.
-    translation_probe_text = (original_description.strip() or original_subject.strip())
-    translation_ctx = await detect_and_translate_ticket_text(translation_probe_text)
-    metadata = final_data.get("metadata") or {}
-    if translation_ctx["was_translated"]:
-        translated_subject = await asyncio.to_thread(gemini_service.translate_to_english, original_subject, translation_ctx["source_language_name"]) if original_subject else original_subject
-        translated_description = await asyncio.to_thread(gemini_service.translate_to_english, original_description, translation_ctx["source_language_name"]) if original_description else original_description
-        final_data["subject"] = translated_subject or original_subject
-        final_data["description"] = translated_description or original_description
-        metadata["original_text"] = {
-            "subject": original_subject,
-            "description": original_description,
-        }
-    metadata["translation"] = {
-        "translated": bool(translation_ctx["was_translated"]),
-        "source_language": translation_ctx["source_language"],
-        "source_language_name": translation_ctx["source_language_name"],
-    }
-    final_data["metadata"] = metadata
-
-    # Backfill SLA deadlines/status when the client omits or sends empty values.
-    priority_key = str(final_data.get("priority") or "medium").lower().strip()
-    now_utc = datetime.datetime.now(datetime.timezone.utc)
-
-    if not str(final_data.get("sla_breach_at") or "").strip():
-        final_data["sla_breach_at"] = compute_sla_breach_at(priority_key, now_utc)
-
-    if not str(final_data.get("sla_response_due_at") or "").strip():
-        policy = get_sla_policy(priority_key)
-        response_hours = max(1, int(round(float(policy["max_hours"]) * 0.25)))
-        response_due_at = now_utc + datetime.timedelta(hours=response_hours)
-        final_data["sla_response_due_at"] = response_due_at.isoformat()
-
-    if not str(final_data.get("sla_status") or "").strip():
-        final_data["sla_status"] = "ACTIVE"
-    # Resolve tenant linkage from user profile with authorization validation.
-    profile = {}
-    auth_user_id = user.get("id")
-    if auth_user_id and request_body.user_id and str(request_body.user_id) != str(auth_user_id):
-        raise HTTPException(status_code=403, detail="User not authorized to save ticket for another user ID")
-    if request_body.user_id:
-        try:
-            profile_res = (
-                supabase.table("profiles")
-                .select("company_id, company")
-                .eq("id", request_body.user_id)
-                .single()
-                .execute()
-            )
-            profile = profile_res.data or {}
-            if not profile:
-                raise HTTPException(status_code=404, detail="User profile not found")
-        except HTTPException:
-            raise
-        except Exception as profile_error:
-            logger.error(f"Tenant resolution error for user {request_body.user_id}: {profile_error}")
-            raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
-
-    # Validate tenant consistency and authorization.
-    profile_company_id = profile.get("company_id")
-    if final_data.get("company_id"):
-        # User provided company_id: verify it matches their profile.
-        if profile_company_id and final_data["company_id"] != profile_company_id:
-            logger.warning(f"Tenant mismatch: user {request_body.user_id} attempted {final_data['company_id']}, assigned to {profile_company_id}")
-            raise HTTPException(status_code=403, detail="User not authorized for this tenant")
-    elif profile_company_id:
-        # Backfill company_id from profile.
-        final_data["company_id"] = profile_company_id
-    elif request_body.user_id:
-        # User has no tenant assignment.
-        raise HTTPException(status_code=400, detail="User has no tenant assignment")
 
     try:
         # Backfill company name if missing.
@@ -3070,8 +2997,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request, current_
 @limiter.limit("10/minute")
 async def analyze_only(request_body: TicketRequest, request: Request, current_user: dict = Depends(get_current_user)):
     """
-    Centralized analysis logic used by `/ai/analyze`, `/ai/analyze_ticket`, and `/ai/analyze_stream`.
-    Returns a serializable dict representing the ticket analysis result.
+
     """
     api_endpoint = request.url.path
     text = request_body.text
@@ -3288,7 +3214,19 @@ async def analyze_only(request_body: TicketRequest, request: Request, current_us
 @limiter.limit("10/minute")
 async def analyze_stream(request: Request, request_body: TicketRequest):
     """
-    REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
+    Streams AI analysis progress in real-time using Server-Sent Events (SSE).
+    
+    This endpoint processes the ticket text and streams incremental updates 
+    regarding the AI's analysis process back to the frontend. It uses system 
+    settings for confidence thresholds, duplicate sensitivity, and auto-resolve 
+    configurations.
+
+    Args:
+        request_body (TicketRequest): Contains the ticket text and associated company details.
+
+    Returns:
+        EventSourceResponse: A streaming response that emits events containing 
+                             analysis progress, metadata, and final predictions.
     """
     import datetime
     def get_now_ist():
@@ -3302,6 +3240,7 @@ async def analyze_stream(request: Request, request_body: TicketRequest):
             "api_endpoint": "/ai/analyze_stream"
         }
         timeline = {"received": get_now_ist()}
+
 
         # 1. Reading
         yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
@@ -3694,6 +3633,7 @@ async def sla_policies(current_user: dict = Depends(get_current_user)):
     """Get configured SLA policies."""
     _require_tenant_admin_profile(current_user)
 
+
     if not supabase:
         # Return defaults from code
         policies = []
@@ -3860,13 +3800,6 @@ def _format_system_settings_payload(rows: list[dict]) -> dict:
     }
 
 
-@app.get("/system/settings")
-async def get_system_settings_endpoint(
-    company_id: str | None = None,
-    current_user: dict = Depends(get_current_user),
-):
-    """Fetch the current tenant's system settings."""
-    _logger = logging.getLogger(__name__)
     if not supabase:
         raise HTTPException(status_code=503, detail="Database not connected")
 
