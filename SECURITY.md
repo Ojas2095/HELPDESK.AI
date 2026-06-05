@@ -8,6 +8,8 @@ The following versions of HELPDESK.AI are currently being supported with securit
 | ------- | --------- |
 | Active  | Yes       |
 
+We strongly encourage all users to upgrade to the latest version to receive security updates.
+
 ## Reporting a Vulnerability
 
 We take the security of HELPDESK.AI seriously. If you believe you have found a security vulnerability, please report it to us by following these steps:
