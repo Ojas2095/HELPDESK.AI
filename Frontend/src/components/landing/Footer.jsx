@@ -4,6 +4,10 @@ import { Twitter, Linkedin, Github, Play, Globe } from 'lucide-react';
 
 export default function Footer({ setShowDemo = () => {} }) {
     const navigate = useNavigate();
+    const footerLinkClass =
+        "relative inline-block text-xs sm:text-sm text-white/65 dark:text-slate-400 transition-all duration-200 ease-out after:absolute after:left-0 after:-bottom-0.5 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-emerald-300 after:transition-transform after:duration-200 hover:-translate-y-0.5 hover:text-white hover:after:scale-x-100 focus-visible:-translate-y-0.5 focus-visible:text-white focus-visible:outline-none focus-visible:after:scale-x-100 dark:hover:text-slate-100 dark:after:bg-emerald-400";
+    const footerBottomLinkClass =
+        "relative inline-block text-xs text-white/40 dark:text-slate-500 transition-all duration-200 ease-out after:absolute after:left-0 after:-bottom-0.5 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-emerald-300 after:transition-transform after:duration-200 hover:-translate-y-0.5 hover:text-white hover:after:scale-x-100 focus-visible:-translate-y-0.5 focus-visible:text-white focus-visible:outline-none focus-visible:after:scale-x-100 dark:hover:text-slate-200 dark:after:bg-emerald-400";
 
     return (
         <footer className="bg-emerald-950 text-white dark:bg-slate-950 dark:text-slate-200 w-full overflow-hidden transition-colors duration-300">
@@ -77,12 +81,12 @@ export default function Footer({ setShowDemo = () => {} }) {
                                         {href.startsWith('/') ? (
                                             <button
                                                 onClick={() => navigate(href)}
-                                                className="text-xs sm:text-sm text-white/65 dark:text-slate-400 hover:text-white dark:hover:text-slate-200 transition-colors text-left w-full bg-transparent border-none p-0 cursor-pointer"
+                                                className={`${footerLinkClass} text-left bg-transparent border-none p-0 cursor-pointer`}
                                             >
                                                 {label}
                                             </button>
                                         ) : (
-                                            <a href={href} className="text-xs sm:text-sm text-white/65 dark:text-slate-400 hover:text-white dark:hover:text-slate-200 transition-colors block">{label}</a>
+                                            <a href={href} className={footerLinkClass}>{label}</a>
                                         )}
                                     </li>
                                 ))}
@@ -97,9 +101,9 @@ export default function Footer({ setShowDemo = () => {} }) {
                     </p>
                     <div className="flex flex-col sm:flex-row items-center gap-4 order-1 md:order-2 w-full md:w-auto justify-center md:justify-end">
                         <div className="flex items-center gap-5 justify-center">
-                            <button onClick={() => navigate('/terms')} className="text-xs text-white/40 dark:text-slate-500 hover:text-white dark:hover:text-slate-300 transition-colors bg-transparent border-none p-0 cursor-pointer">Terms</button>
-                            <button onClick={() => navigate('/privacy')} className="text-xs text-white/40 dark:text-slate-500 hover:text-white dark:hover:text-slate-300 transition-colors bg-transparent border-none p-0 cursor-pointer">Privacy</button>
-                            <button onClick={() => navigate('/security')} className="text-xs text-white/40 dark:text-slate-500 hover:text-white dark:hover:text-slate-300 transition-colors bg-transparent border-none p-0 cursor-pointer">Security</button>
+                            <button onClick={() => navigate('/terms')} className={`${footerBottomLinkClass} bg-transparent border-none p-0 cursor-pointer`}>Terms</button>
+                            <button onClick={() => navigate('/privacy')} className={`${footerBottomLinkClass} bg-transparent border-none p-0 cursor-pointer`}>Privacy</button>
+                            <button onClick={() => navigate('/security')} className={`${footerBottomLinkClass} bg-transparent border-none p-0 cursor-pointer`}>Security</button>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs text-white/40 dark:text-slate-500 border border-white/10 dark:border-slate-800 rounded-lg px-2.5 py-1 cursor-pointer hover:bg-white/10 dark:hover:bg-slate-800/50 transition-colors">
                             <Globe className="w-3.5 h-3.5" />
