@@ -777,7 +777,7 @@ const AdminTickets = () => {
                     <div className="p-12 text-center text-red-500 space-y-4">
                         <AlertCircle className="mx-auto w-12 h-12" />
                         <p className="font-bold uppercase tracking-widest text-xs">{error}</p>
-                        <button onClick={fetchTickets} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Retry</button>
+                        <button onClick={retry} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Retry</button>
                     </div>
                 )}
 

@@ -62,7 +62,7 @@ const makeQueryBuilder = () => {
   return builder;
 };
 
-const createDisabledSupabaseClient = () => ({
+const createDisabledSupabaseClient = (): any => ({
 	auth: {
 		getUser: async () => ({ data: { user: null }, error: null }),
 		getSession: async () => ({ data: { session: null }, error: null }),
