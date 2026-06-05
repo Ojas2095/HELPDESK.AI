@@ -1351,77 +1351,6 @@ async def custom_swagger_ui_html(request: Request):
 # ---------------------------------------------------------------------------
 # Prometheus instrumentation and /metrics endpoint (secure)
 # ---------------------------------------------------------------------------
-if Instrumentator:
-    try:
-        instrumentator = Instrumentator()
-        instrumentator.instrument(app)
-    except Exception as e:
-        instrumentator = None
-        print(f"[METRICS] Instrumentator init failed: {e}")
-else:
-    instrumentator = None
-
-
-@app.get("/metrics")
-async def metrics_endpoint(request: Request):
-    """Expose Prometheus metrics with basic IP / token-based protections.
-
-    Controls:
-    - `METRICS_TOKEN` env var: if set, the client must provide that token either
-      via the `token` query param or `X-Metrics-Token` header.
-    - `METRICS_ALLOWED_IPS` env var: comma-separated CIDR or IP list allowed.
-    - If neither is set, only localhost (127.0.0.1 / ::1) is allowed.
-    """
-    # Token-based auth (preferred)
-    metrics_token = os.environ.get("METRICS_TOKEN")
-    allowed_ips = os.environ.get("METRICS_ALLOWED_IPS", "")
-    client_ip = None
-    try:
-        client_ip = request.client.host if request.client else None
-    except Exception:
-        client_ip = None
-
-    # Check token first (header or query param)
-    if metrics_token:
-        token = None
-        # header may be presented in different casing; prefer X-Metrics-Token
-        token = request.headers.get("X-Metrics-Token") or request.query_params.get("token")
-        if token != metrics_token:
-            raise HTTPException(status_code=403, detail="Forbidden: invalid metrics token")
-    elif allowed_ips:
-        # Validate client IP against allowed CIDRs
-        try:
-            allowed = [s.strip() for s in allowed_ips.split(",") if s.strip()]
-            ok = False
-            if client_ip:
-                for entry in allowed:
-                    try:
-                        net = ipaddress.ip_network(entry, strict=False)
-                        if ipaddress.ip_address(client_ip) in net:
-                            ok = True
-                            break
-                    except Exception:
-                        # Treat as single IP
-                        if client_ip == entry:
-                            ok = True
-                            break
-            if not ok:
-                raise HTTPException(status_code=403, detail="Forbidden: IP not allowed")
-        except HTTPException:
-            raise
-        except Exception as e:
-            print(f"[METRICS] allowed_ips parse error: {e}")
-            raise HTTPException(status_code=500, detail="Metrics configuration error")
-    else:
-        # Default: local-only
-        if client_ip not in ("127.0.0.1", "::1"):
-            raise HTTPException(status_code=403, detail="Forbidden: metrics restricted to localhost")
-
-    if REGISTRY is None or generate_latest is None:
-        return JSONResponse(status_code=503, content={"status": "metrics_unavailable"})
-
-    data = generate_latest(REGISTRY)
-    return StreamingResponse(content=data, media_type=CONTENT_TYPE_LATEST)
 
 
 # Request context binding middleware for encryption auditing and tenant context
@@ -1552,18 +1481,6 @@ async def root():
     </body>
     </html>
     """
-
-
-async def verify_metrics_token(x_metrics_token: str | None = Header(default=None)):
-    expected_token = os.environ.get("METRICS_TOKEN")
-    if expected_token and x_metrics_token != expected_token:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-
-@app.get("/metrics", dependencies=[Depends(verify_metrics_token)])
-def metrics():
-    """Prometheus scrape endpoint — exposes HTTP request, AI inference, and system metrics."""
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -4041,34 +3958,6 @@ async def sla_ticket_detail(ticket_id: str, current_user: dict = Depends(get_cur
 
 
 
-@app.get("/metrics")
-async def metrics(request: Request):
-    """Prometheus scrape endpoint — exposes HTTP request, AI inference, and system metrics.
-
-    Secured via optional ``METRICS_TOKEN`` bearer token and IP allowlist
-    (``METRICS_ALLOWED_IPS`` env var, defaults to private ranges).
-    """
-    # --- IP allowlist check ---
-    client_ip = request.client.host if request.client else ""
-    if METRICS_ALLOWED_IPS:
-        import ipaddress
-        try:
-            client_addr = ipaddress.ip_address(client_ip)
-        except ValueError:
-            raise HTTPException(status_code=403, detail="Forbidden")
-        allowed = any(
-            client_addr in ipaddress.ip_network(cidr, strict=False)
-            for cidr in METRICS_ALLOWED_IPS
-        )
-        if not allowed:
-            # Fall back to token check if IP not in allowlist
-            auth = request.headers.get("authorization", "")
-            if METRICS_TOKEN and auth == f"Bearer {METRICS_TOKEN}":
-                pass  # Token grants access
-            else:
-                raise HTTPException(status_code=403, detail="Forbidden")
-
-
 # ---------------------------------------------------------------------------
 # Admin settings endpoints (Issue #913)
 # ---------------------------------------------------------------------------
@@ -4092,8 +3981,6 @@ async def get_auto_resolve_setting(
         "auto_close_enabled": settings.get("auto_close_enabled", False),
         "auto_close_days": settings.get("auto_close_days", 7),
     }
-
-    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 # ---------------------------------------------------------------------------
