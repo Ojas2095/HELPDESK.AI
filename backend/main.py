@@ -28,7 +28,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -81,6 +81,10 @@ def get_system_settings(company_id: str) -> dict:
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
+# Security: Maximum allowed size for base64-encoded image payload (5 MB)
+MAX_IMAGE_B64_BYTES = 5 * 1024 * 1024  # 5 MB in bytes
+MAX_TEXT_LENGTH = 10_000               # 10,000 character limit for ticket text
+
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
@@ -90,6 +94,29 @@ class TicketRequest(BaseModel):
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
+
+    @field_validator("image_base64")
+    @classmethod
+    def validate_image_size(cls, v: str) -> str:
+        """Reject payloads larger than 5 MB to prevent memory-exhaustion DoS."""
+        if len(v) > MAX_IMAGE_B64_BYTES:
+            raise ValueError(
+                f"image_base64 payload too large: {len(v):,} bytes "
+                f"(maximum allowed: {MAX_IMAGE_B64_BYTES:,} bytes / 5 MB). "
+                "Please resize or compress the image before uploading."
+            )
+        return v
+
+    @field_validator("text")
+    @classmethod
+    def validate_text_length(cls, v: str) -> str:
+        """Reject ticket descriptions exceeding 10,000 characters."""
+        if len(v) > MAX_TEXT_LENGTH:
+            raise ValueError(
+                f"text field exceeds maximum allowed length of {MAX_TEXT_LENGTH:,} characters "
+                f"(received {len(v):,} characters)."
+            )
+        return v
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -731,7 +758,8 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+@limiter.limit("10/minute")  # Security fix: prevent rate-limit bypass via direct /ai/analyze call
+async def analyze_only(request_body: TicketRequest, request: Request):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
