@@ -1,17 +1,7 @@
 """
-Security Headers Middleware — Browser Hardening Framework
-=========================================================
-Implements comprehensive HTTP security response headers following OWASP
-Secure Headers Project recommendations and NIST application security guidance.
-
-Headers applied to every response:
-  - Content-Security-Policy (CSP)
-  - X-Frame-Options
-  - X-Content-Type-Options
-  - Referrer-Policy
-  - Permissions-Policy
-  - Strict-Transport-Security (HSTS)
-  - X-XSS-Protection (legacy browsers)
+[DEPRECATED] Consolidated Security and CORS configuration for HELPDESK.AI Backend.
+Resolves Issue #637 by standardizing Helmet headers and CORS policy.
+Use backend/security_middleware instead.
 """
 
 import os

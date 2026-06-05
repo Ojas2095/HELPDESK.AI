@@ -1,6 +1,7 @@
 # backend/app/cors.py
 """
-FastAPI CORS middleware configuration.
+[DEPRECATED] FastAPI CORS middleware configuration.
+Use backend.security_middleware.get_allowed_origins instead.
 
 Reads comma‑separated allowed origins from the ALLOWED_ORIGINS environment
 variable. Returns HTTP 403 Forbidden if the request Origin does not match
