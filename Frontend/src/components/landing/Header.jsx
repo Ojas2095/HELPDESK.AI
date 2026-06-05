@@ -102,6 +102,12 @@ export default function Header({ setShowDemo = () => {} }) {
                         <a href="#pricing" className="text-sm font-semibold text-gray-600 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">
                             Pricing
                         </a>
+                        <button
+                            onClick={() => navigate('/about')}
+                            className="text-sm font-semibold text-gray-600 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors"
+                        >
+                            About
+                        </button>
                     </div>
 
                     <div className="hidden md:flex items-center gap-3 shrink-0">
@@ -165,6 +171,12 @@ export default function Header({ setShowDemo = () => {} }) {
                         >
                             Pricing
                         </a>
+                        <button
+                            onClick={() => { setIsMenuOpen(false); navigate('/about'); }}
+                            className="block w-full text-base font-semibold text-gray-700 dark:text-slate-200 hover:text-emerald-800 dark:hover:text-emerald-400 py-2"
+                        >
+                            About
+                        </button>
                         <div className="pt-4 flex flex-col gap-3 border-t border-gray-100 dark:border-slate-800">
                             <button 
                                 onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} 
