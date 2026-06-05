@@ -242,13 +242,13 @@ export default function LandingPage() {
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
-            <nav className="sticky top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+            <nav className="sticky top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm dark:bg-gray-900/90 dark:border-gray-800 dark:shadow-gray-900/30">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
                             <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
-                            <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
+                            <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase dark:text-emerald-400">HelpDesk.ai</span>
                         </div>
 
       {/* Logo */}
@@ -257,7 +257,7 @@ export default function LandingPage() {
         onClick={() => navigate('/')}
       >
         <img src="/favicon.png" alt="logo" className="w-10 h-10" />
-        <span className="font-black italic text-emerald-900 text-2xl">
+        <span className="font-black italic text-emerald-900 text-2xl dark:text-emerald-400">
           HELPDESK.AI
         </span>
       </div>
@@ -266,28 +266,28 @@ export default function LandingPage() {
       <div className="hidden lg:flex items-center gap-10">
 
         <button
-          className="p-2 rounded-lg hover:bg-gray-100 transition"
+          className="p-2 rounded-lg hover:bg-gray-100 transition dark:hover:bg-gray-800"
         >
-          <Moon className="w-6 h-6 text-gray-600" />
+          <Moon className="w-6 h-6 text-gray-600 dark:text-gray-400" />
         </button>
 
         <a
           href="#features"
-          className="font-semibold text-gray-600 hover:text-emerald-700 transition"
+          className="font-semibold text-gray-600 hover:text-emerald-700 transition dark:text-gray-400 dark:hover:text-emerald-400"
         >
           Features
         </a>
 
         <a
           href="#how-it-works"
-          className="font-semibold text-gray-600 hover:text-emerald-700 transition"
+          className="font-semibold text-gray-600 hover:text-emerald-700 transition dark:text-gray-400 dark:hover:text-emerald-400"
         >
           How It Works
         </a>
 
         <a
           href="#pricing"
-          className="font-semibold text-gray-600 hover:text-emerald-700 transition"
+          className="font-semibold text-gray-600 hover:text-emerald-700 transition dark:text-gray-400 dark:hover:text-emerald-400"
         >
           Pricing
         </a>
@@ -298,14 +298,14 @@ export default function LandingPage() {
 
         <button
           onClick={() => navigate('/login')}
-          className="font-semibold text-gray-700 hover:text-emerald-700"
+          className="font-semibold text-gray-700 hover:text-emerald-700 dark:text-gray-300 dark:hover:text-emerald-400"
         >
           Sign In
         </button>
 
         <button
           onClick={() => setShowDemo(true)}
-          className="flex items-center gap-2 px-6 py-3 border border-emerald-200 rounded-xl text-emerald-700 font-semibold hover:bg-emerald-50 transition"
+          className="flex items-center gap-2 px-6 py-3 border border-emerald-200 rounded-xl text-emerald-700 font-semibold hover:bg-emerald-50 transition dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
         >
           <Play size={16} fill="currentColor" />
           Watch Demo
@@ -313,7 +313,7 @@ export default function LandingPage() {
 
         <button
           onClick={() => navigate('/admin-signup')}
-          className="px-6 py-3 bg-emerald-900 hover:bg-emerald-800 text-white rounded-xl font-bold shadow-lg"
+          className="px-6 py-3 bg-emerald-900 hover:bg-emerald-800 text-white rounded-xl font-bold shadow-lg dark:bg-emerald-700 dark:hover:bg-emerald-600"
         >
           Get Started Free
         </button>
@@ -324,12 +324,12 @@ export default function LandingPage() {
       <div className="flex lg:hidden items-center gap-2">
 
         <button className="p-2">
-          <Moon className="w-5 h-5 text-gray-600" />
+          <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
 
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="p-2 border border-gray-200 rounded-lg"
+          className="p-2 border border-gray-200 rounded-lg dark:border-gray-700"
         >
           {isMenuOpen ? (
             <X className="w-6 h-6" />
@@ -351,7 +351,7 @@ export default function LandingPage() {
         <a
           href="#features"
           onClick={() => setIsMenuOpen(false)}
-          className="font-medium text-gray-700"
+          className="font-medium text-gray-700 dark:text-gray-300"
         >
           Features
         </a>
@@ -359,7 +359,7 @@ export default function LandingPage() {
         <a
           href="#how-it-works"
           onClick={() => setIsMenuOpen(false)}
-          className="font-medium text-gray-700"
+          className="font-medium text-gray-700 dark:text-gray-300"
         >
           How It Works
         </a>
@@ -367,23 +367,23 @@ export default function LandingPage() {
         <a
           href="#pricing"
           onClick={() => setIsMenuOpen(false)}
-          className="font-medium text-gray-700"
+          className="font-medium text-gray-700 dark:text-gray-300"
         >
           Pricing
         </a>
 
-        <hr />
+        <hr className="dark:border-gray-700" />
 
         <button
           onClick={() => navigate('/login')}
-          className="text-left font-medium"
+          className="text-left font-medium dark:text-gray-300"
         >
           Sign In
         </button>
 
         <button
           onClick={() => setShowDemo(true)}
-          className="flex items-center gap-2 font-medium"
+          className="flex items-center gap-2 font-medium dark:text-gray-300"
         >
           <Play size={16} />
           Watch Demo
@@ -391,7 +391,7 @@ export default function LandingPage() {
 
         <button
           onClick={() => navigate('/admin-signup')}
-          className="bg-emerald-900 text-white py-3 rounded-xl font-semibold"
+          className="bg-emerald-900 text-white py-3 rounded-xl font-semibold dark:bg-emerald-700"
         >
           Get Started Free
         </button>
@@ -403,13 +403,13 @@ export default function LandingPage() {
 
             {/* ==================== HERO ==================== */}
             <section className="relative pt-12 md:pt-20 pb-20 md:pb-32">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10 dark:from-emerald-950/30" />
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-12">
 
                     <button
                         onClick={() => navigate('/admin-signup')}
-                        className="px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/20 hover:bg-emerald-800 transition-all flex items-center justify-center gap-2"
+                        className="px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/20 hover:bg-emerald-800 transition-all flex items-center justify-center gap-2 dark:bg-emerald-700 dark:hover:bg-emerald-600"
                     >
                         Get Started Free
                         <ArrowRight className="w-5 h-5" />
@@ -417,27 +417,27 @@ export default function LandingPage() {
 
                     <button
                         onClick={() => setShowDemo(true)}
-                        className="px-8 py-4 bg-white border border-gray-200 rounded-xl font-semibold text-gray-700 hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2"
+                        className="px-8 py-4 bg-white border border-gray-200 rounded-xl font-semibold text-gray-700 hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:border-emerald-400 dark:hover:text-emerald-400"
                     >
-                        <Play className="w-4 h-4 fill-current" />
+                        <Play className="w-4 h-4 fill-current dark:fill-gray-400" />
                         Watch Demo
                     </button>
 
                 </div>
 
                 {/* Trust Stats */}
-                <div className="grid grid-cols-3 gap-8 pt-4 mt-5 border-t border-gray-100">
+                <div className="grid grid-cols-3 gap-8 pt-4 mt-5 border-t border-gray-100 dark:border-gray-800">
                     <div className="flex items-center gap-3">
-                        <BrainCircuit className="w-8 h-8 text-emerald-600" />
+                        <BrainCircuit className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
                         <div>
-                            <div className="text-2xl font-bold text-gray-900">99%</div>
-                            <div className="text-sm text-gray-500">Classification Accuracy</div>
+                            <div className="text-2xl font-bold text-gray-900 dark:text-white">99%</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">Classification Accuracy</div>
                         </div>
                     </div>
 
                     <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1] dark:text-white">
                         Your IT Helpdesk,<br />
-                        <span className="text-emerald-700">Fully Automated.</span>
+                        <span className="text-emerald-700 dark:text-emerald-400">Fully Automated.</span>
                     </h1>
 
                     <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 mb-10 leading-relaxed dark:text-slate-300">
@@ -447,51 +447,51 @@ export default function LandingPage() {
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
                         <button
                             onClick={() => navigate('/admin-signup')}
-                            className={`group w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold ${CTA_PRIMARY_GLOW} hover:bg-emerald-800 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2 text-base`}
+                            className={`group w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold ${CTA_PRIMARY_GLOW} hover:bg-emerald-800 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2 text-base dark:bg-emerald-700 dark:hover:bg-emerald-600`}
                         >
                             Get Started Free <ArrowRight className={`w-5 h-5 ${CTA_ICON_SHIFT}`} />
                         </button>
                         <button
                             onClick={() => setShowDemo(true)}
-                            className={`group w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2 text-base`}
+                            className={`group w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 ${CTA_TRANSITION} ${CTA_SCALE} flex items-center justify-center gap-2 text-base dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:border-emerald-400 dark:hover:text-emerald-400`}
                         >
-                            <Play className={`w-4 h-4 fill-gray-500 ${CTA_PLAY_SHIFT}`} /> Watch a Demo
+                            <Play className={`w-4 h-4 fill-gray-500 ${CTA_PLAY_SHIFT} dark:fill-gray-400`} /> Watch a Demo
                         </button>
                     </div>
 
             
                     {/* BENTO VISUAL */}
                     <div className="relative max-w-6xl mx-auto">
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl opacity-60 -z-10 rounded-full" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl opacity-60 -z-10 rounded-full dark:from-emerald-900/30 dark:via-emerald-800/20 dark:to-emerald-900/30" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
                             {/* LEFT: Email */}
                             <div className="relative group perspective-1000">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-gray-200 to-gray-100 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000" />
-                                <div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/60 overflow-hidden transform transition-transform group-hover:scale-[1.01]">
-                                    <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-gray-200 to-gray-100 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 dark:from-gray-700 dark:to-gray-800 dark:opacity-40" />
+                                <div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/60 overflow-hidden transform transition-transform group-hover:scale-[1.01] dark:bg-gray-800 dark:border-gray-700/60">
+                                    <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between dark:bg-gray-900 dark:border-gray-700">
                                         <div className="flex gap-1.5">
                                             <div className="w-3 h-3 rounded-full bg-red-400" />
                                             <div className="w-3 h-3 rounded-full bg-yellow-400" />
                                             <div className="w-3 h-3 rounded-full bg-green-400" />
                                         </div>
-                                        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 dark:text-gray-500">
                                             <Mail className="w-3 h-3" /> Incoming Request
                                         </div>
                                     </div>
                                     <div className="p-6">
                                         <div className="flex items-center justify-between mb-6">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm">SC</div>
+                                                <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm dark:bg-purple-900/30 dark:text-purple-400">SC</div>
                                                 <div>
-                                                    <div className="font-semibold text-gray-900 text-sm">Sarah Connors</div>
-                                                    <div className="text-xs text-gray-500">sarah@university.edu</div>
+                                                    <div className="font-semibold text-gray-900 text-sm dark:text-white">Sarah Connors</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">sarah@university.edu</div>
                                                 </div>
                                             </div>
-                                            <div className="text-xs text-gray-400">2 mins ago</div>
+                                            <div className="text-xs text-gray-400 dark:text-gray-500">2 mins ago</div>
                                         </div>
                                         <div className="mb-4">
-                                            <h3 className="text-sm font-bold text-gray-800 mb-1">Subject: Wifi down again in Lab 3??</h3>
-                                            <p className="text-sm text-gray-600 leading-relaxed">
+                                            <h3 className="text-sm font-bold text-gray-800 mb-1 dark:text-gray-200">Subject: Wifi down again in Lab 3??</h3>
+                                            <p className="text-sm text-gray-600 leading-relaxed dark:text-gray-300">
                                                 Hey support, the wifi in <span className="bg-yellow-200 dark:bg-yellow-500/30 dark:text-yellow-200 text-yellow-900 px-1 rounded font-medium">downstairs lab 3</span> is acting up again.
                                                 Can't connect at all. Class starts in 20 mins, need this fixed ASAP!<br /><br />
                                                 Thanks,<br />Sarah
@@ -499,71 +499,71 @@ export default function LandingPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="hidden md:flex absolute -right-8 top-1/2 -translate-y-1/2 z-20 text-emerald-300">
+                                <div className="hidden md:flex absolute -right-8 top-1/2 -translate-y-1/2 z-20 text-emerald-300 dark:text-emerald-500">
                                     <ArrowRight className="w-8 h-8 animate-pulse" />
                                 </div>
                             </div>
 
                             {/* RIGHT: Processed Ticket */}
                             <div className="relative group">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000" />
-                                <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all group-hover:-translate-y-1">
-                                    <div className="bg-white border-b border-gray-100 px-5 py-3 flex items-center justify-between">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 dark:opacity-30 dark:group-hover:opacity-50" />
+                                <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all group-hover:-translate-y-1 dark:bg-gray-800 dark:border-gray-700">
+                                    <div className="bg-white border-b border-gray-100 px-5 py-3 flex items-center justify-between dark:bg-gray-900 dark:border-gray-700">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs font-bold text-gray-500">#T-4029</span>
-                                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 uppercase tracking-wide">AI Processed</span>
+                                            <span className="font-mono text-xs font-bold text-gray-500 dark:text-gray-400">#T-4029</span>
+                                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 uppercase tracking-wide dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">AI Processed</span>
                                         </div>
-                                        <div className="flex gap-2 text-gray-400">
+                                        <div className="flex gap-2 text-gray-400 dark:text-gray-500">
                                             <Search className="w-4 h-4" />
                                             <Bell className="w-4 h-4" />
-                                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-[10px]">AI</div>
+                                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-[10px] dark:bg-emerald-900/30 dark:text-emerald-400">AI</div>
                                         </div>
                                     </div>
                                     <div className="p-6 space-y-5">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <h3 className="font-bold text-gray-800 text-lg mb-1">WiFi Connectivity Issue</h3>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                <h3 className="font-bold text-gray-800 text-lg mb-1 dark:text-gray-200">WiFi Connectivity Issue</h3>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                                                     <Clock className="w-3 h-3" /> Created 1m ago
                                                     <span>•</span> via Email
                                                 </div>
                                             </div>
-                                            <button className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200">
+                                            <button className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200 dark:bg-emerald-700 dark:hover:bg-emerald-600 dark:shadow-emerald-900/30">
                                                 Resolve
                                             </button>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 dark:bg-gray-900 dark:border-gray-700">
+                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1 dark:text-gray-500">
                                                     <AlertCircle className="w-3 h-3" /> Priority
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                                    <span className="text-sm font-bold text-gray-800">High</span>
+                                                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">High</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 dark:bg-gray-900 dark:border-gray-700">
+                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1 dark:text-gray-500">
                                                     <Folder className="w-3 h-3" /> Category
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-sm font-bold text-gray-800">Network</span>
+                                                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Network</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 col-span-2">
-                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 col-span-2 dark:bg-gray-900 dark:border-gray-700">
+                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1 dark:text-gray-500">
                                                     <MapPin className="w-3 h-3" /> Location
                                                 </div>
-                                                <div className="text-sm font-bold text-gray-800">Lab 3 (Downstairs)</div>
+                                                <div className="text-sm font-bold text-gray-800 dark:text-gray-200">Lab 3 (Downstairs)</div>
                                             </div>
                                         </div>
-                                        <div className="border-t border-gray-100 pt-3 flex items-center justify-between">
-                                            <div className="text-xs text-gray-500 flex items-center gap-1">
-                                                Assigned to <span className="font-bold text-gray-700">NetOps Team</span>
+                                        <div className="border-t border-gray-100 pt-3 flex items-center justify-between dark:border-gray-700">
+                                            <div className="text-xs text-gray-500 flex items-center gap-1 dark:text-gray-400">
+                                                Assigned to <span className="font-bold text-gray-700 dark:text-gray-300">NetOps Team</span>
                                             </div>
                                             <div className="flex -space-x-1">
-                                                <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white" />
-                                                <div className="w-6 h-6 rounded-full bg-green-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-green-700">+3</div>
+                                                <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white dark:bg-blue-900/30 dark:border-gray-800" />
+                                                <div className="w-6 h-6 rounded-full bg-green-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-gray-800">+3</div>
                                             </div>
                                         </div>
                                     </div>
@@ -578,26 +578,26 @@ export default function LandingPage() {
             {/* RIGHT SIDE */}
             <div className="relative h-[500px] flex items-center justify-center">
                 {/* Glow */}
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl rounded-full opacity-70 -z-10" />
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl rounded-full opacity-70 -z-10 dark:from-emerald-900/30 dark:via-emerald-800/20 dark:to-emerald-900/30" />
 
                 {/* Incoming Email Card */}
                 <motion.div 
-                    className="absolute top-0 left-0 w-[340px] bg-white/80 backdrop-blur-md rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.07)] border border-white overflow-hidden z-10"
+                    className="absolute top-0 left-0 w-[340px] bg-white/80 backdrop-blur-md rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.07)] border border-white overflow-hidden z-10 dark:bg-gray-800/80 dark:border-gray-700"
                     initial={{ opacity: 0, x: 50, rotate: 5 }}
                     animate={{ opacity: 1, x: 0, rotate: -3 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                 >
                     <div className="p-4">
                         <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                <Mail className="w-5 h-5 text-blue-500" />
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center dark:bg-blue-900/30">
+                                <Mail className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                             </div>
                             <div>
-                                <p className="font-bold text-sm text-gray-800">Jane Doe</p>
-                                <p className="text-xs text-gray-500">jane.doe@example.com</p>
+                                <p className="font-bold text-sm text-gray-800 dark:text-gray-200">Jane Doe</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">jane.doe@example.com</p>
                             </div>
                         </div>
-                        <p className="text-sm text-gray-700 italic">"Hey support, the wifi in downstream lab 3 is acting up again. Can't connect. Need fixed ASAP!"</p>
+                        <p className="text-sm text-gray-700 italic dark:text-gray-300">"Hey support, the wifi in downstream lab 3 is acting up again. Can't connect. Need fixed ASAP!"</p>
                     </div>
                 </motion.div>
 
@@ -608,17 +608,17 @@ export default function LandingPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.4, delay: 0.6 }}
                 >
-                    <div className="w-1 h-12 bg-gradient-to-b from-transparent via-emerald-300 to-transparent" />
-                    <div className="bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl shadow-emerald-500/30 flex items-center gap-2">
+                    <div className="w-1 h-12 bg-gradient-to-b from-transparent via-emerald-300 to-transparent dark:via-emerald-500" />
+                    <div className="bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl shadow-emerald-500/30 flex items-center gap-2 dark:bg-emerald-700">
                         <Bot className="w-5 h-5" />
                         <span className="font-bold">AI Processing</span>
                     </div>
-                    <div className="w-1 h-12 bg-gradient-to-b from-transparent via-emerald-300 to-transparent" />
+                    <div className="w-1 h-12 bg-gradient-to-b from-transparent via-emerald-300 to-transparent dark:via-emerald-500" />
                 </motion.div>
 
                 {/* Processed Ticket */}
                 <motion.div 
-                    className="absolute bottom-0 right-0 w-[420px] bg-white rounded-3xl shadow-[0_30px_90px_rgba(16,185,129,0.15)] border border-gray-100 overflow-hidden z-10"
+                    className="absolute bottom-0 right-0 w-[420px] bg-white rounded-3xl shadow-[0_30px_90px_rgba(16,185,129,0.15)] border border-gray-100 overflow-hidden z-10 dark:bg-gray-800 dark:border-gray-700"
                     initial={{ opacity: 0, x: -50, rotate: -5 }}
                     animate={{ opacity: 1, x: 0, rotate: 3 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
@@ -629,15 +629,15 @@ export default function LandingPage() {
                     </div>
                     <div className="p-4">
                         <div className="flex items-center gap-2 mb-3">
-                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                                <Bot className="w-4 h-4 text-emerald-600" />
+                            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center dark:bg-emerald-800">
+                                <Bot className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                             </div>
-                            <span className="text-sm font-bold text-gray-800 italic">HelpDesk AI Assistant</span>
+                            <span className="text-sm font-bold text-gray-800 italic dark:text-gray-200">HelpDesk AI Assistant</span>
                         </div>
-                        <p className="text-xs text-gray-600 leading-snug mb-4">"Remotely reset the Lab 3 router. Connectivity restored. Total downtime: 143ms."</p>
+                        <p className="text-xs text-gray-600 leading-snug mb-4 dark:text-gray-300">"Remotely reset the Lab 3 router. Connectivity restored. Total downtime: 143ms."</p>
                         <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-[10px] text-emerald-700 font-bold uppercase tracking-widest text-center">Category: Network</div>
-                            <div className="bg-red-500/10 border border-red-500/20 p-2 rounded-lg text-[10px] text-red-700 font-bold uppercase tracking-widest text-center">Priority: High</div>
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-[10px] text-emerald-700 font-bold uppercase tracking-widest text-center dark:text-emerald-400">Category: Network</div>
+                            <div className="bg-red-500/10 border border-red-500/20 p-2 rounded-lg text-[10px] text-red-700 font-bold uppercase tracking-widest text-center dark:text-red-400">Priority: High</div>
                         </div>
                     </div>
                 </motion.div>
@@ -679,25 +679,25 @@ export default function LandingPage() {
             />
 
             {/* ==================== PRICING ==================== */}
-            <section className="py-16 sm:py-20 md:py-24 bg-gray-50" id="pricing">
+            <section className="py-16 sm:py-20 md:py-24 bg-gray-50 dark:bg-gray-900" id="pricing">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
-                        <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹) · GST applicable</p>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 dark:text-white">Simple, Transparent Pricing</h2>
+                        <p className="text-gray-500 mb-8 dark:text-gray-400">All plans in Indian Rupees (₹) · GST applicable</p>
 
                         {/* Billing Toggle */}
                         <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm dark:bg-[#0f1f18] dark:border-emerald-900/30">
                             <button
                                 onClick={() => setBillingAnnual(false)}
-                                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                             >
                                 Monthly
                             </button>
                             <button
                                 onClick={() => setBillingAnnual(true)}
-                                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                             >
-                                Annual <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">Save 20%</span>
+                                Annual <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full dark:bg-emerald-900/50 dark:text-emerald-400">Save 20%</span>
                             </button>
                         </div>
                     </div>
@@ -706,16 +706,16 @@ export default function LandingPage() {
                         {pricingPlans.map(({ name, price, priceLabel, period, desc, cta, ctaStyle, features, popular }) => (
                             <div
                                 key={name}
-                                className={`p-5 sm:p-6 md:p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 md:scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
+                                className={`p-5 sm:p-6 md:p-8 rounded-2xl bg-white transition-all relative dark:bg-gray-800 ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 md:scale-[1.02] dark:border-emerald-600' : 'border border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'}`}
                             >
                                 {popular && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg">
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg dark:bg-emerald-700">
                                         ⭐ MOST POPULAR
                                     </div>
                                 )}
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">{name}</h3>
-                                <div className="text-4xl font-extrabold text-gray-900 mb-2">
-                                    {priceLabel ? priceLabel : <><span className="text-3xl sm:text-4xl">₹{price.toLocaleString('en-IN')}</span><span className="text-base font-normal text-gray-500">{period}</span></>}
+                                <h3 className="text-lg font-bold text-gray-900 mb-2 dark:text-white">{name}</h3>
+                                <div className="text-4xl font-extrabold text-gray-900 mb-2 dark:text-white">
+                                    {priceLabel ? priceLabel : <><span className="text-3xl sm:text-4xl">₹{price.toLocaleString('en-IN')}</span><span className="text-base font-normal text-gray-500 dark:text-gray-400">{period}</span></>}
                                 </div>
                                 <p className="text-sm text-gray-500 mb-6 dark:text-slate-400">{desc}</p>
                                 <button
@@ -735,7 +735,7 @@ export default function LandingPage() {
                                 <ul className="space-y-3">
                                     {features.map(feat => (
                                         <li key={feat} className="flex items-start gap-3 text-sm text-gray-600 dark:text-slate-300">
-                                            <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0 mt-px" />
+                                            <CheckCircle className="w-5 h-5 text-emerald-700 shrink-0 mt-px dark:text-emerald-400" />
                                             {feat}
                                         </li>
                                     ))}
@@ -788,7 +788,7 @@ export default function LandingPage() {
       icon: CheckCircle,
       visual: (
         <div className='space-y-4'>
-          <div className='bg-white rounded-2xl shadow-xl overflow-hidden border border-emerald-100'>
+          <div className='bg-white rounded-2xl shadow-xl overflow-hidden border border-emerald-100 dark:bg-gray-800 dark:border-emerald-900/50'>
             <div className='bg-emerald-500 px-4 py-2 flex justify-between items-center'>
               <span className='text-[10px] font-black text-white uppercase tracking-widest'>
                 Ticket #4029
@@ -797,14 +797,14 @@ export default function LandingPage() {
             </div>
             <div className='p-4'>
               <div className='flex items-center gap-2 mb-2'>
-                <div className='w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center'>
-                  <Bot className='w-3.5 h-3.5 text-emerald-600' />
+                <div className='w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center dark:bg-emerald-800'>
+                  <Bot className='w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400' />
                 </div>
-                <span className='text-xs font-bold text-gray-800 italic'>
+                <span className='text-xs font-bold text-gray-800 italic dark:text-gray-200'>
                   HelpDesk AI Assistant
                 </span>
               </div>
-              <p className='text-[11px] text-gray-600 leading-tight'>
+              <p className='text-[11px] text-gray-600 leading-tight dark:text-gray-300'>
                 "Remotely reset the Lab 3 router. Connectivity restored. Total downtime: 143ms."
               </p>
             </div>
@@ -833,7 +833,7 @@ export default function LandingPage() {
       desc: 'Perfect for small teams exploring AI helpdesk.',
       cta: 'Get Started Free',
       ctaStyle:
-        'border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800',
+        'border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800 dark:border-gray-700 dark:text-gray-300 dark:hover:border-emerald-400 dark:hover:text-emerald-400',
       features: [
         'Up to 50 tickets/mo',
         'Basic AI Categorization',
@@ -849,7 +849,7 @@ export default function LandingPage() {
       period: '/mo',
       desc: 'For growing IT teams needing full automation.',
       cta: 'Start Free Trial',
-      ctaStyle: 'bg-emerald-900 text-white hover:bg-emerald-800 shadow-lg shadow-emerald-900/20',
+      ctaStyle: 'bg-emerald-900 text-white hover:bg-emerald-800 shadow-lg shadow-emerald-900/20 dark:bg-emerald-700 dark:hover:bg-emerald-600',
       features: [
         'Up to 500 tickets/mo',
         'Advanced AI Parsing',
@@ -867,7 +867,7 @@ export default function LandingPage() {
       desc: 'For large organizations with complex IT landscapes.',
       cta: 'Contact Sales',
       ctaStyle:
-        'border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800',
+        'border border-gray-200 text-gray-700 hover:border-emerald-900 hover:text-emerald-800 dark:border-gray-700 dark:text-gray-300 dark:hover:border-emerald-400 dark:hover:text-emerald-400',
       features: [
         'Unlimited tickets',
         'Custom AI Fine-Tuning',
@@ -902,17 +902,17 @@ export default function LandingPage() {
   };
 
   return (
-    <div className='min-h-screen bg-white font-sans text-slate-800'>
+    <div className='min-h-screen bg-white font-sans text-slate-800 dark:bg-gray-900 dark:text-white'>
       {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
       {/* ==================== NAV ==================== */}
-      <nav className='sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm'>
+      <nav className='sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm dark:bg-gray-900/90 dark:border-gray-800 dark:shadow-gray-900/30'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='flex justify-between items-center h-16'>
             {/* Logo */}
             <div className='flex items-center gap-2 cursor-pointer' onClick={() => navigate('/')}>
               <img src='/favicon.png' alt='H' className='w-8 h-8 object-contain' />
-              <span className='font-black text-2xl tracking-tighter text-emerald-900 italic uppercase'>
+              <span className='font-black text-2xl tracking-tighter text-emerald-900 italic uppercase dark:text-emerald-400'>
                 HelpDesk.ai
               </span>
             </div>
@@ -921,19 +921,19 @@ export default function LandingPage() {
             <div className='hidden md:flex items-center gap-8'>
               <a
                 href='#features'
-                className='text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors'
+                className='text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors dark:text-gray-400 dark:hover:text-emerald-400'
               >
                 Features
               </a>
               <a
                 href='#how-it-works'
-                className='text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors'
+                className='text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors dark:text-gray-400 dark:hover:text-emerald-400'
               >
                 How It Works
               </a>
               <a
                 href='#pricing'
-                className='text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors'
+                className='text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors dark:text-gray-400 dark:hover:text-emerald-400'
               >
                 Pricing
               </a>
@@ -943,19 +943,19 @@ export default function LandingPage() {
             <div className='hidden md:flex items-center gap-3'>
               <button
                 onClick={() => navigate('/login')}
-                className='text-sm font-semibold text-gray-700 hover:text-emerald-800 transition-colors px-4 py-2 rounded-lg hover:bg-gray-50'
+                className='text-sm font-semibold text-gray-700 hover:text-emerald-800 transition-colors px-4 py-2 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:hover:text-emerald-400 dark:hover:bg-gray-800'
               >
                 Sign In
               </button>
               <button
                 onClick={() => setShowDemo(true)}
-                className='text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 transition-all flex items-center gap-1.5'
+                className='text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 transition-all flex items-center gap-1.5 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20'
               >
-                <Play className='w-3.5 h-3.5 fill-emerald-700' /> Watch Demo
+                <Play className='w-3.5 h-3.5 fill-emerald-700 dark:fill-emerald-400' /> Watch Demo
               </button>
               <button
                 onClick={() => navigate('/admin-signup')}
-                className='bg-emerald-900 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-emerald-900/20'
+                className='bg-emerald-900 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-emerald-900/20 dark:bg-emerald-700 dark:hover:bg-emerald-600'
               >
                 Get Started Free
               </button>
@@ -965,7 +965,7 @@ export default function LandingPage() {
             <div className='md:hidden'>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className='text-gray-600 hover:text-emerald-800 p-2'
+                className='text-gray-600 hover:text-emerald-800 p-2 dark:text-gray-400 dark:hover:text-emerald-400'
               >
                 {isMenuOpen ? <X className='w-6 h-6' /> : <Menu className='w-6 h-6' />}
               </button>
@@ -975,48 +975,48 @@ export default function LandingPage() {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className='md:hidden bg-white border-t border-gray-100 absolute w-full shadow-xl z-50'>
+          <div className='md:hidden bg-white border-t border-gray-100 absolute w-full shadow-xl z-50 dark:bg-gray-900 dark:border-gray-800'>
             <div className='px-5 pt-3 pb-6 space-y-4'>
               <a
                 href='#features'
                 onClick={() => setIsMenuOpen(false)}
-                className='block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2'
+                className='block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2 dark:text-gray-300 dark:hover:text-emerald-400'
               >
                 Features
               </a>
               <a
                 href='#how-it-works'
                 onClick={() => setIsMenuOpen(false)}
-                className='block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2'
+                className='block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2 dark:text-gray-300 dark:hover:text-emerald-400'
               >
                 How It Works
               </a>
               <a
                 href='#pricing'
                 onClick={() => setIsMenuOpen(false)}
-                className='block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2'
+                className='block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2 dark:text-gray-300 dark:hover:text-emerald-400'
               >
                 Pricing
               </a>
-              <div className='pt-4 flex flex-col gap-3 border-t border-gray-100'>
+              <div className='pt-4 flex flex-col gap-3 border-t border-gray-100 dark:border-gray-800'>
                 <button
                   onClick={() => {
                     setIsMenuOpen(false);
                     setShowDemo(true);
                   }}
-                  className='w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2'
+                  className='w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2 dark:text-emerald-400 dark:border-emerald-800'
                 >
-                  <Play className='w-4 h-4 fill-emerald-700' /> Watch Demo
+                  <Play className='w-4 h-4 fill-emerald-700 dark:fill-emerald-400' /> Watch Demo
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className='w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg'
+                  className='w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg dark:text-gray-300 dark:border-gray-700'
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => navigate('/admin-signup')}
-                  className='w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow'
+                  className='w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow dark:bg-emerald-700'
                 >
                   Get Started Free
                 </button>
@@ -1028,21 +1028,21 @@ export default function LandingPage() {
 
       {/* ==================== HERO ==================== */}
       <section className='relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden'>
-        <div className='absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10' />
+        <div className='absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10 dark:from-emerald-950/30' />
 
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10'>
-          <div className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-8'>
+          <div className='inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-8 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-400'>
             <Activity className='w-3 h-3' />
             <span>AI-Powered Helpdesk Automation · Made in India 🇮🇳</span>
           </div>
 
-          <h1 className='text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]'>
+          <h1 className='text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1] dark:text-white'>
             Your IT Helpdesk,
             <br />
-            <span className='text-emerald-700'>Fully Automated.</span>
+            <span className='text-emerald-700 dark:text-emerald-400'>Fully Automated.</span>
           </h1>
 
-          <p className='max-w-2xl mx-auto text-lg md:text-xl text-gray-500 mb-10 leading-relaxed'>
+          <p className='max-w-2xl mx-auto text-lg md:text-xl text-gray-500 mb-10 leading-relaxed dark:text-gray-400'>
             Turn messy user complaints into structured, categorized, and prioritized support tickets
             — instantly. No manual triage. No missed urgencies.
           </p>
@@ -1050,56 +1050,56 @@ export default function LandingPage() {
           <div className='flex flex-col sm:flex-row items-center justify-center gap-4 mb-6'>
             <button
               onClick={() => navigate('/admin-signup')}
-              className='w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/25 hover:bg-emerald-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base'
+              className='w-full sm:w-auto px-8 py-4 bg-emerald-900 text-white rounded-xl font-bold shadow-xl shadow-emerald-900/25 hover:bg-emerald-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-base dark:bg-emerald-700 dark:hover:bg-emerald-600'
             >
               Get Started Free <ArrowRight className='w-5 h-5' />
             </button>
             <button
               onClick={() => setShowDemo(true)}
-              className='w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 text-base'
+              className='w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-semibold hover:border-emerald-500 hover:text-emerald-700 transition-all flex items-center justify-center gap-2 text-base dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:border-emerald-400 dark:hover:text-emerald-400'
             >
-              <Play className='w-4 h-4 fill-gray-500' /> Watch a Demo
+              <Play className='w-4 h-4 fill-gray-500 dark:fill-gray-400' /> Watch a Demo
             </button>
           </div>
 
           {/* BENTO VISUAL */}
           <div className='relative max-w-6xl mx-auto'>
-            <div className='absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl opacity-60 -z-10 rounded-full' />
+            <div className='absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl opacity-60 -z-10 rounded-full dark:from-emerald-900/30 dark:via-emerald-800/20 dark:to-emerald-900/30' />
             <div className='grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center'>
               {/* LEFT: Email */}
               <div className='relative group perspective-1000'>
-                <div className='absolute -inset-1 bg-gradient-to-r from-gray-200 to-gray-100 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000' />
-                <div className='relative bg-white rounded-2xl shadow-xl border border-gray-200/60 overflow-hidden transform transition-transform group-hover:scale-[1.01]'>
-                  <div className='bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between'>
+                <div className='absolute -inset-1 bg-gradient-to-r from-gray-200 to-gray-100 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 dark:from-gray-700 dark:to-gray-800 dark:opacity-40' />
+                <div className='relative bg-white rounded-2xl shadow-xl border border-gray-200/60 overflow-hidden transform transition-transform group-hover:scale-[1.01] dark:bg-gray-800 dark:border-gray-700/60'>
+                  <div className='bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between dark:bg-gray-900 dark:border-gray-700'>
                     <div className='flex gap-1.5'>
                       <div className='w-3 h-3 rounded-full bg-red-400' />
                       <div className='w-3 h-3 rounded-full bg-yellow-400' />
                       <div className='w-3 h-3 rounded-full bg-green-400' />
                     </div>
-                    <div className='text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1'>
+                    <div className='text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 dark:text-gray-500'>
                       <Mail className='w-3 h-3' /> Incoming Request
                     </div>
                   </div>
                   <div className='p-6'>
                     <div className='flex items-center justify-between mb-6'>
                       <div className='flex items-center gap-3'>
-                        <div className='w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm'>
+                        <div className='w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm dark:bg-purple-900/30 dark:text-purple-400'>
                           SC
                         </div>
                         <div>
-                          <div className='font-semibold text-gray-900 text-sm'>Sarah Connors</div>
-                          <div className='text-xs text-gray-500'>sarah@university.edu</div>
+                          <div className='font-semibold text-gray-900 text-sm dark:text-white'>Sarah Connors</div>
+                          <div className='text-xs text-gray-500 dark:text-gray-400'>sarah@university.edu</div>
                         </div>
                       </div>
-                      <div className='text-xs text-gray-400'>2 mins ago</div>
+                      <div className='text-xs text-gray-400 dark:text-gray-500'>2 mins ago</div>
                     </div>
                     <div className='mb-4'>
-                      <h3 className='text-sm font-bold text-gray-800 mb-1'>
+                      <h3 className='text-sm font-bold text-gray-800 mb-1 dark:text-gray-200'>
                         Subject: Wifi down again in Lab 3??
                       </h3>
-                      <p className='text-sm text-gray-600 leading-relaxed'>
+                      <p className='text-sm text-gray-600 leading-relaxed dark:text-gray-300'>
                         Hey support, the wifi in{' '}
-                        <span className='bg-yellow-100 px-1 rounded'>downstairs lab 3</span> is
+                        <span className='bg-yellow-100 px-1 rounded dark:bg-yellow-500/30 dark:text-yellow-200'>downstairs lab 3</span> is
                         acting up again. Can't connect at all. Class starts in 20 mins, need this
                         fixed ASAP!
                         <br />
@@ -1111,26 +1111,26 @@ export default function LandingPage() {
                     </div>
                   </div>
                 </div>
-                <div className='hidden md:flex absolute -right-8 top-1/2 -translate-y-1/2 z-20 text-emerald-300'>
+                <div className='hidden md:flex absolute -right-8 top-1/2 -translate-y-1/2 z-20 text-emerald-300 dark:text-emerald-500'>
                   <ArrowRight className='w-8 h-8 animate-pulse' />
                 </div>
               </div>
 
               {/* RIGHT: Processed Ticket */}
               <div className='relative group'>
-                <div className='absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000' />
-                <div className='relative bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all group-hover:-translate-y-1'>
-                  <div className='bg-white border-b border-gray-100 px-5 py-3 flex items-center justify-between'>
+                <div className='absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 dark:opacity-30 dark:group-hover:opacity-50' />
+                <div className='relative bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all group-hover:-translate-y-1 dark:bg-gray-800 dark:border-gray-700'>
+                  <div className='bg-white border-b border-gray-100 px-5 py-3 flex items-center justify-between dark:bg-gray-900 dark:border-gray-700'>
                     <div className='flex items-center gap-2'>
-                      <span className='font-mono text-xs font-bold text-gray-500'>#T-4029</span>
-                      <span className='bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 uppercase tracking-wide'>
+                      <span className='font-mono text-xs font-bold text-gray-500 dark:text-gray-400'>#T-4029</span>
+                      <span className='bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 uppercase tracking-wide dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'>
                         AI Processed
                       </span>
                     </div>
-                    <div className='flex gap-2 text-gray-400'>
+                    <div className='flex gap-2 text-gray-400 dark:text-gray-500'>
                       <Search className='w-4 h-4' />
                       <Bell className='w-4 h-4' />
-                      <div className='w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-[10px]'>
+                      <div className='w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-[10px] dark:bg-emerald-900/30 dark:text-emerald-400'>
                         AI
                       </div>
                     </div>
@@ -1138,50 +1138,50 @@ export default function LandingPage() {
                   <div className='p-6 space-y-5'>
                     <div className='flex justify-between items-start'>
                       <div>
-                        <h3 className='font-bold text-gray-800 text-lg mb-1'>
+                        <h3 className='font-bold text-gray-800 text-lg mb-1 dark:text-gray-200'>
                           WiFi Connectivity Issue
                         </h3>
-                        <div className='flex items-center gap-2 text-xs text-gray-500'>
+                        <div className='flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400'>
                           <Clock className='w-3 h-3' /> Created 1m ago
                           <span>•</span> via Email
                         </div>
                       </div>
-                      <button className='bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200'>
+                      <button className='bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200 dark:bg-emerald-700 dark:hover:bg-emerald-600 dark:shadow-emerald-900/30'>
                         Resolve
                       </button>
                     </div>
                     <div className='grid grid-cols-2 gap-3'>
-                      <div className='bg-gray-50 p-3 rounded-lg border border-gray-100'>
-                        <div className='text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1'>
+                      <div className='bg-gray-50 p-3 rounded-lg border border-gray-100 dark:bg-gray-900 dark:border-gray-700'>
+                        <div className='text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1 dark:text-gray-500'>
                           <AlertCircle className='w-3 h-3' /> Priority
                         </div>
                         <div className='flex items-center gap-2'>
                           <span className='w-2 h-2 rounded-full bg-red-500 animate-pulse' />
-                          <span className='text-sm font-bold text-gray-800'>High</span>
+                          <span className='text-sm font-bold text-gray-800 dark:text-gray-200'>High</span>
                         </div>
                       </div>
-                      <div className='bg-gray-50 p-3 rounded-lg border border-gray-100'>
-                        <div className='text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1'>
+                      <div className='bg-gray-50 p-3 rounded-lg border border-gray-100 dark:bg-gray-900 dark:border-gray-700'>
+                        <div className='text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1 dark:text-gray-500'>
                           <Folder className='w-3 h-3' /> Category
                         </div>
                         <div className='flex items-center gap-1'>
-                          <span className='text-sm font-bold text-gray-800'>Network</span>
+                          <span className='text-sm font-bold text-gray-800 dark:text-gray-200'>Network</span>
                         </div>
                       </div>
-                      <div className='bg-gray-50 p-3 rounded-lg border border-gray-100 col-span-2'>
-                        <div className='text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1'>
+                      <div className='bg-gray-50 p-3 rounded-lg border border-gray-100 col-span-2 dark:bg-gray-900 dark:border-gray-700'>
+                        <div className='text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1 dark:text-gray-500'>
                           <MapPin className='w-3 h-3' /> Location
                         </div>
-                        <div className='text-sm font-bold text-gray-800'>Lab 3 (Downstairs)</div>
+                        <div className='text-sm font-bold text-gray-800 dark:text-gray-200'>Lab 3 (Downstairs)</div>
                       </div>
                     </div>
-                    <div className='border-t border-gray-100 pt-3 flex items-center justify-between'>
-                      <div className='text-xs text-gray-500 flex items-center gap-1'>
-                        Assigned to <span className='font-bold text-gray-700'>NetOps Team</span>
+                    <div className='border-t border-gray-100 pt-3 flex items-center justify-between dark:border-gray-700'>
+                      <div className='text-xs text-gray-500 flex items-center gap-1 dark:text-gray-400'>
+                        Assigned to <span className='font-bold text-gray-700 dark:text-gray-300'>NetOps Team</span>
                       </div>
                       <div className='flex -space-x-1'>
-                        <div className='w-6 h-6 rounded-full bg-blue-100 border-2 border-white' />
-                        <div className='w-6 h-6 rounded-full bg-green-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-green-700'>
+                        <div className='w-6 h-6 rounded-full bg-blue-100 border-2 border-white dark:bg-blue-900/30 dark:border-gray-800' />
+                        <div className='w-6 h-6 rounded-full bg-green-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-gray-800'>
                           +3
                         </div>
                       </div>
@@ -1195,9 +1195,9 @@ export default function LandingPage() {
       </section>
 
       {/* ==================== STATS BAR ==================== */}
-      <section className='bg-emerald-900 py-12 text-white'>
+      <section className='bg-emerald-900 py-12 text-white dark:bg-slate-950'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-          <div className='grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10'>
+          <div className='grid grid-cols-2 lg:grid-cols-4 gap-8 text-center divide-y-2 sm:divide-y-0 sm:divide-x divide-white/10 dark:divide-slate-800'>
             <AnimatedStat prefix='+' target='80' suffix='%' label='Faster Ticket Triage' />
             <AnimatedStat target='99' suffix='%' label='Classification Accuracy' />
             <AnimatedStat target='Zero' label='Manual Routing Needed' isWord={true} />
@@ -1207,53 +1207,53 @@ export default function LandingPage() {
       </section>
 
       {/* ==================== FEATURES GRID ==================== */}
-      <section className='py-24 bg-white' id='features'>
+      <section className='py-24 bg-white dark:bg-gray-900' id='features'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='text-center mb-16'>
-            <span className='text-xs font-bold tracking-widest text-emerald-700 uppercase mb-3 block'>
+            <span className='text-xs font-bold tracking-widest text-emerald-700 uppercase mb-3 block dark:text-emerald-400'>
               Core Intelligence
             </span>
-            <h2 className='text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight'>
+            <h2 className='text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight dark:text-white'>
               Work Smarter, Not Harder
             </h2>
-            <p className='text-gray-500 mt-4 text-lg max-w-xl mx-auto'>
+            <p className='text-gray-500 mt-4 text-lg max-w-xl mx-auto dark:text-gray-400'>
               Three AI capabilities that eliminate manual helpdesk work.
             </p>
           </div>
 
           <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
             {/* Card 1: Auto-Categorization */}
-            <div className='group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1'>
-              <div className='h-52 bg-gradient-to-br from-blue-50 to-gray-50 p-6 flex items-center justify-center relative overflow-hidden'>
+            <div className='group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 dark:bg-gray-800 dark:border-gray-700 dark:hover:shadow-gray-900/50 dark:hover:shadow-xl'>
+              <div className='h-52 bg-gradient-to-br from-blue-50 to-gray-50 p-6 flex items-center justify-center relative overflow-hidden dark:from-blue-950/30 dark:to-gray-900'>
                 <div className='relative z-10 flex flex-col gap-3 items-center'>
-                  <div className='bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-xs font-bold text-gray-400 flex items-center gap-2 transform -translate-x-4 opacity-60'>
-                    <div className='w-2 h-2 rounded-full bg-gray-300' /> Ticket #1024
+                  <div className='bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-xs font-bold text-gray-400 flex items-center gap-2 transform -translate-x-4 opacity-60 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500'>
+                    <div className='w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600' /> Ticket #1024
                   </div>
-                  <div className='bg-white px-5 py-3 rounded-xl shadow-lg border border-blue-100 flex items-center gap-3 transform scale-110'>
-                    <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center'>
-                      <Folder className='w-4 h-4 text-blue-600' />
+                  <div className='bg-white px-5 py-3 rounded-xl shadow-lg border border-blue-100 flex items-center gap-3 transform scale-110 dark:bg-gray-800 dark:border-blue-900/50'>
+                    <div className='w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center dark:bg-blue-900/40'>
+                      <Folder className='w-4 h-4 text-blue-600 dark:text-blue-400' />
                     </div>
                     <div>
-                      <div className='h-2 w-16 bg-gray-200 rounded mb-1.5' />
-                      <span className='bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-100'>
+                      <div className='h-2 w-16 bg-gray-200 rounded mb-1.5 dark:bg-gray-700' />
+                      <span className='bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800'>
                         Network
                       </span>
                     </div>
                   </div>
-                  <div className='bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-xs font-bold text-gray-400 flex items-center gap-2 transform translate-x-6 opacity-60'>
-                    <div className='w-2 h-2 rounded-full bg-gray-300' /> Ticket #1025
+                  <div className='bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-xs font-bold text-gray-400 flex items-center gap-2 transform translate-x-6 opacity-60 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500'>
+                    <div className='w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600' /> Ticket #1025
                   </div>
                 </div>
               </div>
               <div className='p-8'>
-                <h3 className='text-xl font-bold text-gray-900 mb-3'>Auto-Categorization</h3>
-                <p className='text-gray-500 leading-relaxed mb-6'>
+                <h3 className='text-xl font-bold text-gray-900 mb-3 dark:text-white'>Auto-Categorization</h3>
+                <p className='text-gray-500 leading-relaxed mb-6 dark:text-gray-400'>
                   Instantly detects if an issue is Network, Hardware, Software, or Access-related —
                   no manual tagging.
                 </p>
                 <button
                   onClick={() => navigate('/features/categorization')}
-                  className='inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all'
+                  className='inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all dark:text-emerald-400 dark:hover:text-emerald-300'
                 >
                   Explore <ChevronRight className='w-4 h-4' />
                 </button>
@@ -1261,43 +1261,43 @@ export default function LandingPage() {
             </div>
 
             {/* Card 2: Priority Detection */}
-            <div className='group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1'>
-              <div className='h-52 bg-gradient-to-br from-red-50 to-orange-50 p-6 flex items-center justify-center relative overflow-hidden'>
+            <div className='group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 dark:bg-gray-800 dark:border-gray-700 dark:hover:shadow-gray-900/50 dark:hover:shadow-xl'>
+              <div className='h-52 bg-gradient-to-br from-red-50 to-orange-50 p-6 flex items-center justify-center relative overflow-hidden dark:from-red-950/30 dark:to-orange-950/30'>
                 <div className='relative z-10 w-full max-w-[200px] space-y-2.5'>
-                  <div className='bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between opacity-50 scale-95'>
+                  <div className='bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between opacity-50 scale-95 dark:bg-gray-800 dark:border-gray-700'>
                     <div className='flex items-center gap-2'>
                       <div className='w-2 h-2 rounded-full bg-green-400' />
-                      <div className='h-1.5 w-12 bg-gray-200 rounded' />
+                      <div className='h-1.5 w-12 bg-gray-200 rounded dark:bg-gray-700' />
                     </div>
-                    <span className='text-[10px] font-bold text-gray-400'>Low</span>
+                    <span className='text-[10px] font-bold text-gray-400 dark:text-gray-500'>Low</span>
                   </div>
-                  <div className='bg-white p-3 rounded-xl border border-red-100 shadow-md flex items-center justify-between ring-2 ring-red-50'>
+                  <div className='bg-white p-3 rounded-xl border border-red-100 shadow-md flex items-center justify-between ring-2 ring-red-50 dark:bg-gray-800 dark:border-red-900/50 dark:ring-red-900/30'>
                     <div className='flex items-center gap-3'>
                       <div className='w-2 h-2 rounded-full bg-red-500 animate-pulse' />
-                      <div className='h-2 w-20 bg-gray-800 rounded' />
+                      <div className='h-2 w-20 bg-gray-800 rounded dark:bg-gray-200' />
                     </div>
-                    <span className='text-[10px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded border border-red-100'>
+                    <span className='text-[10px] bg-red-50 text-red-600 font-bold px-1.5 py-0.5 rounded border border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'>
                       CRITICAL
                     </span>
                   </div>
-                  <div className='bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between opacity-50 scale-95'>
+                  <div className='bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex items-center justify-between opacity-50 scale-95 dark:bg-gray-800 dark:border-gray-700'>
                     <div className='flex items-center gap-2'>
                       <div className='w-2 h-2 rounded-full bg-yellow-400' />
-                      <div className='h-1.5 w-16 bg-gray-200 rounded' />
+                      <div className='h-1.5 w-16 bg-gray-200 rounded dark:bg-gray-700' />
                     </div>
-                    <span className='text-[10px] font-bold text-gray-400'>Medium</span>
+                    <span className='text-[10px] font-bold text-gray-400 dark:text-gray-500'>Medium</span>
                   </div>
                 </div>
               </div>
               <div className='p-8'>
-                <h3 className='text-xl font-bold text-gray-900 mb-3'>Priority Detection</h3>
-                <p className='text-gray-500 leading-relaxed mb-6'>
+                <h3 className='text-xl font-bold text-gray-900 mb-3 dark:text-white'>Priority Detection</h3>
+                <p className='text-gray-500 leading-relaxed mb-6 dark:text-gray-400'>
                   Understands urgency signals in text and automatically flags issues from Low to
                   Critical.
                 </p>
                 <button
                   onClick={() => navigate('/features/priority')}
-                  className='inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all'
+                  className='inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all dark:text-emerald-400 dark:hover:text-emerald-300'
                 >
                   Explore <ChevronRight className='w-4 h-4' />
                 </button>
@@ -1305,20 +1305,20 @@ export default function LandingPage() {
             </div>
 
             {/* Card 3: Smart Resolution */}
-            <div className='group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1'>
-              <div className='h-52 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 flex items-center justify-center relative overflow-hidden'>
+            <div className='group rounded-3xl bg-gray-50 border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 hover:-translate-y-1 dark:bg-gray-800 dark:border-gray-700 dark:hover:shadow-gray-900/50 dark:hover:shadow-xl'>
+              <div className='h-52 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 flex items-center justify-center relative overflow-hidden dark:from-emerald-950/30 dark:to-teal-950/30'>
                 <div className='relative z-10 w-full max-w-[200px] flex flex-col gap-3'>
-                  <div className='self-end bg-emerald-600 text-white p-2.5 rounded-2xl rounded-tr-none shadow-sm text-[10px] max-w-[80%]'>
+                  <div className='self-end bg-emerald-600 text-white p-2.5 rounded-2xl rounded-tr-none shadow-sm text-[10px] max-w-[80%] dark:bg-emerald-700'>
                     Reset password for user@company.com?
                   </div>
                   <div className='self-start flex items-end gap-2'>
-                    <div className='w-6 h-6 rounded-full bg-emerald-100 border border-white shadow-sm flex items-center justify-center'>
-                      <Bot className='w-3 h-3 text-emerald-600' />
+                    <div className='w-6 h-6 rounded-full bg-emerald-100 border border-white shadow-sm flex items-center justify-center dark:bg-emerald-800 dark:border-gray-700'>
+                      <Bot className='w-3 h-3 text-emerald-600 dark:text-emerald-400' />
                     </div>
-                    <div className='bg-white p-2.5 rounded-2xl rounded-tl-none border border-gray-200 shadow-sm text-[10px] text-gray-600'>
+                    <div className='bg-white p-2.5 rounded-2xl rounded-tl-none border border-gray-200 shadow-sm text-[10px] text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'>
                       <div className='flex items-center gap-1.5 mb-1'>
                         <CheckCircle className='w-3 h-3 text-emerald-500' />
-                        <span className='font-bold text-gray-800'>Done</span>
+                        <span className='font-bold text-gray-800 dark:text-gray-200'>Done</span>
                       </div>
                       Reset link sent successfully.
                     </div>
@@ -1326,14 +1326,14 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className='p-8'>
-                <h3 className='text-xl font-bold text-gray-900 mb-3'>Smart Resolution</h3>
-                <p className='text-gray-500 leading-relaxed mb-6'>
+                <h3 className='text-xl font-bold text-gray-900 mb-3 dark:text-white'>Smart Resolution</h3>
+                <p className='text-gray-500 leading-relaxed mb-6 dark:text-gray-400'>
                   Checks historical data to auto-fix simple issues, or routes complex ones to the
                   right human team.
                 </p>
                 <button
                   onClick={() => navigate('/features/resolution')}
-                  className='inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all'
+                  className='inline-flex items-center text-sm font-semibold text-emerald-900 hover:text-emerald-700 gap-1 group-hover:gap-2 transition-all dark:text-emerald-400 dark:hover:text-emerald-300'
                 >
                   Explore <ChevronRight className='w-4 h-4' />
                 </button>
@@ -1434,28 +1434,28 @@ export default function LandingPage() {
       </section>
 
       {/* ==================== PRICING ==================== */}
-      <section className='py-24 bg-gray-50' id='pricing'>
+      <section className='py-24 bg-gray-50 dark:bg-gray-900' id='pricing'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='text-center mb-12'>
-            <h2 className='text-3xl md:text-4xl font-extrabold text-gray-900 mb-4'>
+            <h2 className='text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 dark:text-white'>
               Simple, Transparent Pricing
             </h2>
-            <p className='text-gray-500 mb-8'>All plans in Indian Rupees (₹) · GST applicable</p>
+            <p className='text-gray-500 mb-8 dark:text-gray-400'>All plans in Indian Rupees (₹) · GST applicable</p>
 
             {/* Billing Toggle */}
-            <div className='inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm'>
+            <div className='inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm dark:bg-gray-800 dark:border-gray-700'>
               <button
                 onClick={() => setBillingAnnual(false)}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setBillingAnnual(true)}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
               >
                 Annual{' '}
-                <span className='bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full'>
+                <span className='bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full dark:bg-emerald-900/50 dark:text-emerald-400'>
                   Save 20%
                 </span>
               </button>
@@ -1467,25 +1467,25 @@ export default function LandingPage() {
               ({ name, price, priceLabel, period, desc, cta, ctaStyle, features, popular }) => (
                 <div
                   key={name}
-                  className={`p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
+                  className={`p-8 rounded-2xl bg-white transition-all relative dark:bg-gray-800 ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 scale-[1.02] dark:border-emerald-600' : 'border border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'}`}
                 >
                   {popular && (
-                    <div className='absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg'>
+                    <div className='absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg dark:bg-emerald-700'>
                       ⭐ MOST POPULAR
                     </div>
                   )}
-                  <h3 className='text-lg font-bold text-gray-900 mb-2'>{name}</h3>
-                  <div className='text-4xl font-extrabold text-gray-900 mb-2'>
+                  <h3 className='text-lg font-bold text-gray-900 mb-2 dark:text-white'>{name}</h3>
+                  <div className='text-4xl font-extrabold text-gray-900 mb-2 dark:text-white'>
                     {priceLabel ? (
                       priceLabel
                     ) : (
                       <>
                         ₹{price.toLocaleString('en-IN')}
-                        <span className='text-base font-normal text-gray-500'>{period}</span>
+                        <span className='text-base font-normal text-gray-500 dark:text-gray-400'>{period}</span>
                       </>
                     )}
                   </div>
-                  <p className='text-sm text-gray-500 mb-6'>{desc}</p>
+                  <p className='text-sm text-gray-500 mb-6 dark:text-gray-400'>{desc}</p>
                   <button
                     onClick={() => handlePricingClick(name)}
                     disabled={isRedirecting && name === 'Growth'}
@@ -1502,8 +1502,8 @@ export default function LandingPage() {
                   </button>
                   <ul className='space-y-3'>
                     {features.map((feat) => (
-                      <li key={feat} className='flex items-start gap-3 text-sm text-gray-600'>
-                        <CheckCircle className='w-5 h-5 text-emerald-700 shrink-0 mt-px' />
+                      <li key={feat} className='flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300'>
+                        <CheckCircle className='w-5 h-5 text-emerald-700 shrink-0 mt-px dark:text-emerald-400' />
                         {feat}
                       </li>
                     ))}

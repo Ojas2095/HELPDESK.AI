@@ -11,7 +11,6 @@ import NotificationPopover from "./NotificationPopover";
 import ThemeToggle from "../../components/shared/ThemeToggle";
 
 import useAuthStore from "../../store/authStore";
-import ThemeToggle from "../../components/shared/ThemeToggle";
 
 const TopNav = () => {
     const navigate = useNavigate();
@@ -19,26 +18,6 @@ const TopNav = () => {
  
     const { profile, logout } = useAuthStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isDark, setIsDark] = useState(false);
-
-    useEffect(() => {
-        setIsDark(document.documentElement.classList.contains('dark'));
-    }, []);
-
-    const toggleTheme = () => {
-        const nextDark = !isDark;
-        setIsDark(nextDark);
-        if (nextDark) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    };
-
-  const { profile, logout } = useAuthStore();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const initials = profile?.full_name
     ? profile.full_name[0].toUpperCase()
