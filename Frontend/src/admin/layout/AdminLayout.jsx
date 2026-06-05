@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
 import NotificationToast from '../../user/components/NotificationToast';
+import KeyboardShortcuts from '../components/KeyboardShortcuts';
 
 /**
  * AdminLayout Component
@@ -15,6 +16,7 @@ const AdminLayout = () => {
 
     return (
         <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
+            <KeyboardShortcuts />
             {/* Master Navigation Column (Responsive) */}
             <div 
                 className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
