@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Sun, Moon, Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useTheme } from "../../contexts/ThemeContext";
 import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';
@@ -12,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
  * and a functional avatar dropdown menu.
  */
 const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar }) => {
+  const { theme, toggleTheme } = useTheme();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef(null);
@@ -101,7 +103,19 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
             <div className="flex items-center gap-4 lg:gap-6">
                 {/* Communications Hub */}
                 <div className="relative border-r border-slate-200 pr-4 lg:pr-6 hidden sm:block">
-                    <NotificationPopover isAdmin={true} />
+                    
+              {/* Dark mode toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                title={theme === "dark" ? "Light mode" : "Dark mode"}
+              >
+                {theme === "dark"
+                  ? <Sun className="w-5 h-5 text-yellow-400" />
+                  : <Moon className="w-5 h-5 text-gray-500 dark:text-gray-300" />}
+              </button>
+              <NotificationPopover isAdmin={true} />
                 </div>
 
                 {/* Identity Access & Dropdown */}
