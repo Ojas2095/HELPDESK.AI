@@ -16,8 +16,8 @@ const buildConfigList = () => {
         env.VITE_GEMINI_API_KEY_1, env.VITE_GEMINI_API_KEY_2,
         env.VITE_GEMINI_API_KEY_3, env.VITE_GEMINI_API_KEY_4
     ].filter(Boolean);
-    // Dynamically retrieve configured model slugs or fallback to stable defaults
-    const geminiModels = (env.VITE_AI_GEMINI_MODELS || 'gemini-3.5-flash,gemini-3.5-flash-lite,gemini-2.0-flash').split(',');
+    // Dynamically retrieve configured model slugs or fallback to supported stable defaults.
+    const geminiModels = (env.VITE_AI_GEMINI_MODELS || 'gemini-3.5-flash,gemini-2.5-flash,gemini-2.5-flash-lite').split(',');
     
     geminiKeys.forEach(key => {
         geminiModels.forEach(model => {

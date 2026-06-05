@@ -15,7 +15,10 @@ class GeminiService:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY")
         self._initialized = False
-        self.model_name = 'gemini-3.5-flash'
+        self.model_name = os.getenv(
+            "GEMINI_MODEL_NAME",
+            "gemini-3.5-flash"
+        )
         
         if self.api_key:
             try:

@@ -1,45 +1,6 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.venv/
-venv/
-env/
+# Environment / secrets
 .env
 .env.*
 !.env.example
-
-# Backend
-backend/.venv/
-backend/.pytest_cache/
-backend/.mypy_cache/
-backend/.ruff_cache/
-backend/.env
-backend/.env.*
 !backend/.env.example
-
-# Frontend
-Frontend/node_modules/
-Frontend/dist/
-Frontend/.vercel/
-Frontend/.env
-Frontend/.env.*
 !Frontend/.env.example
-*.local
-
-# Logs and Data
-*.log
-data/low_confidence_log.json
-user_feedback_rows.csv
-docs/logs/
-
-# Docs / Artifacts
-docs/helpdesk*.pdf
-
-# OS / Editor
-.DS_Store
-.idea/
-.vscode/
