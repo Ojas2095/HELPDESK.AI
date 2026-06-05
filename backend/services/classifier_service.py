@@ -73,6 +73,37 @@ AUTO_RESOLVE_SUBS = {
     "WiFi Issue", "Printer Error", "Monitor Problem",
 }
 
+# Fix Bug 1 & 4: Sensible default subcategory when category is overridden by keyword match.
+# These are used to re-derive priority and auto_resolve after an override so the returned
+# prediction object is always internally consistent.
+_CATEGORY_DEFAULT_SUBCATEGORY = {
+    "Network":  "Internet Slow",
+    "Software": "Application Crash",
+    "Access":   "Login Failure",
+    "Hardware": "Hardware Failure",
+}
+
+# Fix Bug 2: Use word-boundary-safe keyword lists with NO cross-category duplicates.
+# "Latency" was present in both Network and Software — removed from Network to avoid
+# category poisoning via dict-iteration order.
+_TECH_KEYWORDS = {
+    "Network": [
+        r"\bIP address\b", r"\bhostname\b", r"\bconnection\b", r"\bnetwork\b",
+        r"\bbandwidth\b", r"\bDNS\b", r"\bfirewall\b", r"\bVPN\b",
+        r"\bConnectivity\b", r"\bRouting\b", r"\bSpikes\b",
+    ],
+    "Software": [
+        r"\bcrash\b", r"\bload\b", r"\bwebsite\b", r"\bapplication\b",
+        r"\berror\b", r"\bbug\b", r"\bfailing\b", r"\bsoftware\b",
+        r"\bSQL\b", r"\bCluster\b", r"\bDatabase\b", r"\bProduction\b",
+        r"\bLatency\b",
+    ],
+    "Access": [
+        r"\blogin\b", r"\bpassword\b", r"\baccess\b", r"\bauthentication\b",
+        r"\baccount\b", r"\bpermission\b", r"\bMFA\b", r"\bOAuth\b",
+    ],
+}
+
 
 class ClassifierService:
     def __init__(self):
