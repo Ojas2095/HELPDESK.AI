@@ -1,9 +1,7 @@
-.tmp-ci-venv/
 node_modules/
 venv/
 .venv/
-env/
+__pycache__/
+*.min.js
 dist/
 build/
-scratch/
-Summary/
