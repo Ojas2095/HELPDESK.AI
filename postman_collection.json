@@ -1,0 +1,541 @@
+{
+  "info": {
+    "name": "HELPDESK.AI API",
+    "description": "AI-powered helpdesk backend \u2014 all 20 endpoints with pre-request scripts and environment variables.\n\n**Setup:**\n1. Import this collection into Postman\n2. Create an environment with `base_url` = `http://localhost:8000`\n3. Run `/auth/login` once \u2014 the test script auto-sets `{{access_token}}`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": {
+      "major": 3,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "ticket_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "company_id",
+      "value": "your-company-uuid",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Liveness probe \u2014 returns classifier_loaded and ner_loaded booleans."
+          }
+        },
+        {
+          "name": "GET /ready",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/ready",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            },
+            "description": "Readiness probe \u2014 all ML model + Supabase checks."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access_token) { pm.environment.set('access_token', json.access_token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"user@example.com\", \"password\": \"secret\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticate and receive a JWT. The test script auto-saves `access_token` to your environment."
+          }
+        },
+        {
+          "name": "POST /auth/signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"newuser@example.com\", \"password\": \"strong-password\", \"company_id\": \"{{company_id}}\"}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/signup",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "signup"
+              ]
+            },
+            "description": "Register a new user. Rate-limited to 5/minute."
+          }
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Invalidate the current session."
+          }
+        },
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Return the currently authenticated user profile."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "POST /ai/analyze_ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"I cannot connect to the VPN from home.\",\n  \"image_base64\": \"\",\n  \"user_id\": \"user-uuid\",\n  \"company\": \"{{company_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_ticket",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_ticket"
+              ]
+            },
+            "description": "Full V3 ticket analysis: classification, NER, duplicate detection, RAG. Rate-limited to 10/minute."
+          }
+        },
+        {
+          "name": "POST /ai/analyze (read-only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"My laptop screen is flickering after the latest driver update.\",\n  \"company\": \"{{company_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze"
+              ]
+            },
+            "description": "AI analysis without DB persistence \u2014 returns preview for user confirmation."
+          }
+        },
+        {
+          "name": "POST /ai/analyze_stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Outlook keeps crashing on startup.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_stream"
+              ]
+            },
+            "description": "Streaming SSE version of analyze_ticket \u2014 suitable for real-time UI feedback."
+          }
+        },
+        {
+          "name": "POST /ai/troubleshoot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"I can't print to the network printer.\",\n  \"history\": [],\n  \"category\": \"Hardware\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/troubleshoot",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "troubleshoot"
+              ]
+            },
+            "description": "Interactive Gemini-powered troubleshooting tree."
+          }
+        },
+        {
+          "name": "POST /ai/analyze_bug",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bug_title\": \"NullPointerException on ticket save\",\n  \"description\": \"Crashes when image_url is null\",\n  \"steps_to_reproduce\": \"1. Leave image_url empty\\n2. Submit ticket\",\n  \"console_errors\": \"NullPointerException at line 42\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_bug",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_bug"
+              ]
+            },
+            "description": "Gemini-powered probable-cause analysis for bug reports."
+          }
+        },
+        {
+          "name": "POST /ai/log_correction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"{{ticket_id}}\",\n  \"original_category\": \"Software\",\n  \"corrected_category\": \"Network\",\n  \"admin_id\": \"admin-uuid\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/log_correction",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "log_correction"
+              ]
+            },
+            "description": "Log an admin correction when AI prediction differs from the human decision."
+          }
+        },
+        {
+          "name": "POST /ai/analyze-v2 (legacy)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Password reset not working.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze-v2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze-v2"
+              ]
+            },
+            "description": "Legacy V2 classifier. Deprecated \u2014 prefer /ai/analyze_ticket."
+          }
+        },
+        {
+          "name": "POST /ai/analyze_ticket/legacy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Email not syncing on mobile.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_ticket/legacy",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_ticket",
+                "legacy"
+              ]
+            },
+            "description": "Legacy V1 pipeline. Deprecated \u2014 prefer /ai/analyze_ticket."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "GET /tickets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tickets?company_id={{company_id}}&page=1&per_page=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "company_id",
+                  "value": "{{company_id}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List tickets for a company. Requires bearer token. Rate-limited to 30/minute."
+          }
+        },
+        {
+          "name": "POST /tickets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"user-uuid\",\n  \"subject\": \"VPN not connecting\",\n  \"description\": \"Cannot connect from home office.\",\n  \"category\": \"Network\",\n  \"subcategory\": \"VPN Issues\",\n  \"priority\": \"High\",\n  \"assigned_team\": \"Network Support\",\n  \"status\": \"open\",\n  \"auto_resolve\": false,\n  \"is_duplicate\": false,\n  \"confidence\": 0.95,\n  \"company\": \"{{company_id}}\",\n  \"company_id\": \"{{company_id}}\",\n  \"sla_breach_at\": \"2025-01-01T12:00:00Z\",\n  \"metadata\": {},\n  \"entities\": [],\n  \"solution_steps\": [],\n  \"ocr_text\": \"\",\n  \"needs_review\": false,\n  \"routing_confidence\": 0.9\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets"
+              ]
+            },
+            "description": "Create a new support ticket directly (without AI analysis)."
+          }
+        },
+        {
+          "name": "POST /tickets/save",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"user-uuid\",\n  \"subject\": \"Screen flickering\",\n  \"description\": \"Screen flickers after driver update.\",\n  \"category\": \"Hardware\",\n  \"subcategory\": \"Display Issues\",\n  \"priority\": \"Medium\",\n  \"assigned_team\": \"Hardware Support\",\n  \"status\": \"open\",\n  \"auto_resolve\": false,\n  \"is_duplicate\": false,\n  \"confidence\": 0.88,\n  \"sla_breach_at\": \"2025-01-02T09:00:00Z\",\n  \"metadata\": {},\n  \"entities\": [],\n  \"solution_steps\": [],\n  \"ocr_text\": \"\",\n  \"needs_review\": false,\n  \"routing_confidence\": 0.85\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/save",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "save"
+              ]
+            },
+            "description": "Persist the AI-analysed ticket to Supabase after user confirmation."
+          }
+        },
+        {
+          "name": "GET /tickets/{ticket_id}",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}"
+              ]
+            },
+            "description": "Retrieve a single ticket by UUID."
+          }
+        },
+        {
+          "name": "PATCH /tickets/{ticket_id}",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"resolved\",\n  \"assigned_team\": \"Level-2 Support\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "{{ticket_id}}"
+              ]
+            },
+            "description": "Partially update a ticket (status, priority, assigned_team, etc.)."
+          }
+        }
+      ]
+    }
+  ]
+}
