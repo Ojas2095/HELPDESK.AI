@@ -106,7 +106,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                         )}
                         {/* Tooltip for collapsed mode */}
                         {isCollapsed && !isMobile && (
-                            <div className="absolute left-full ml-3 bg-gray-900 text-white text-xs py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-lg" style={{ top: '50%', transform: 'translateY(-50%)' }}>
+                            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-lg">
                                 {item.label}
                             </div>
                         )}

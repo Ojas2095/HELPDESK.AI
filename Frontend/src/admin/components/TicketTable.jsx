@@ -77,11 +77,9 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                         const subject = safeDisplayText(ticket.subject || ticket.summary || ticket.description, 'Untitled ticket');
                         const truncSubject = subject.length > 28 ? subject.slice(0, 28) + '...' : subject;
 
-                        // Ticket ID truncated
                         const tid = ticket.ticket_id || ticket.id || '';
                         const truncId = tid.length > 8 ? tid.slice(0, 8) + '...' : tid;
 
-                        // User initial
                         const userProfile = ticket.creator || ticket.profiles;
                         const userName = userProfile?.full_name || ticket.user_name || 'User';
                         const initial = userName.charAt(0).toUpperCase();
@@ -109,13 +107,13 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 <td role="cell" style={{ padding: '14px 24px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                         <div className="flex items-center gap-2">
-                                            <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#16a34a' }}>#{truncId}</span>
+                                            <span className="font-mono text-[11px] font-bold text-green-600">#{truncId}</span>
                                             <div className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-400">
                                                 <ExternalLink size={12} />
                                             </div>
                                         </div>
-                                        <span style={{ fontSize: '11px', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Clock size={10} color="#d1d5db" />
+                                        <span className="text-[11px] text-gray-400 flex items-center gap-1">
+                                            <Clock size={10} className="text-gray-300" />
                                             {formatTimelineDate(ticket.created_at || ticket.createdAt || ticket.timestamp)}
                                         </span>
                                     </div>
@@ -128,15 +126,15 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                             <img
                                                 src={profilePic}
                                                 alt={userName}
-                                                style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '1px solid #d1fae5', flexShrink: 0 }}
+                                                className="w-8 h-8 rounded-full object-cover border border-green-100 shrink-0"
                                             />
                                         ) : (
-                                            <div style={{ width: 32, height: 32, background: '#f0fdf4', border: '1px solid #d1fae5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                <span style={{ color: '#16a34a', fontSize: '12px', fontWeight: 600 }}>{initial}</span>
+                                            <div className="w-8 h-8 bg-green-50 border border-green-100 rounded-full flex items-center justify-center shrink-0">
+                                                <span className="text-green-600 text-xs font-semibold">{initial}</span>
                                             </div>
                                         )}
-                                        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '220px' }}>
-                                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <div className="flex flex-col max-w-[220px]">
+                                            <span className="text-[13px] font-medium text-gray-900 overflow-hidden text-ellipsis whitespace-nowrap">
                                                 {truncSubject}
                                                 {ticket.source === 'voice' && (
                                                     <span title="Voice Submitted" style={{ marginLeft: '6px', fontSize: '14px' }}>
@@ -165,7 +163,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                             <span style={{ width: 4, height: 4, borderRadius: '50%', background: categoryDotColors[effectiveCategory] || '#6b7280', display: 'inline-block' }}></span>
                                             {effectiveCategory}
                                         </span>
-                                        {effectiveSubcategory && <span style={{ fontSize: '10px', color: '#9ca3af', marginLeft: '4px' }}>{effectiveSubcategory}</span>}
+                                        {effectiveSubcategory && <span className="text-[10px] text-gray-400 ml-1">{effectiveSubcategory}</span>}
                                     </div>
                                 </td>
 
@@ -183,10 +181,10 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 {/* Assigned Ops */}
                                 <td role="cell" style={{ padding: '14px 24px' }}>
                                     <div className="flex items-center gap-2">
-                                        <div style={{ width: 28, height: 28, background: '#f0fdf4', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #d1fae5' }}>
-                                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a' }}>{effectiveTeam?.charAt(0)}</span>
+                                        <div className="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center border border-green-100">
+                                            <span className="text-[10px] font-bold text-green-600">{effectiveTeam?.charAt(0)}</span>
                                         </div>
-                                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#374151', whiteSpace: 'nowrap' }}>{effectiveTeam}</span>
+                                        <span className="text-xs font-medium text-gray-700 whitespace-nowrap">{effectiveTeam}</span>
                                     </div>
                                 </td>
 
