@@ -176,3 +176,11 @@ async def transcribe_audio_async(
                 os.remove(temp_path)
             except OSError as cleanup_err:
                 logger.warning("Failed to clean up temp audio %s: %s", temp_path, cleanup_err)
+
+
+def get_voice_service_health() -> dict:
+    """Return lightweight voice service health without forcing model load."""
+    return {
+        "model_loaded": _whisper_model is not None,
+        "model_name": WHISPER_MODEL_NAME,
+    }

@@ -12,10 +12,16 @@ Issue #207: Voice-to-Ticket Feature
 import logging
 import re
 import uuid
-from typing import Any, Optional
+from typing import Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Request
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from pydantic import BaseModel, Field
 from backend.services.rate_limit_config import limiter
+
+from backend.services.voice_service import (
+    get_voice_service_health,
+    transcribe_audio_async,
+)
 
 
 
@@ -32,6 +38,27 @@ SUPPORTED_FORMATS = ["webm", "wav", "mp3", "ogg", "m4a", "flac"]
 _LANG_TAG_RE = re.compile(r"^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$")
 
 
+class TranscribeResponse(BaseModel):
+    transcribed_text: str
+    detected_language: str = "en"
+    confidence: float = Field(ge=0.0, le=1.0)
+    duration_seconds: Optional[float] = None
+
+
+class CreateTicketResponse(BaseModel):
+    status: str
+    message: str
+    transcription: dict
+    transcribed_text: Optional[str] = None
+    suggested_title: Optional[str] = None
+
+
+class HealthResponse(BaseModel):
+    status: str
+    model_loaded: bool
+    message: Optional[str] = None
+
+
 @router.post("/transcribe")
 @limiter.limit("10/minute")
 async def transcribe_audio(
@@ -44,7 +71,7 @@ async def transcribe_audio(
     Accepts: webm, wav, mp3, ogg, m4a, flac
     Returns: transcribed text, detected language, confidence, duration
     """
-    rid = _request_id(req)
+    rid = _request_id(request)
     lang = _validate_language(language)
     logger.info(
         "transcribe: request_id=%s filename=%s language=%s",
@@ -52,7 +79,7 @@ async def transcribe_audio(
     )
 
     content = await audio.read()
-    _read_and_validate_audio(content)
+    _read_and_validate_audio(content, audio.filename or "")
 
     try:
         result = await transcribe_audio_async(
@@ -97,7 +124,7 @@ async def create_ticket_from_voice(
     Combines speech recognition with the existing ticket analysis pipeline,
     returning a ready-to-review ticket object.
     """
-    rid = _request_id(req)
+    rid = _request_id(request)
     lang = _validate_language(language)
     logger.info(
         "create-ticket: request_id=%s filename=%s language=%s user_id=%s company=%s",
@@ -105,7 +132,7 @@ async def create_ticket_from_voice(
     )
 
     content = await audio.read()
-    _read_and_validate_audio(content)
+    _read_and_validate_audio(content, audio.filename or "")
 
     try:
         # Step 1: Transcribe
@@ -181,6 +208,43 @@ async def voice_health() -> HealthResponse:
 
 
 # ─── Internal helpers ─────────────────────────────────────────────────────────
+
+def _request_id(request: Request) -> str:
+    return request.headers.get("x-request-id") or str(uuid.uuid4())
+
+
+def _validate_language(language: Optional[str]) -> Optional[str]:
+    if language is None or language == "":
+        return None
+    if not _LANG_TAG_RE.match(language):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Invalid BCP-47 language tag: '{language}'. "
+                "Expected format like 'en', 'en-US', 'zh-Hant', or 'zh-419'."
+            ),
+        )
+    return language
+
+
+def _read_and_validate_audio(content: bytes, filename: str) -> None:
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Empty audio file received.",
+        )
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Audio file too large. Maximum allowed is {MAX_UPLOAD_SIZE_MB} MB.",
+        )
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if not ext or ext not in SUPPORTED_FORMATS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported audio format. Allowed: {', '.join(SUPPORTED_FORMATS)}.",
+        )
+
 
 def _extract_title(text: str, max_length: int = 80) -> str:
     """Generate a short title from transcribed text.
