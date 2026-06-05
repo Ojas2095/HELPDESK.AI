@@ -1612,6 +1612,7 @@ class BugReportAnalysisRequest(BaseModel):
 class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 @limiter.limit("10/minute")
 async def analyze_bug(request: Request, request_body: BugReportAnalysisRequest):
@@ -1834,6 +1835,7 @@ def _atomic_write_json(path: Path, data) -> None:
     os.replace(tmp_path, path)
 
 
+@limiter.limit("10/minute")
 @app.post("/ai/log_correction")
 @limiter.limit("30/minute")
 async def log_correction(request: Request, user: dict = Depends(get_current_user)):
