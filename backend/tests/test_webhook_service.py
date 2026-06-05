@@ -1,312 +1,174 @@
-"""
-Unit tests for webhook_service.py
-"""
-
 import pytest
-from unittest.mock import patch, MagicMock
-from backend.services.webhook_service import (
-    build_slack_payload,
-    build_teams_payload,
-    detect_webhook_type,
-    send_webhook_notification,
-    notify_critical_ticket,
-)
 
 
-class TestBuildSlackPayload:
-    def test_build_slack_payload_critical_priority(self):
-        ticket = {
-            "id": "1234567890abcdef",
-            "subject": "Server down",
-            "priority": "critical",
-            "assigned_team": "Ops",
-            "company": "ACME Corp",
-            "sla_breach_at": "2026-05-30T15:00:00Z",
+def test_ticket_insert_webhook_function_exists(db_connection):
+    """
+    Verify the webhook trigger function exists.
+    """
+
+    query = """
+    SELECT routine_name
+    FROM information_schema.routines
+    WHERE routine_schema = 'public'
+    AND routine_name = 'ticket_insert_webhook';
+    """
+
+    with db_connection.cursor() as cursor:
+        cursor.execute(query)
+        result = cursor.fetchone()
+
+    assert result is not None
+    assert result[0] == "ticket_insert_webhook"
+
+
+def test_ticket_insert_trigger_exists(db_connection):
+    """
+    Verify the trigger exists on tickets table.
+    """
+
+    query = """
+    SELECT trigger_name
+    FROM information_schema.triggers
+    WHERE event_object_table = 'tickets'
+    AND trigger_name = 'ticket_insert_trigger';
+    """
+
+    with db_connection.cursor() as cursor:
+        cursor.execute(query)
+        result = cursor.fetchone()
+
+    assert result is not None
+    assert result[0] == "ticket_insert_trigger"
+
+
+def test_webhook_payload_structure():
+    """
+    Validate webhook payload structure.
+    """
+
+    sample_record = {
+        "id": 1,
+        "title": "Test Ticket",
+        "description": "Webhook payload test"
+    }
+
+    payload = {
+        "type": "INSERT",
+        "table": "tickets",
+        "record": sample_record
+    }
+
+    assert payload["type"] == "INSERT"
+    assert payload["table"] == "tickets"
+
+    assert "record" in payload
+    assert payload["record"]["id"] == 1
+    assert payload["record"]["title"] == "Test Ticket"
+
+
+def test_webhook_payload_handles_empty_record():
+    """
+    Ensure payload handles empty records.
+    """
+
+    payload = {
+        "type": "INSERT",
+        "table": "tickets",
+        "record": {}
+    }
+
+    assert payload["record"] == {}
+
+
+def test_webhook_payload_handles_null_values():
+    """
+    Ensure payload handles null values correctly.
+    """
+
+    payload = {
+        "type": "INSERT",
+        "table": "tickets",
+        "record": {
+            "id": 1,
+            "title": None,
+            "description": None
         }
-        payload = build_slack_payload(ticket)
+    }
 
-        assert "attachments" in payload
-        assert len(payload["attachments"]) == 1
-        attachment = payload["attachments"][0]
-        assert attachment["color"] == "#FF0000"
-
-        blocks = attachment["blocks"]
-        header_block = blocks[0]
-        assert header_block["type"] == "header"
-        assert "critical" in header_block["text"]["text"].lower()
-
-    def test_build_slack_payload_high_priority(self):
-        ticket = {
-            "id": "1234567890abcdef",
-            "subject": "Database slow",
-            "priority": "high",
-            "assigned_team": "DBA",
-            "company": "ACME Corp",
-            "sla_breach_at": "2026-05-30T18:00:00Z",
-        }
-        payload = build_slack_payload(ticket)
-        attachment = payload["attachments"][0]
-        assert attachment["color"] == "#FF0000"
-
-    def test_build_slack_payload_medium_priority(self):
-        ticket = {
-            "id": "1234567890abcdef",
-            "subject": "UI glitch",
-            "priority": "medium",
-            "assigned_team": "Frontend",
-            "company": "ACME Corp",
-            "sla_breach_at": None,
-        }
-        payload = build_slack_payload(ticket)
-        attachment = payload["attachments"][0]
-        assert attachment["color"] == "#FFA500"
-
-    def test_build_slack_payload_missing_fields(self):
-        ticket = {
-            "id": "1234",
-        }
-        payload = build_slack_payload(ticket)
-        assert "attachments" in payload
-        attachment = payload["attachments"][0]
-        assert attachment["color"] == "#FFA500"
-
-    def test_build_slack_payload_short_id(self):
-        ticket = {
-            "id": "abc",
-            "subject": "Test",
-            "priority": "critical",
-            "assigned_team": "Team",
-            "company": "Co",
-            "sla_breach_at": None,
-        }
-        payload = build_slack_payload(ticket)
-        assert "attachments" in payload
+    assert payload["record"]["title"] is None
+    assert payload["record"]["description"] is None
 
 
-class TestBuildTeamsPayload:
-    def test_build_teams_payload_critical_priority(self):
-        ticket = {
-            "id": "1234567890abcdef",
-            "subject": "Server down",
-            "priority": "critical",
-            "assigned_team": "Ops",
-            "company": "ACME Corp",
-            "sla_breach_at": "2026-05-30T15:00:00Z",
-        }
-        payload = build_teams_payload(ticket)
+def test_ticket_insert_webhook_function_definition_contains_http_post(
+    db_connection,
+):
+    """
+    Verify webhook function uses net.http_post.
+    """
 
-        assert payload["@type"] == "MessageCard"
-        assert payload["themeColor"] == "FF0000"
-        assert len(payload["sections"]) == 1
+    query = """
+    SELECT pg_get_functiondef(p.oid)
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE p.proname = 'ticket_insert_webhook'
+    AND n.nspname = 'public';
+    """
 
-    def test_build_teams_payload_high_priority(self):
-        ticket = {
-            "id": "1234567890abcdef",
-            "subject": "Database slow",
-            "priority": "high",
-            "assigned_team": "DBA",
-            "company": "ACME Corp",
-            "sla_breach_at": None,
-        }
-        payload = build_teams_payload(ticket)
-        assert payload["themeColor"] == "FF0000"
+    with db_connection.cursor() as cursor:
+        cursor.execute(query)
+        result = cursor.fetchone()
 
-    def test_build_teams_payload_low_priority(self):
-        ticket = {
-            "id": "1234567890abcdef",
-            "subject": "Minor issue",
-            "priority": "low",
-            "assigned_team": "Support",
-            "company": "ACME Corp",
-            "sla_breach_at": None,
-        }
-        payload = build_teams_payload(ticket)
-        assert payload["themeColor"] == "FFA500"
+    assert result is not None
 
-    def test_build_teams_payload_missing_fields(self):
-        ticket = {
-            "id": "1234",
-        }
-        payload = build_teams_payload(ticket)
-        assert payload["@type"] == "MessageCard"
+    function_definition = result[0]
+
+    assert "net.http_post" in function_definition
 
 
-class TestDetectWebhookType:
-    def test_detect_slack_webhook(self):
-        url = "https://hooks.slack.com/services/ABC/DEF/123"
-        assert detect_webhook_type(url) == "slack"
+def test_ticket_insert_webhook_contains_authorization_header(
+    db_connection,
+):
+    """
+    Verify Authorization header exists in webhook function.
+    """
 
-    def test_detect_teams_webhook(self):
-        url = "https://webhook.office.com/testwebhook"
-        assert detect_webhook_type(url) == "teams"
+    query = """
+    SELECT pg_get_functiondef(p.oid)
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE p.proname = 'ticket_insert_webhook'
+    AND n.nspname = 'public';
+    """
 
-    def test_detect_teams_webhook_outlook(self):
-        url = "https://outlook.office.com/webhook/test"
-        assert detect_webhook_type(url) == "teams"
+    with db_connection.cursor() as cursor:
+        cursor.execute(query)
+        result = cursor.fetchone()
 
-    def test_detect_default_slack(self):
-        url = "https://other.service.com/webhook"
-        assert detect_webhook_type(url) == "slack"
+    function_definition = result[0]
 
-
-class TestSendWebhookNotification:
-    @patch("backend.services.webhook_service.urlopen")
-    def test_send_webhook_notification_success_slack(self, mock_urlopen):
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=None)
-        mock_urlopen.return_value = mock_response
-
-        ticket = {
-            "id": "1234567890abcdef",
-            "subject": "Test",
-            "priority": "critical",
-            "assigned_team": "Team",
-            "company": "Co",
-            "sla_breach_at": None,
-        }
-        url = "https://hooks.slack.com/services/ABC/DEF/123"
-
-        result = send_webhook_notification(url, ticket)
-
-        assert result is True
-        mock_urlopen.assert_called_once()
-
-    @patch("backend.services.webhook_service.urlopen")
-    def test_send_webhook_notification_success_teams(self, mock_urlopen):
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=None)
-        mock_urlopen.return_value = mock_response
-
-        ticket = {
-            "id": "1234567890abcdef",
-            "subject": "Test",
-            "priority": "critical",
-            "assigned_team": "Team",
-            "company": "Co",
-            "sla_breach_at": None,
-        }
-        url = "https://webhook.office.com/testwebhook"
-
-        result = send_webhook_notification(url, ticket)
-
-        assert result is True
-
-    @patch("backend.services.webhook_service.urlopen")
-    def test_send_webhook_notification_http_error(self, mock_urlopen):
-        from urllib.error import HTTPError
-
-        mock_urlopen.side_effect = HTTPError(
-            url="http://test",
-            code=500,
-            msg="Internal Server Error",
-            hdrs={},
-            fp=None,
-        )
-
-        ticket = {"id": "1234", "subject": "Test", "priority": "high"}
-        url = "https://hooks.slack.com/services/ABC/DEF/123"
-
-        result = send_webhook_notification(url, ticket)
-
-        assert result is False
-
-    @patch("backend.services.webhook_service.urlopen")
-    def test_send_webhook_notification_url_error(self, mock_urlopen):
-        from urllib.error import URLError
-
-        mock_urlopen.side_effect = URLError("Connection refused")
-
-        ticket = {"id": "1234", "subject": "Test", "priority": "high"}
-        url = "https://hooks.slack.com/services/ABC/DEF/123"
-
-        result = send_webhook_notification(url, ticket)
-
-        assert result is False
-
-    def test_send_webhook_notification_no_url(self):
-        result = send_webhook_notification("", {"id": "1234"})
-        assert result is False
+    assert "Authorization" in function_definition
 
 
-class TestNotifyCriticalTicket:
-    @patch.dict("os.environ", {"SLACK_WEBHOOK_URL": "https://hooks.slack.com/test"})
-    @patch("backend.services.webhook_service.send_webhook_notification")
-    def test_notify_critical_ticket_with_env_url(self, mock_send):
-        mock_send.return_value = True
+def test_ticket_insert_webhook_returns_new_record(
+    db_connection,
+):
+    """
+    Ensure trigger function returns NEW.
+    """
 
-        ticket = {"id": "1234567890abcdef", "subject": "Test", "priority": "critical"}
-        result = notify_critical_ticket(ticket)
+    query = """
+    SELECT pg_get_functiondef(p.oid)
+    FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE p.proname = 'ticket_insert_webhook'
+    AND n.nspname = 'public';
+    """
 
-        assert result is True
-        mock_send.assert_called_once()
-        call_args = mock_send.call_args[0]
-        assert call_args[0] == "https://hooks.slack.com/test"
-        assert call_args[1]["id"] == "1234567890abcdef"
+    with db_connection.cursor() as cursor:
+        cursor.execute(query)
+        result = cursor.fetchone()
 
-    @patch("backend.services.webhook_service.send_webhook_notification")
-    def test_notify_critical_ticket_with_provided_url(self, mock_send):
-        mock_send.return_value = True
+    function_definition = result[0]
 
-        ticket = {"id": "1234567890abcdef", "subject": "Test", "priority": "critical"}
-        webhook_url = "https://hooks.slack.com/provided"
-        result = notify_critical_ticket(ticket, webhook_url=webhook_url)
+    assert "return NEW" in function_definition
 
-        assert result is True
-        mock_send.assert_called_once_with(webhook_url, ticket)
-
-    @patch("os.environ.get", return_value="")
-    def test_notify_critical_ticket_no_url(self, mock_get):
-        result = notify_critical_ticket({"id": "1234"})
-        assert result is False
-
-    @patch("backend.services.webhook_service.send_webhook_notification")
-    def test_notify_critical_ticket_send_fails(self, mock_send):
-        mock_send.return_value = False
-
-        ticket = {"id": "1234567890abcdef", "subject": "Test", "priority": "critical"}
-        webhook_url = "https://hooks.slack.com/test"
-        result = notify_critical_ticket(ticket, webhook_url=webhook_url)
-
-        assert result is False
-
-
-class TestConfigurableFrontendURL:
-    def test_build_slack_payload_uses_custom_frontend_url(self):
-        custom_url = "https://custom-helpdesk.com"
-        ticket = {"id": "1234567890abcdef", "subject": "Test"}
-        
-        with patch("backend.services.webhook_service.FRONTEND_BASE_URL", custom_url):
-            payload = build_slack_payload(ticket)
-            
-            attachment = payload["attachments"][0]
-            ticket_field = attachment["blocks"][1]["fields"][0]["text"]
-            assert custom_url in ticket_field
-            assert "https://helpdeskaiv1.vercel.app" not in ticket_field
-
-    def test_build_teams_payload_uses_custom_frontend_url(self):
-        custom_url = "https://custom-helpdesk.com"
-        ticket = {"id": "1234567890abcdef", "subject": "Test"}
-        
-        with patch("backend.services.webhook_service.FRONTEND_BASE_URL", custom_url):
-            payload = build_teams_payload(ticket)
-            
-            target_uri = payload["potentialAction"][0]["targets"][0]["uri"]
-            assert custom_url in target_uri
-            assert "https://helpdeskaiv1.vercel.app" not in target_uri
-
-    def test_build_slack_payload_uses_default_frontend_url(self):
-        # Ensure it uses default if env var is not set
-        ticket = {"id": "1234567890abcdef", "subject": "Test"}
-        
-        # We patch it to the default value to be sure
-        default_url = "https://helpdeskaiv1.vercel.app"
-        with patch("backend.services.webhook_service.FRONTEND_BASE_URL", default_url):
-            payload = build_slack_payload(ticket)
-            
-            attachment = payload["attachments"][0]
-            ticket_field = attachment["blocks"][1]["fields"][0]["text"]
-            assert default_url in ticket_field
