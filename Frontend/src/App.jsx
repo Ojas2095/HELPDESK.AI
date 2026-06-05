@@ -32,6 +32,7 @@ import TicketTracking from "./user/pages/TicketTracking";
 // Layouts
 import UserLayout from "./user/UserLayout";
 import AdminLayout from "./admin/layout/AdminLayout";
+import KeyboardShortcuts from "./admin/components/KeyboardShortcuts";
 
 // User Pages
 import Dashboard from "./user/pages/Dashboard";
@@ -169,6 +170,7 @@ function AppLayout() {
   // but we still need to handle role-based navigation here
   return (
     <>
+      <KeyboardShortcuts />
       <Routes>
         <Route path="/knowledge-check" element={<DuplicateDetection />} />
         <Route path="/auto-resolve" element={<AutoResolveChat />} />
