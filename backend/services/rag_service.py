@@ -54,7 +54,7 @@ class RagService:
                 self.model = SentenceTransformer('all-MiniLM-L6-v2')
             self._loaded = True
             print("[RAG] Model loaded successfully.")
-        except Exception as e:
+        except RuntimeError as e:
             allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
             self._load_failed = True
             print(f"[RAG] Failed to load model: {e}")
@@ -101,5 +101,7 @@ class RagService:
             return None
             
         except Exception as e:
+            import logging
+            logging.exception(e)
             print(f"[RAG ERROR] Query failed: {e}")
             return None

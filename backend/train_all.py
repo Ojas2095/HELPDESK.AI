@@ -31,7 +31,7 @@ def main():
     t0 = time.time()
     try:
         train_classifier()
-    except Exception as e:
+    except ValueError as e:
         print(f"\n[ERROR] Classifier training failed: {e}")
         raise
     t1 = time.time()
@@ -43,6 +43,8 @@ def main():
     try:
         train_ner()
     except Exception as e:
+        import logging
+        logging.exception(e)
         print(f"\n[ERROR] NER training failed: {e}")
         raise
     t1 = time.time()

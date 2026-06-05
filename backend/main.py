@@ -506,6 +506,8 @@ def get_system_settings(company_id: str) -> dict:
                 pass
             return settings
     except Exception as e:
+        import logging
+        logging.exception(e)
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
 
@@ -992,11 +994,11 @@ async def lifespan(app: FastAPI):
         print(f"[WARNING] NER not loaded: {e}")
     try:
         duplicate_service.load()
-    except Exception as e:
+    except (ValueError, IOError) as e:
         print(f"[WARNING] Duplicate service not loaded: {e}")
     try:
         rag_service.load()
-    except Exception as e:
+    except RuntimeError as e:
         print(f"[WARNING] RAG service not loaded: {e}")
     try:
         onnx_classifier.load()
