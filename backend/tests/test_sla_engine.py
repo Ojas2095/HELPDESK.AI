@@ -360,7 +360,7 @@ class TestSLAEngineEvaluateTicket:
 
     def test_priority_case_insensitive(self):
         now = datetime.datetime.now(datetime.timezone.utc)
-        past = now - datetime.timedelta(hours=6)
+        past = now - datetime.timedelta(hours=2)
         ticket = {"priority": "HIGH", "created_at": past.isoformat(), "status": "open"}
         result = self.engine.evaluate_ticket(ticket)
         assert result["sla_status"] in ("warning", "active")
@@ -371,6 +371,22 @@ class TestSLAEngineEvaluateTicket:
         ticket = {"created_at": past.isoformat(), "status": "open"}
         result = self.engine.evaluate_ticket(ticket)
         assert "policy" in result
+
+    def test_unknown_priority_logs_warning_and_uses_medium_policy(self, caplog):
+        now = datetime.datetime.now(datetime.timezone.utc)
+        past = now - datetime.timedelta(minutes=30)
+        ticket = {
+            "id": "ticket-urgent-1",
+            "priority": "URGENT",
+            "created_at": past.isoformat(),
+            "status": "open",
+        }
+
+        result = self.engine.evaluate_ticket(ticket)
+
+        assert result["policy"] == SLA_POLICIES["medium"]
+        assert "Unknown priority 'URGENT'" in caplog.text
+        assert "ticket-urgent-1" in caplog.text
 
     def test_returns_elapsed_pct(self):
         now = datetime.datetime.now(datetime.timezone.utc)
