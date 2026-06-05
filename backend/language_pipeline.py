@@ -158,6 +158,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language": "en",
             "source_language_name": "English",
             "was_translated": False,
+            "translation_attempted": False,
             "translation_failed": False,
             "original_text": "",
             "metadata": {},
@@ -174,6 +175,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
                 "English" if detected_lang in ("en", "eng") else source_name
             ),
             "was_translated": False,
+            "translation_attempted": False,
             "translation_failed": False,
             "original_text": original_text,
             "metadata": {},
@@ -182,10 +184,12 @@ def detect_and_translate_ticket_text(text: str) -> dict:
     lang = str(detected_lang).lower().split("-")[0][:2]
     model_name = f"Helsinki-NLP/opus-mt-{lang}-en"
     translated_text = original_text
+    failure_reason = "translation returned original text"
 
     try:
         translated_text = _run_translation(original_text, model_name)
     except Exception as e:
+        failure_reason = str(e)
         logger.error(
             "Translation failed: %s | detected language: %s",
             str(e),
@@ -204,6 +208,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
             "source_language": detected_lang,
             "source_language_name": source_name,
             "was_translated": False,
+            "translation_attempted": True,
             "translation_failed": True,
             "original_text": original_text,
             "metadata": {},
@@ -214,6 +219,7 @@ def detect_and_translate_ticket_text(text: str) -> dict:
         "source_language": detected_lang,
         "source_language_name": source_name,
         "was_translated": True,
+        "translation_attempted": True,
         "translation_failed": False,
         "original_text": original_text,
         "metadata": {},
