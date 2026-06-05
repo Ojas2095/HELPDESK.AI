@@ -16,6 +16,7 @@ import {
   Volume2,
   Globe,
   ChevronDown,
+  FileText,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "../../components/ui/button";
@@ -112,19 +113,167 @@ const CreateTicket = () => {
         };
     }, [imagePreview]);
 
-    const processOCR = async (imageFile) => {
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB client-side limit
+    const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg', 'application/pdf'];
+
+    const processOCR = async (file) => {
         setIsOcrLoading(true);
+        setError('');
         try {
+            // Handle PDFs — extract text client-side using FileReader (text content)
+            if (file.type === 'application/pdf') {
+                const text = await extractPdfText(file);
+                if (text && text.trim()) {
+                    setExtractedOCR(text.trim());
+                } else {
+                    setExtractedOCR('');
+                    setError('Could not extract any text from the PDF. The file may be empty, scanned (image-based), or corrupted.');
+                }
+                setIsOcrLoading(false);
+                return;
+            }
+
+            // Handle images via Tesseract OCR
             const { default: Tesseract } = await import('tesseract.js');
-            const { data: { text } } = await Tesseract.recognize(imageFile, 'eng');
+            const { data: { text } } = await Tesseract.recognize(file, 'eng');
             setExtractedOCR(text.trim());
         } catch (err) {
             console.error("OCR Failed:", err);
+            setError('Text extraction failed. The file may be corrupted or in an unsupported format.');
+            setExtractedOCR('');
         } finally {
             setIsOcrLoading(false);
         }
     };
-  }, []);
+
+    // Client-side PDF text extraction (reads as text if the PDF has embedded text)
+    const extractPdfText = async (pdfFile) => {
+        try {
+            // Use FileReader to read as ArrayBuffer, then decode text
+            // This works for text-based PDFs. Scanned/image PDFs will return empty.
+            const arrayBuffer = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(pdfFile);
+            });
+
+            // Try to extract text manually by looking for text between parentheses
+            // or BT/ET markers in the raw PDF content
+            const uint8Array = new Uint8Array(arrayBuffer);
+            const decoder = new TextDecoder('utf-8', { fatal: false });
+            const rawText = decoder.decode(uint8Array);
+
+            // Basic PDF text extraction: look for text between parentheses in PDF stream
+            const textMatches = [];
+            const textBetweenParens = rawText.match(/\(([^)]*)\)/g);
+            if (textBetweenParens) {
+                for (const match of textBetweenParens) {
+                    const content = match.slice(1, -1);
+                    // Filter out binary-looking content
+                    if (/[a-zA-Z0-9\s]{3,}/.test(content)) {
+                        textMatches.push(content);
+                    }
+                }
+            }
+
+            const extracted = textMatches.join(' ').trim();
+            return extracted;
+        } catch (err) {
+            console.error("PDF text extraction error:", err);
+            return '';
+        }
+    };
+
+    const validateFile = (file) => {
+        if (!file) return 'No file selected.';
+        if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+            return 'Invalid file type. Only PNG, JPG, and PDF files are allowed.';
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            return `File too large (${(file.size / 1024 / 1024).toFixed(2)} MB). Maximum size is 5 MB.`;
+        }
+        return null; // valid
+    };
+
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files?.[0];
+        if (!selectedFile) return;
+        // Prevent re-upload while processing
+        if (isOcrLoading) {
+            setError('Please wait for the current file to finish processing.');
+            e.target.value = '';
+            return;
+        }
+        const validationError = validateFile(selectedFile);
+        if (validationError) {
+            setError(validationError);
+            e.target.value = '';
+            return;
+        }
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        setFile(selectedFile);
+        if (selectedFile.type === 'application/pdf') {
+            // PDFs don't have image previews; show a PDF document icon placeholder
+            setImagePreview(null);
+        } else {
+            setImagePreview(URL.createObjectURL(selectedFile));
+        }
+        setError('');
+        processOCR(selectedFile);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const droppedFile = e.dataTransfer.files?.[0];
+        if (!droppedFile) return;
+        // Prevent re-upload while processing
+        if (isOcrLoading) {
+            setError('Please wait for the current file to finish processing.');
+            return;
+        }
+        const validationError = validateFile(droppedFile);
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        setFile(droppedFile);
+        if (droppedFile.type === 'application/pdf') {
+            setImagePreview(null);
+        } else {
+            setImagePreview(URL.createObjectURL(droppedFile));
+        }
+        setError('');
+        processOCR(droppedFile);
+    };
+
+    const removeFile = () => {
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        setFile(null);
+        setImagePreview(null);
+        setExtractedOCR('');
+        setError('');
+    };
+
+    const handleCancelVoice = () => {
+        if (isListening) stopListening();
+        setShowVoiceModal(false);
+    };
+
+    const toggleMic = () => {
+        if (isListening) {
+            stopListening();
+        } else {
+            startListening();
+        }
+    };
 
   // Close language dropdown on outside click
   useEffect(() => {
@@ -355,19 +504,6 @@ const CreateTicket = () => {
                           </motion.div>
                         </button>
 
-    const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const droppedFile = e.dataTransfer.files?.[0];
-        if (droppedFile && (droppedFile.type === 'image/png' || droppedFile.type === 'image/jpeg')) {
-            if (imagePreview) URL.revokeObjectURL(imagePreview);
-            setFile(droppedFile);
-            setImagePreview(URL.createObjectURL(droppedFile));
-            setError('');
-            processOCR(droppedFile);
-        }
-    };
-
     // ── Smart Template handlers (v2: highlight → activate → dismiss) ──
 
     /** Step 1: Highlight a template card (shows preview, does NOT apply) */
@@ -433,7 +569,7 @@ const CreateTicket = () => {
         }
 
         if (file && !isOcrLoading && !extractedOCR.trim()) {
-            setError('No text could be extracted from the image. Please upload a clear screenshot containing text, or remove the image to continue.');
+            setError('No text could be extracted from the file. Please upload a clear screenshot or a text-based PDF, or remove the file to continue.');
             return;
         }
 
@@ -720,14 +856,14 @@ const CreateTicket = () => {
                                                         type="file"
                                                         ref={fileInputRef}
                                                         onChange={handleFileChange}
-                                                        accept="image/png, image/jpeg"
+                                                        accept="image/png, image/jpeg, application/pdf"
                                                         className="hidden"
                                                     />
                                                     <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform shadow-md">
                                                         <Upload className="text-emerald-400" size={16} />
                                                     </div>
                                                     <p className="text-sm font-extrabold text-slate-300 font-syne uppercase tracking-wider m-0">Uplink System Screenshot</p>
-                                                    <p className="text-xs text-slate-500 font-medium mt-1 m-0">PNG or JPG block array up to 10MB</p>
+                                                    <p className="text-xs text-slate-500 font-medium mt-1 m-0">PNG, JPG, or PDF up to 5MB</p>
                                                 </motion.div>
                                             ) : (
                                                 <motion.div
@@ -737,8 +873,12 @@ const CreateTicket = () => {
                                                     exit={{ opacity: 0, scale: 0.98 }}
                                                     className="relative rounded-3xl border border-white/10 bg-white/[0.02] p-4 items-center flex gap-4 text-left shadow-2xl"
                                                 >
-                                                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/5 shadow-inner shrink-0 bg-black">
-                                                        <img src={imagePreview} alt="Attached vector mapping payload" className="w-full h-full object-cover" />
+                                                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/5 shadow-inner shrink-0 bg-black flex items-center justify-center">
+                                                        {file?.type === 'application/pdf' ? (
+                                                            <FileText className="text-emerald-400" size={28} />
+                                                        ) : (
+                                                            <img src={imagePreview} alt="Attached vector mapping payload" className="w-full h-full object-cover" />
+                                                        )}
                                                     </div>
                                                     <div className="flex-1 min-w-0 space-y-0.5">
                                                         <p className="text-sm font-bold text-white truncate m-0">{file?.name}</p>
@@ -962,7 +1102,7 @@ const CreateTicket = () => {
                             type='file'
                             ref={fileInputRef}
                             onChange={handleFileChange}
-                            accept='image/png, image/jpeg'
+                            accept='image/png, image/jpeg, application/pdf'
                             className='hidden'
                           />
                           <div className='w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform'>
@@ -971,7 +1111,7 @@ const CreateTicket = () => {
                           <p className='text-sm font-semibold text-gray-600'>
                             Drag and drop or click to upload
                           </p>
-                          <p className='text-xs text-gray-400 mt-1'>PNG or JPG up to 10MB</p>
+                          <p className='text-xs text-gray-400 mt-1'>PNG, JPG, or PDF up to 5MB</p>
                         </motion.div>
                       ) : (
                         <motion.div
@@ -981,12 +1121,16 @@ const CreateTicket = () => {
                           className='relative rounded-2xl border border-gray-100 overflow-hidden bg-white p-4 items-center flex'
                         >
                           <div className='flex items-center gap-4 w-full'>
-                            <div className='w-20 h-20 rounded-xl overflow-hidden border border-gray-50 shadow-inner shrink-0'>
-                              <img
-                                src={imagePreview}
-                                alt='Preview'
-                                className='w-full h-full object-cover'
-                              />
+                            <div className='w-20 h-20 rounded-xl overflow-hidden border border-gray-50 shadow-inner shrink-0 flex items-center justify-center'>
+                              {file?.type === 'application/pdf' ? (
+                                <FileText className='text-emerald-500' size={36} />
+                              ) : (
+                                <img
+                                  src={imagePreview}
+                                  alt='Preview'
+                                  className='w-full h-full object-cover'
+                                />
+                              )}
                             </div>
                             <div className='flex-1 min-w-0'>
                               <p className='text-sm font-bold text-gray-900 truncate'>
