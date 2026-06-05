@@ -75,15 +75,15 @@ class AutoCloseService:
         try:
             # Query system_settings table for company-specific settings
             response = self.supabase.table("system_settings").select(
-                "auto_close_days, auto_close_enabled, updated_at"
+                "auto_close_days, enable_auto_resolve, auto_close_enabled, updated_at"
             ).eq("company_id", company_id).single().execute()
 
             if response.data:
                 settings = {
                     "auto_close_days": response.data.get("auto_close_days", self.default_auto_close_days),
-                    # Fixes #913: respect the DB value explicitly; default to False (safe/disabled)
+                    # Fixes #913/#1372: read enable_auto_resolve (new column), fallback to auto_close_enabled (legacy)
                     # so that a missing or unreadable setting never silently auto-closes tickets.
-                    "auto_close_enabled": bool(response.data.get("auto_close_enabled", False)),
+                    "auto_close_enabled": bool(response.data.get("enable_auto_resolve", response.data.get("auto_close_enabled", False))),
                     "_cached_at": datetime.now(timezone.utc).timestamp(),
                 }
                 self._settings_cache[company_id] = settings
@@ -100,15 +100,6 @@ class AutoCloseService:
             "auto_close_enabled": False
         }
 
-        # Fall back to defaults (enabled by default)
-        default_settings = {
-            "auto_close_days": self.default_auto_close_days,
-            "auto_close_enabled": True,
-            "_cached_at": datetime.now(timezone.utc).timestamp()
-        }
-        self._settings_cache[company_id] = default_settings
-        return default_settings
-
     def is_auto_close_enabled(self, company_id: str) -> bool:
         """
         Check if auto-close is enabled for a specific company.
@@ -123,7 +114,7 @@ class AutoCloseService:
             bool: True if auto-close is enabled for this company
         """
         settings = self.get_company_settings(company_id)
-        return settings.get("auto_close_enabled", True)
+        return settings.get("auto_close_enabled", False)
 
     def get_auto_close_days(self, company_id: str) -> int:
         """

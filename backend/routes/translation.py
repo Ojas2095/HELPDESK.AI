@@ -269,4 +269,6 @@ async def detect(request: Request, body: DetectLanguageRequest):
 @limiter.limit("60/minute")
 async def list_languages(request: Request):
     """List supported languages for translation."""
+    rid = _request_id(req)
+    logger.info("[%s] languages: listing supported languages", rid)
     return {"success": True, "data": _cached_supported_languages()}

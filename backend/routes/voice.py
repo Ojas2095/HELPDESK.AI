@@ -31,6 +31,13 @@ SUPPORTED_FORMATS = ["webm", "wav", "mp3", "ogg", "m4a", "flac"]
 # FIX 6: BCP-47 language tag pattern reused from translation router.
 _LANG_TAG_RE = re.compile(r"^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$")
 
+# BCP-47 language tag pattern (e.g. "en", "zh", "fr-CA", "zh-Hans")
+_BCP47_PATTERN = re.compile(
+    r"^[a-zA-Z]{2,3}"           # ISO 639-1/2 primary language
+    r"(?:-[a-zA-Z]{2,3})?"      # optional ISO 3166 region
+    r"(?:-[a-zA-Z]{4})?"        # optional ISO 15924 script
+    r"$"
+)
 
 @router.post("/transcribe")
 @limiter.limit("10/minute")
@@ -41,8 +48,56 @@ async def transcribe_audio(
 ) -> TranscribeResponse:
     """Transcribe an uploaded audio file into text.
 
-    Accepts: webm, wav, mp3, ogg, m4a, flac
-    Returns: transcribed text, detected language, confidence, duration
+class VoiceTranscriptionData(BaseModel):
+    """Transcription result data."""
+    transcribed_text: str = ""
+    detected_language: Optional[str] = None
+    confidence: Optional[float] = None
+    duration: Optional[float] = None
+
+
+class VoiceTranscriptionResponse(BaseModel):
+    """POST /api/voice/transcribe response."""
+    transcribed_text: str = ""
+    detected_language: Optional[str] = None
+    confidence: Optional[float] = None
+    duration: Optional[float] = None
+
+
+class VoiceTicketResponse(BaseModel):
+    """POST /api/voice/create-ticket response."""
+    status: str = "success"
+    transcription: Optional[VoiceTranscriptionData] = None
+    transcribed_text: str = ""
+    suggested_title: str = ""
+    message: str = ""
+
+
+class VoiceHealthResponse(BaseModel):
+    """GET /api/voice/health response."""
+    status: str = "ok"
+    model_loaded: bool = False
+    max_audio_size_mb: int = 25
+    supported_formats: list[str] = Field(default_factory=lambda: [])
+
+
+# ---------------------------------------------------------------------------
+# Service imports (bug 4: deferred imports → top-level with graceful fallback)
+# ---------------------------------------------------------------------------
+
+_voice_service_available = True
+try:
+    from backend.services.voice_service import transcribe_audio_async  # noqa: F811
+except ImportError:
+    _voice_service_available = False
+    transcribe_audio_async = None  # type: ignore
+
+
+def _is_whisper_available() -> bool:
+    """Check if the Whisper model is loaded (safe public-API check).
+
+    Uses the service module's public interface rather than accessing
+    private internals directly (bug 7: private _whisper_model access).
     """
     rid = _request_id(req)
     lang = _validate_language(language)

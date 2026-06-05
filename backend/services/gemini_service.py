@@ -173,6 +173,18 @@ class GeminiService:
 
         try:
 
+            # Validate magic bytes (file signature) to prevent non-image data
+            # from being passed to PIL's format detection
+            if not _validate_image_signature(image_bytes):
+                return {
+                    "image_description": "[Invalid Image] Unsupported or unrecognized image format.",
+                    "ocr_text": "",
+                    "detected_problem": ""
+                }
+
+            # Decompression bomb protection: limit total pixels PIL will allocate
+            Image.MAX_IMAGE_PIXELS = 50_000_000  # 50 megapixels
+
             img = Image.open(io.BytesIO(image_bytes))
             img.verify()  # detect truncated/corrupted files early
         except Exception as exc:

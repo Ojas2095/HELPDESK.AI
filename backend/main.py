@@ -2723,6 +2723,10 @@ async def create_ticket(
         except Exception:
             pass
 
+    # Encrypt PII fields before storing (Issue #1376)
+    for field in ("subject", "description"):
+        if data.get(field):
+            data[field] = encrypt_pii(data[field])
     res = supabase.table("tickets").insert(data).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Failed to create ticket")
