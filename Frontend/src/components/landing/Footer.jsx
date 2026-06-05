@@ -23,13 +23,13 @@ export default function Footer({ setShowDemo = () => {} }) {
                         </p>
                         <p className="text-[11px] text-white/30 dark:text-slate-500">Made with ❤️ in India 🇮🇳</p>
                         <div className="flex gap-2.5 pt-1">
-                            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors">
+                            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
                                 <Twitter className="w-3.5 h-3.5" />
                             </a>
-                            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors">
+                            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
                                 <Linkedin className="w-3.5 h-3.5" />
                             </a>
-                            <a href="https://github.com/ritesh-1918/HELPDESK.AI" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-colors">
+                            <a href="https://github.com/ritesh-1918/HELPDESK.AI" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-white/10 dark:bg-slate-800 hover:bg-white/20 dark:hover:bg-slate-700 rounded-lg flex items-center justify-center transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
                                 <Github className="w-3.5 h-3.5" />
                             </a>
                         </div>
@@ -105,7 +105,7 @@ export default function Footer({ setShowDemo = () => {} }) {
                             <button onClick={() => navigate('/privacy')} className={`${footerBottomLinkClass} bg-transparent border-none p-0 cursor-pointer`}>Privacy</button>
                             <button onClick={() => navigate('/security')} className={`${footerBottomLinkClass} bg-transparent border-none p-0 cursor-pointer`}>Security</button>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-white/40 dark:text-slate-500 border border-white/10 dark:border-slate-800 rounded-lg px-2.5 py-1 cursor-pointer hover:bg-white/10 dark:hover:bg-slate-800/50 transition-colors">
+                        <div className="flex items-center gap-1.5 text-xs text-white/40 dark:text-slate-500 border border-white/10 dark:border-slate-800 rounded-lg px-2.5 py-1 cursor-pointer hover:bg-white/10 dark:hover:bg-slate-800/50 transition-all duration-300 hover:-translate-y-0.5 hover:scale-110">
                             <Globe className="w-3.5 h-3.5" />
                             <span>English (IN)</span>
                         </div>
