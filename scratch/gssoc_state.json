@@ -60,7 +60,14 @@
       "ambassador_active": false
     }
   ],
-  "contributor_prs": [],
+  "contributor_prs": [
+    {
+      "number": 1427,
+      "difficulty": "level:advanced",
+      "quality": "quality:exceptional",
+      "type_bonus": "type:bug"
+    }
+  ],
   "mentor_prs": [
     {
       "number": 114,

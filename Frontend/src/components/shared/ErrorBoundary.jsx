@@ -1,6 +1,12 @@
 /**
- * Error Boundary Component
- * Catches unhandled errors and shows a stylized error page with diagnostic export.
+ * ErrorBoundary — canonical implementation, supersedes components/ErrorBoundary.jsx
+ * and components/ui/ErrorBoundary.jsx. Use this one throughout the app.
+ *
+ * Props:
+ *   fallback    {ReactNode|Function(error, resetFn)} — custom fallback UI
+ *   onError     {Function(error, errorInfo, errorId)} — error reporting hook
+ *   resetKeys   {Array} — boundary resets automatically when any value changes
+ *   children    {ReactNode}
  */
 
 import React, { Component } from 'react';
@@ -20,13 +26,38 @@ class ErrorBoundary extends Component {
         return { hasError: true, error };
     }
 
+    static getDerivedStateFromProps(props, state) {
+        // Auto-reset when resetKeys change (e.g. on route transitions)
+        if (state.hasError && Array.isArray(props.resetKeys)) {
+            const prev = state._prevResetKeys || [];
+            const changed = props.resetKeys.some((k, i) => k !== prev[i]);
+            if (changed) {
+                return {
+                    hasError: false,
+                    error: null,
+                    errorInfo: null,
+                    errorId: null,
+                    _prevResetKeys: props.resetKeys,
+                };
+            }
+        }
+        return { _prevResetKeys: props.resetKeys };
+    }
+
     componentDidCatch(error, errorInfo) {
         const errorId = `ERR-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         this.setState({ errorInfo, errorId });
 
         // Log to console for development
-        console.error('[ErrorBoundary] Caught error:', error);
-        console.error('[ErrorBoundary] Error info:', errorInfo);
+        if (import.meta.env.DEV) {
+            console.error('[ErrorBoundary] Caught error:', error);
+            console.error('[ErrorBoundary] Error info:', errorInfo);
+        }
+
+        // onError callback for external reporting (Sentry, LogRocket, etc.)
+        if (typeof this.props.onError === 'function') {
+            this.props.onError(error, errorInfo, errorId);
+        }
 
         // In production, you could send to error tracking service
         if (import.meta.env.PROD) {
