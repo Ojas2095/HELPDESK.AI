@@ -21,7 +21,7 @@ from backend.services.duplicate_service import DuplicateService, SIMILARITY_THRE
 
 def _make_service_with_mock_model():
     """Build a DuplicateService with a mocked sentence-transformer model."""
-    import torch
+    import numpy as np
 
     svc = DuplicateService()
     svc._loaded = True
@@ -31,11 +31,11 @@ def _make_service_with_mock_model():
     mock_model = MagicMock()
     call_count = [0]
 
-    def fake_encode(text, convert_to_tensor=False):
+    def fake_encode(text, *args, **kwargs):
         call_count[0] += 1
         # Return a simple 3-dim tensor based on text hash for determinism
         val = float(hash(text) % 100) / 100.0
-        return torch.tensor([val, val * 0.5, val * 0.25])
+        return np.array([val, val * 0.5, val * 0.25], dtype=np.float32)
 
     mock_model.encode = fake_encode
     svc.model = mock_model
@@ -169,7 +169,6 @@ class TestSnapshotIsolation(unittest.TestCase):
 class TestLockReleasedAfterException(unittest.TestCase):
     def test_lock_released_when_add_ticket_encode_fails(self):
         """Even if model.encode raises, the lock must be releasable afterwards."""
-        import torch
         svc = _make_service_with_mock_model()
 
         original_encode = svc.model.encode
@@ -263,5 +262,35 @@ class TestCheckDuplicateEdgeCases(unittest.TestCase):
         self.assertFalse(result["is_duplicate"])
 
 
-if __name__ == "__main__":
+class TestMatrixSnapshotConsistency(unittest.TestCase):
+    def test_check_duplicate_does_not_return_id_from_stale_service_matrix(self):
+        """check_duplicate must derive matrix and IDs from the same ticket snapshot."""
+        import numpy as np
+
+        svc = DuplicateService()
+        svc._loaded = True
+        svc._load_failed = False
+        svc.model = MagicMock()
+        svc.save_to_disk = lambda tid, text: None
+        svc._encode_with_cache = lambda text: np.array([0.0, 1.0], dtype=np.float32)
+
+        # The real ticket snapshot only contains existing-id.
+        svc._tickets = [
+            ("existing-id", np.array([1.0, 0.0], dtype=np.float32), "existing ticket")
+        ]
+        # Simulate a stale/mismatched service-level matrix from a concurrent update.
+        # The query vector best matches injected-id, but injected-id is not present
+        # in the current _tickets snapshot and must never be returned.
+        svc._embedding_matrix = np.array(
+            [[1.0, 0.0], [0.0, 1.0]], dtype=np.float32
+        )
+        svc._ticket_ids = ["existing-id", "injected-id"]
+        svc._embedding_matrix_dirty = False
+
+        result = svc.check_duplicate("query", threshold=-1.0)
+
+        self.assertEqual(result["duplicate_ticket_id"], "existing-id")
+
+
+if __name__ == '__main__':
     unittest.main()
