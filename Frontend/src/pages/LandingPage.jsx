@@ -895,8 +895,8 @@ export default function LandingPage() {
                                             {href.startsWith('/') ? (
                                                 <button
                                                     onClick={() => navigate(href)}
-                                                    className="text-sm text-white/65 hover:text-white transition-colors text-left"
-                                                >
+                                                  className="group relative inline-flex items-center gap-1 text-sm text-white/60 transition-all duration-300 ease-out hover:text-white
+                                                               hover:translate-x-1 after:content-[''] after:absolute after:left-0 after:-bottom-0.5 after:h-[2px] after:w-0 after:bg-emerald-400 after:transition-all after:duration-300 hover:after:w-full" >
                                                     {label}
                                                 </button>
                                             ) : (
@@ -914,11 +914,15 @@ export default function LandingPage() {
                         <p className="text-xs text-white/40">
                             © 2026 HelpDesk.ai. All rights reserved. · Registered in India
                         </p>
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => navigate('/terms')} className="text-xs text-white/40 hover:text-white transition-colors">Terms</button>
-                            <button onClick={() => navigate('/privacy')} className="text-xs text-white/40 hover:text-white transition-colors">Privacy</button>
-                            <button onClick={() => navigate('/security')} className="text-xs text-white/40 hover:text-white transition-colors">Security</button>
-                            <div className="flex items-center gap-2 text-xs text-white/40 border border-white/10 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-white/10 transition-colors">
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <button onClick={() => navigate('/terms')}className="text-xs text-white/40 px-2 py-1 rounded-md transition-all duration-300
+                               hover:text-white hover:bg-white/10  hover:backdrop-blur-md hover:scale-[1.05]">Terms</button>
+                            <button onClick={() => navigate('/privacy')} className="text-xs text-white/40 px-2 py-1 rounded-md transition-all duration-300
+                               hover:text-white hover:bg-white/10  hover:backdrop-blur-md hover:scale-[1.05]">Privacy</button>
+                            <button onClick={() => navigate('/security')} className="text-xs text-white/40 px-2 py-1 rounded-md transition-all duration-300
+                            hover:text-white hover:bg-white/10 hover:backdrop-blur-md hover:scale-[1.05]">Security</button>
+                            <div className="flex items-center gap-2 text-xs text-white/40 px-2 py-1 rounded-md cursor-pointer border border-white/10 transition-all duration-300
+                                hover:text-white hover:bg-white/10 hover:backdrop-blur-md hover:scale-[1.05]">
                                 <Globe className="w-3.5 h-3.5" />
                                 <span>English (IN)</span>
                             </div>
