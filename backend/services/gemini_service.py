@@ -171,6 +171,21 @@ class GeminiService:
         # Enforce pixel cap to block decompression-bomb attacks before Image.open
         Image.MAX_IMAGE_PIXELS = MAX_PIXELS
 
+        # ── Size guard (CWE-400) — reject payloads > MAX_IMAGE_B64_BYTES ──────
+        if len(image_base64) > MAX_IMAGE_B64_BYTES:
+            print(
+                f"[GeminiService] analyze_image: payload {len(image_base64):,} bytes "
+                f"exceeds cap of {MAX_IMAGE_B64_BYTES:,} bytes. Rejecting."
+            )
+            return {
+                "image_description": (
+                    f"[Error] Image payload exceeds the {MAX_IMAGE_B64_BYTES // (1024*1024)} MB limit. "
+                    "Please upload a smaller screenshot."
+                ),
+                "ocr_text": "",
+                "detected_problem": ""
+            }
+
         try:
 
             # Validate magic bytes (file signature) to prevent non-image data
