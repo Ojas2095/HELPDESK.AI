@@ -15,6 +15,7 @@ import {
   Loader2,
   CheckCircle2,
   History,
+  Copy,
 } from 'lucide-react';
 import { formatFullTimestamp } from '../../utils/dateUtils';
 import { supabase } from '../../lib/supabaseClient';
@@ -34,6 +35,7 @@ const TicketDetail = () => {
     const [showCsat, setShowCsat] = useState(false);
     const [csatHasBeenDismissed, setCsatHasBeenDismissed] = useState(false);
     const [showOriginalText, setShowOriginalText] = useState(false);
+    const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -206,8 +208,19 @@ const TicketDetail = () => {
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-white/[0.05] pb-8">
                         <div className="flex-1 space-y-3">
                             <div className="flex flex-wrap items-center gap-3">
-                                <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono font-bold px-3 py-1 rounded-lg text-xs">
+                                <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-2">
                                     #{formatTicketId(ticket.ticket_id)}
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(ticket.ticket_id);
+                                        setCopied(true);
+                                        setTimeout(() => setCopied(false), 2000);
+                                      }}
+                                      className="hover:text-emerald-300 transition-colors"
+                                      title="Copy Ticket ID"
+                                    >
+                                      {copied ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                                    </button>
                                 </span>
                                 <TicketStatusBadge status={ticket.status} />
                             </div>
