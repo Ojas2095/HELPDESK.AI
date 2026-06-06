@@ -453,7 +453,7 @@ class TroubleshootResponse(BaseModel):
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
 @limiter.limit("10/minute")
-async def troubleshoot(request: TroubleshootRequest, request: Request):
+async def troubleshoot(request: Request, request_body: TroubleshootRequest):
 
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
@@ -482,7 +482,7 @@ class BugReportAnalysisResponse(BaseModel):
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 @limiter.limit("10/minute")
-async def analyze_bug(request: BugReportAnalysisRequest, request: Request):
+async def analyze_bug(request: Request, request_body: BugReportAnalysisRequest):
 
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
@@ -569,7 +569,7 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
 @limiter.limit("10/minute")
-async def get_tickets(company_id: str | None = None, request: Request):
+async def get_tickets(request: Request, company_id: str | None = None):
 
     """Fetch persistent tickets from Supabase."""
     if not supabase:
@@ -584,7 +584,7 @@ async def get_tickets(company_id: str | None = None, request: Request):
 
 @app.post("/tickets/save")
 @limiter.limit("10/minute")
-async def save_ticket(request_body: TicketSaveRequest, request: Request):
+async def save_ticket(request: Request, request_body: TicketSaveRequest):
 
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
@@ -689,7 +689,7 @@ async def save_ticket(request_body: TicketSaveRequest, request: Request):
 
 @app.get("/tickets/{ticket_id}")
 @limiter.limit("10/minute")
-async def get_ticket_by_id(ticket_id: str, request: Request):
+async def get_ticket_by_id(request: Request, ticket_id: str):
 
     """Fetch single persistent ticket."""
     if not supabase:
@@ -703,7 +703,7 @@ async def get_ticket_by_id(ticket_id: str, request: Request):
 
 @app.post("/tickets", response_model=TicketRecord)
 @limiter.limit("10/minute")
-async def create_ticket(ticket: TicketRecord, request: Request):
+async def create_ticket(request: Request, ticket: TicketRecord):
 
     """Save a new ticket into the system."""
     # Check for duplicates before adding
@@ -718,7 +718,7 @@ async def create_ticket(ticket: TicketRecord, request: Request):
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
 @limiter.limit("10/minute")
-async def update_ticket(ticket_id: str, updates: dict, request: Request):
+async def update_ticket(request: Request, ticket_id: str, updates: dict):
 
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     for i, ticket in enumerate(TICKETS_DB):
@@ -738,7 +738,7 @@ async def update_ticket(ticket_id: str, updates: dict, request: Request):
 # ---------------------------------------------------------------------------
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
-async def analyze_ticket(request_body: TicketRequest, request: Request):
+async def analyze_ticket(request: Request, request_body: TicketRequest):
 
     """
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
@@ -775,7 +775,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
 
 @app.post("/ai/analyze")
 @limiter.limit("10/minute")
-async def analyze_only(request_body: TicketRequest, request: Request):
+async def analyze_only(request: Request, request_body: TicketRequest):
 
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
@@ -938,7 +938,7 @@ async def analyze_only(request_body: TicketRequest, request: Request):
 
 @app.post("/ai/analyze_stream")
 @limiter.limit("10/minute")
-async def analyze_stream(request_body: TicketRequest, request: Request):
+async def analyze_stream(request: Request, request_body: TicketRequest):
 
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
@@ -1092,7 +1092,7 @@ async def analyze_stream(request_body: TicketRequest, request: Request):
 
 @app.post("/ai/analyze_ticket/legacy")
 @limiter.limit("10/minute")
-async def legacy_analyze_and_save(request_body: TicketRequest, request: Request):
+async def legacy_analyze_and_save(request: Request, request_body: TicketRequest):
 
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
@@ -1102,7 +1102,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest, request: Request)
 
 @app.post("/ai/analyze-v2")
 @limiter.limit("10/minute")
-async def analyze_ticket_v2(request: TicketRequest, request: Request):
+async def analyze_ticket_v2(request: Request, request_body: TicketRequest):
     """Advanced V2 ticket analysis using improved models."""
 
     text = request_body.text
@@ -1204,7 +1204,7 @@ class SignupBody(BaseModel):
 
 @app.post("/auth/login")
 @limiter.limit("5/minute")
-async def auth_login(body: LoginBody, response: Response, request: Request):
+async def auth_login(request: Request, body: LoginBody, response: Response):
     """Authenticate user and return JWT token."""
 
     if not supabase:
@@ -1227,7 +1227,7 @@ async def auth_login(body: LoginBody, response: Response, request: Request):
 
 @app.post("/auth/signup")
 @limiter.limit("5/minute")
-async def auth_signup(body: SignupBody, response: Response, request: Request):
+async def auth_signup(request: Request, body: SignupBody, response: Response):
     """Register a new user account."""
 
     if not supabase:
@@ -1260,7 +1260,7 @@ async def auth_signup(body: SignupBody, response: Response, request: Request):
 
 @app.post("/auth/logout")
 @limiter.limit("5/minute")
-async def auth_logout(response: Response, request: Request):
+async def auth_logout(request: Request, response: Response):
     """Invalidate current user session."""
 
     _clear_session_cookies(response)
