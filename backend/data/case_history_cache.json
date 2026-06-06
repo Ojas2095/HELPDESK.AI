@@ -1,0 +1,14 @@
+[
+  {
+    "ticket_id": "t-001",
+    "text": "I cannot connect to WiFi"
+  },
+  {
+    "ticket_id": "t-002",
+    "text": "VPN authentication fails repeatedly"
+  },
+  {
+    "ticket_id": "t-003",
+    "text": "VPN connection keeps dropping"
+  }
+]
