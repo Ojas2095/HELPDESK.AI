@@ -28,15 +28,14 @@ import contextlib
 from logging.handlers import RotatingFileHandler
 
 # Suppress harmless PyTorch CPU pin_memory warning
-from encryption import encrypt_pii, decrypt_pii, is_encrypted
-from services.encryption_service import encrypt_ticket_pii, decrypt_ticket_pii
-from pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
+from backend.encryption import encrypt_pii, decrypt_pii, is_encrypted
+from backend.services.encryption_service import encrypt_ticket_pii, decrypt_ticket_pii
+from backend.pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
 from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -396,13 +395,6 @@ def classify_sla_status(sla_breach_at: str | None) -> str:
 # ── Rate limiter setup ────────────────────────────────────────────────────────
 # Uses client IP as the key. In production behind a proxy, set:
 #   get_remote_address to read X-Forwarded-For instead.
-from backend.services.rate_limit_config import limiter
-
-
-# Limits (tune via env vars in production)
-ML_HEAVY_LIMIT  = "10/minute"   # NLP, OCR, Gemini — GPU/CPU intensive
-ML_LIGHT_LIMIT  = "30/minute"   # Similar incident search — lighter
-
 app = FastAPI(title="AI Helpdesk Ticket Analyzer")
 
 # ── Apply to FastAPI app ──────────────────────────────────────────────────────
