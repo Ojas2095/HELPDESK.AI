@@ -5,6 +5,9 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
+import threading
+import tempfile
+import torch
 from sentence_transformers import SentenceTransformer, util
 
 SIMILARITY_THRESHOLD = 0.70
@@ -15,6 +18,7 @@ class DuplicateService:
         self.model = None
         self._loaded = False
         self._load_failed = False
+        self._lock = threading.Lock()
         # In-memory store: list of (ticket_id, embedding, text)
         self._tickets: list[tuple[str, object, str]] = []
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
@@ -66,26 +70,36 @@ class DuplicateService:
                 raise
 
     def save_to_disk(self, ticket_id: str, text: str):
-        """Append a new ticket to the JSON storage."""
+        """Append a new ticket to the JSON storage atomically."""
         import json
-        data = []
-        try:
-            os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
+        with self._lock:
+            data = []
             if os.path.exists(self.storage_file):
                 with open(self.storage_file, "r") as f:
                     try:
                         data = json.load(f)
                         if not isinstance(data, list):
                             data = []
+                    except json.JSONDecodeError:
+                        data = []
                     except:
                         data = []
             
             data.append({"ticket_id": ticket_id, "text": text})
-            with open(self.storage_file, "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
-        except Exception as e:
-            print(f"[DuplicateService] Failed to save to disk: {e}")
+            
+            os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
+            tmp_fd, tmp_path = tempfile.mkstemp(
+                dir=os.path.dirname(self.storage_file), suffix=".tmp"
+            )
+            try:
+                with os.fdopen(tmp_fd, "w") as tf:
+                    json.dump(data, tf, indent=2)
+                os.replace(tmp_path, self.storage_file)
+                print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
+            except Exception as e:
+                os.unlink(tmp_path)
+                print(f"[DuplicateService] Failed to save to disk: {e}")
+                raise
 
     def add_ticket(self, ticket_id: str, text: str):
         """Add a ticket to the in-memory store and persist to disk."""
@@ -93,11 +107,14 @@ class DuplicateService:
         if not self.is_available():
             print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
+        
         embedding = self.model.encode(text, convert_to_tensor=True)
-        self._tickets.append((ticket_id, embedding, text))
+        with self._lock:
+            self._tickets.append((ticket_id, embedding, text))
+            
         self.save_to_disk(ticket_id, text)
 
-    def check_duplicate(self, text: str, threshold: float = None) -> dict:
+    def check_duplicate(self, text: str, threshold: float = None):
         """
         Check if a ticket is a duplicate of any stored ticket.
 
@@ -106,48 +123,41 @@ class DuplicateService:
             threshold: Optional override for the similarity threshold.
 
         Returns:
-            {
-                "is_duplicate": bool,
-                "duplicate_ticket_id": str | None,
-                "similarity": float
-            }
+            dict with duplicate info, or None if no duplicate / unavailable / empty.
         """
         self.load()
         
-        # If model is not available, return no duplicate found
         if not self.is_available():
             print("[DuplicateService] DEGRADED: Duplicate check skipped (model not available)")
-            return {
-                "is_duplicate": False,
-                "duplicate_ticket_id": None,
-                "similarity": 0.0,
-            }
-        
-        # Use provided threshold or default to global constant
+            return None
+            
         active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
-
-        if not self._tickets:
-            return {
-                "is_duplicate": False,
-                "duplicate_ticket_id": None,
-                "similarity": 0.0,
-            }
-
-        query_embedding = self.model.encode(text, convert_to_tensor=True)
-
-        best_score = 0.0
-        best_id = None
-
-        for ticket_id, stored_emb, _ in self._tickets:
-            score = util.cos_sim(query_embedding, stored_emb).item()
-            if score > best_score:
-                best_score = score
-                best_id = ticket_id
-
+        
+        with self._lock:
+            if not self._tickets:
+                return None
+            tickets_snapshot = list(self._tickets)
+            
+        new_emb = self.model.encode(text, convert_to_tensor=True)
+        embeddings = [e for _, e, _ in tickets_snapshot]
+        
+        stacked = torch.stack(embeddings)
+        scores = util.pytorch_cos_sim(new_emb, stacked)[0]
+        
+        best_score, best_idx = torch.max(scores, dim=0)
+        best_score = best_score.item()
+        best_idx = best_idx.item()
+        
         is_dup = best_score >= active_threshold
+        
+        if is_dup:
+            best_id = tickets_snapshot[best_idx][0]
+            return {
+                "is_duplicate": True,
+                "duplicate_ticket_id": best_id,
+                "similarity": round(best_score, 4),
+            }
+        else:
+            return None
 
-        return {
-            "is_duplicate": is_dup,
-            "duplicate_ticket_id": best_id if is_dup else None,
-            "similarity": round(best_score, 4),
-        }
+duplicate_service = DuplicateService()
