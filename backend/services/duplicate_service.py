@@ -23,7 +23,7 @@ class DuplicateService:
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
         self._lock = threading.Lock()
-        self._file_lock = threading.Lock()
+        self._load_lock = threading.Lock()
 
     def is_available(self) -> bool:
         """Check if the model is available for duplicate detection."""
@@ -31,59 +31,66 @@ class DuplicateService:
 
     def load(self):
         """Load the sentence-transformer model and saved tickets."""
-        if self._loaded or self._load_failed:
-            return
-        
-        print("[DuplicateService] Loading model...")
-        try:
-            # Check if a local model path is provided
-            model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
-            if model_path and os.path.exists(model_path):
-                print(f"[DuplicateService] Loading from local path: {model_path}")
-                self.model = SentenceTransformer(model_path)
-            else:
-                # Download from HuggingFace
-                self.model = SentenceTransformer("all-MiniLM-L6-v2")
-            self._loaded = True
+        with self._load_lock:
+            if self._loaded or self._load_failed:
+                return
             
-            if os.path.exists(self.storage_file):
-                print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
-                import json
-                try:
-                    with open(self.storage_file, "r") as f:
-                        data = json.load(f)
-                        for item in data:
-                            text = item["text"]
-                            embedding = self.model.encode(text, convert_to_tensor=True)
-                            self._tickets.append((item["ticket_id"], embedding, text))
-                    print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
-                except Exception as e:
-                    print(f"[DuplicateService] Error loading storage: {e}")
-        except Exception as e:
-            allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
-            self._load_failed = True
-            print(f"[DuplicateService] Failed to load model: {e}")
-            if allow_degraded:
-                print("[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
-                self.model = None
-                self._loaded = False
-            else:
-                raise
+            print("[DuplicateService] Loading model...")
+            try:
+                # Check if a local model path is provided
+                model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
+                if model_path and os.path.exists(model_path):
+                    print(f"[DuplicateService] Loading from local path: {model_path}")
+                    self.model = SentenceTransformer(model_path)
+                else:
+                    # Download from HuggingFace
+                    self.model = SentenceTransformer("all-MiniLM-L6-v2")
+                self._loaded = True
+                
+                # Sync previous ticket history under file lock
+                from filelock import FileLock
+                lock = FileLock(self.storage_file + ".lock")
+                with lock:
+                    if os.path.exists(self.storage_file):
+                        print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
+                        import json
+                        try:
+                            with open(self.storage_file, "r") as f:
+                                data = json.load(f)
+                                for item in data:
+                                    text = item["text"]
+                                    embedding = self.model.encode(text, convert_to_tensor=True)
+                                    self._tickets.append((item["ticket_id"], embedding, text))
+                            print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
+                        except (FileNotFoundError, PermissionError, OSError, json.JSONDecodeError) as e:
+                            print(f"[DuplicateService] Error loading storage: {e}")
+            except Exception as e:
+                allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+                self._load_failed = True
+                print(f"[DuplicateService] Failed to load model: {e}")
+                if allow_degraded:
+                    print("[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
+                    self.model = None
+                    self._loaded = False
+                else:
+                    raise
 
     def save_to_disk(self, ticket_id: str, text: str):
         """Append a new ticket to the JSON storage."""
         import json
-        with self._file_lock:
+        from filelock import FileLock
+        lock = FileLock(self.storage_file + ".lock")
+        with lock:
             data = []
             os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
             if os.path.exists(self.storage_file):
-                with open(self.storage_file, "r") as f:
-                    try:
+                try:
+                    with open(self.storage_file, "r") as f:
                         data = json.load(f)
                         if not isinstance(data, list):
                             data = []
-                    except json.JSONDecodeError:
-                        data = []
+                except (FileNotFoundError, PermissionError, OSError, json.JSONDecodeError):
+                    data = []
             
             data.append({"ticket_id": ticket_id, "text": text})
             tmp_fd, tmp_path = tempfile.mkstemp(
@@ -118,13 +125,19 @@ class DuplicateService:
         """
         self.load()
         
+        fallback_res = {
+            "is_duplicate": False,
+            "duplicate_ticket_id": None,
+            "similarity": 0.0,
+        }
+        
         if not self.is_available():
             print("[DuplicateService] DEGRADED: Duplicate check skipped (model not available)")
-            return None
+            return fallback_res
             
         with self._lock:
             if not self._tickets:
-                return None
+                return fallback_res
             tickets_snapshot = list(self._tickets)
 
         new_emb = self.model.encode(text, convert_to_tensor=True)
@@ -145,4 +158,4 @@ class DuplicateService:
                 "similarity": round(best_score_val, 4),
             }
             
-        return None
+        return fallback_res
